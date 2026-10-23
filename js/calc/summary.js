@@ -105,6 +105,12 @@
     const debtMonthly = debts.reduce((s, d) => s + (d.balance > 0 ? d.payment : 0), 0);
     const outgoings = spendingMonthly + mortgageMonthly + debtMonthly;
     const hasTakeHome = Number.isFinite(takeHomeMonthly);
+    if (hasTakeHome && takeHomeMonthly - outgoings < 0) {
+      warnings.push({
+        level: 'warn',
+        text: `You\u2019re spending about ${fmt(outgoings - takeHomeMonthly)} a month more than you take home.`,
+      });
+    }
 
     return {
       assets: { items: assetItems, total: totalAssets },

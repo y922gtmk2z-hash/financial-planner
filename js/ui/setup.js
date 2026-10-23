@@ -29,6 +29,7 @@
       h('h2', { id: `sec-${sec.id}` }, sec.title),
       sec.intro ? h('p', { class: 'muted' }, sec.intro) : null,
       basic,
+      sec.id === 'income' ? FP.bonusEditor.render(ctx) : null,
       adv.length ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), adv) : null);
   }
 

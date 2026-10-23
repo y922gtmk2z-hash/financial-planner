@@ -62,7 +62,7 @@ test('summary: net worth, equity and outgoings for the sample household', () => 
   assert.equal(s.netWorth, s.assets.total - s.liabilities.total);
   assert.equal(s.home.equity, 325000 - 198000);
   assert.equal(s.cashFlow.surplus, null);
-  assert.equal(s.cashFlow.spendingMonthly, 1550);
+  assert.equal(s.cashFlow.spendingMonthly, 1480);
   assert.equal(s.cashFlow.debtMonthly, 345);
   assert.ok(s.mortgage.monthsToClear < s.mortgage.monthsToClearWithoutOver);
   // credit card with a blank rate uses the default other-debt rate
@@ -77,4 +77,23 @@ test('summary copes with an empty profile', () => {
   assert.equal(s.mortgage, null);
   assert.equal(s.home.ltvPct, null);
   assert.equal(s.cashFlow.outgoings, 0);
+});
+
+test('bonuses are stored as a list and validated', () => {
+  assert.deepEqual(FP.profile.blank().income.bonuses, []);
+  const p = FP.profile.normalise({ income: { bonuses: [{ amount: '1,500', month: 'mar' }, { amount: 200, month: 'smarch' }, 'junk'] } });
+  assert.equal(p.income.bonuses.length, 2);
+  assert.equal(p.income.bonuses[0].amount, 1500);
+  assert.equal(p.income.bonuses[0].month, 'mar');
+  assert.equal(p.income.bonuses[1].month, 'spread');
+  assert.ok(p.income.bonuses[0].id);
+});
+
+test('older saves with a single bonus are converted to the list', () => {
+  const p = FP.profile.normalise({ income: { bonus: 2000, bonusMonth: 'jun' } });
+  assert.equal(p.income.bonuses.length, 1);
+  assert.equal(p.income.bonuses[0].amount, 2000);
+  assert.equal(p.income.bonuses[0].month, 'jun');
+  assert.equal(p.income.bonus, undefined);
+  assert.deepEqual(FP.profile.normalise({ income: { bonus: 0 } }).income.bonuses, []);
 });

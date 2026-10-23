@@ -13,8 +13,8 @@
   function render(root, ctx) {
     const p = ctx.profile();
     const a = p.assumptions;
-    // Take-home pay is calculated from Stage 2 onwards.
-    const s = FP.summary.compute(p, null);
+    const pay = FP.tax.forProfile(p);
+    const s = FP.summary.compute(p, pay.takeHomeMonthly);
 
     FP.dom.add(root,
       h('h1', null, 'Today'),
@@ -23,7 +23,7 @@
       netWorthCard(s),
       chartCard(s),
       homeCard(s, a, p),
-      cashFlowCard(s, a, p));
+      cashFlowCard(s, a, p, pay));
   }
 
   function netWorthCard(s) {
@@ -106,27 +106,43 @@
       ]) : null);
   }
 
-  function cashFlowCard(s, a, p) {
+  function cashFlowCard(s, a, p, pay) {
     const cf = s.cashFlow;
     const defaultRateUsed = s.debts.some((d) => d.rateIsDefault && d.balance > 0);
+    const region = pay.region === 'scotland' ? 'Scottish tax bands' : 'rest-of-UK tax bands';
     return h('section', { class: 'card', 'aria-labelledby': 'cf-h' },
       h('h2', { id: 'cf-h' }, 'Monthly cash flow'),
-      h('div', { class: 'pending' },
-        h('strong', null, 'Take-home pay: coming in Stage 2.'),
-        ` It will be worked out from your ${money(p.income.grossSalary)} salary (income tax, National Insurance, pension and student loan), and your monthly surplus will appear here.`),
+      dl([
+        ['Take-home pay', h('a', { href: '#income' }, money(cf.takeHomeMonthly))],
+      ]),
+      pay.bonusPayments.length ? h('p', { class: 'muted small' },
+        'A regular month, without bonuses paid in a particular month. After deductions, bonuses add ',
+        pay.bonusPayments.map((b) => `${money(b.extra)} in ${monthName(b.month)}`).join(', '), '.') : null,
+      h('h3', null, 'Going out'),
       dl([
         ['Spending', money(cf.spendingMonthly)],
         ['Mortgage (incl. overpayment)', money(cf.mortgageMonthly)],
         ['Other debt payments', money(cf.debtMonthly)],
       ]),
-      h('div', { class: 'total-row' }, h('span', null, 'Total going out'), h('strong', null, `${money(cf.outgoings)} a month`)),
-      h('div', { class: 'total-row' }, h('span', null, 'Surplus (take-home − outgoings)'),
-        h('strong', null, cf.surplus == null ? 'Stage 2' : money(cf.surplus))),
+      h('div', { class: 'total-row' }, h('span', null, 'Total going out'), h('strong', null, money(cf.outgoings))),
+      h('div', { class: 'total-row surplus' },
+        h('span', null, cf.surplus < 0 ? 'Shortfall each month' : 'Surplus each month'),
+        h('strong', { class: cf.surplus < 0 ? 'negative' : 'positive' }, money(Math.abs(cf.surplus)))),
+      h('p', { class: 'muted small' }, 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.'),
       chips([
+        `Tax year ${pay.taxYear}`,
+        region,
+        `Pension ${pct(a.employeePensionPct, 1)} of salary`,
+        pay.bonusPayments.length ? `Bonus months: ${pay.bonusPayments.map((b) => monthName(b.month)).join(', ')}` : null,
+        pay.bonusSpread > 0 ? 'Some bonus spread over 12 months' : null,
         `${p.spending.filter((r) => r.monthly > 0).length} spending categories`,
         defaultRateUsed ? `Other debts default rate ${pct(a.otherDebtRate, 1)}` : null,
         `Mortgage rate ${pct(a.mortgageRate, 2)}`,
       ]));
+  }
+
+  function monthName(v) {
+    return (FP.profile.BONUS_MONTHS.find((m) => m.value === v) || { label: v }).label;
   }
 
   function dl(rows) {
