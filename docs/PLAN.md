@@ -50,28 +50,29 @@ profile = {
   assets:     { homeValue, cashSavings, isa, gia, pension, other },
   mortgage:   { balance, remainingTermYears, monthlyOverpayment },
   debts:      [{ id, name, balance, rate|null, monthlyPayment }],   // blank rate → assumption
-  income:     { grossSalary, bonus, studentLoanPlan },
+  income:     { grossSalary, bonuses: [{ id, amount, month }], studentLoanPlan, region, pensionMethod },
   spending:   [{ id, category, monthly }],
   assumptions:{ inflation, salaryGrowth, ..., mortgageRate, employeePensionPct, ... }
 }
 ```
 
-Stage 4 wraps this in `{ scenarios: { id: { name, profile } }, activeId }` — a
-scenario is a full clone of the profile, so any input or assumption can differ.
+Stage 4 wraps this in a workspace, `{ activeId, scenarios: [{ id, name, profile }] }`;
+a scenario is a full copy of the profile, so any input or assumption can differ.
+Bonuses are a list since Stage 2; older single-bonus saves are converted on load.
 
-## Stages (one PR each)
+## Stages (one PR each) — all complete
 
-1. **Setup + Today + Assumptions** — data model, storage, sample data, export/import/
+1. ✅ **Setup + Today + Assumptions** (#1) — data model, storage, sample data, export/import/
    clear, Setup form with validation, Today dashboard (net worth, assets vs
    liabilities chart, home equity, mortgage payoff, monthly outgoings), Assumptions
    panel with reset. Take-home pay shows as "arrives in Stage 2".
-2. **Income** — `tax-2026-27` config (rUK + Scotland), take-home calculator (income
+2. ✅ **Income** (#2; added later: bonus month, multiple bonuses) — `tax-2026-27` config (rUK + Scotland), take-home calculator (income
    tax with PA taper, employee NI, pension, student loan), wired into Today's cash flow
    so surplus is computed.
-3. **Future** — projection engine (≤40 years, to end age), per-item rules, savings
+3. ✅ **Future** (#3; added: tax thresholds frozen/inflation, State Pension, drawdown) — projection engine (≤40 years, to end age), per-item rules, savings
    split for surplus, nominal/real toggle, net worth line + stacked component chart,
    equity line.
-4. **Scenarios** — save baseline, clone, edit any input/assumption, side-by-side table
+4. ✅ **Scenarios** (#4) — save baseline, clone, edit any input/assumption, side-by-side table
    and overlay chart.
-5. **Tests, README, polish** — fuller tests for tax, compound growth, amortisation and
+5. ✅ **Tests, README, polish** (#5) — fuller tests for tax, compound growth, amortisation and
    projection; README; accessibility and mobile polish.

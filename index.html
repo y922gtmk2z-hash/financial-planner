@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)">
   <title>Finance planner</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c5cab'/%3E%3Ctext x='16' y='23' font-family='system-ui,sans-serif' font-size='20' font-weight='700' fill='white' text-anchor='middle'%3E%C2%A3%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -24,16 +25,20 @@
     </div>
   </header>
 
-  <p class="disclaimer" role="note">
+  <aside class="disclaimer" aria-label="Important">
     <strong>Planning illustration only &mdash; not financial advice.</strong>
     Results depend on the assumptions you set, and projections are not guaranteed.
-  </p>
+  </aside>
 
-  <div id="sample-banner" class="sample-banner" hidden></div>
+  <section id="sample-banner" class="sample-banner" aria-label="Sample data" hidden></section>
 
-  <div id="scenario-bar" class="scenario-bar"></div>
+  <section id="scenario-bar" class="scenario-bar" aria-label="Scenario"></section>
 
-  <main id="main" tabindex="-1"></main>
+  <main id="main" tabindex="-1">
+    <noscript>
+      <p class="card">This planner needs JavaScript to work. Everything runs in your browser and nothing is sent anywhere.</p>
+    </noscript>
+  </main>
 
   <footer class="app-footer">
     <p>This tool is a planning illustration and not financial advice. Figures are estimates based on your inputs and the assumptions you can see and change. Investments can fall as well as rise and projections are not guaranteed. Consider speaking to a regulated financial adviser before making decisions.</p>
@@ -45,8 +50,8 @@
     <a href="#setup" data-route="setup"><span class="tab-icon" aria-hidden="true">✎</span>Setup</a>
     <a href="#income" data-route="income"><span class="tab-icon" aria-hidden="true">₤</span>Income</a>
     <a href="#future" data-route="future"><span class="tab-icon" aria-hidden="true">↗</span>Future</a>
-    <a href="#scenarios" data-route="scenarios"><span class="tab-icon" aria-hidden="true">⇄</span>Scenarios</a>
-    <a href="#assumptions" data-route="assumptions"><span class="tab-icon" aria-hidden="true">%</span>Assumptions</a>
+    <a href="#scenarios" data-route="scenarios"><span class="tab-icon" aria-hidden="true">⇄</span><span class="tab-full">Scenarios</span><span class="tab-short" aria-hidden="true">Compare</span></a>
+    <a href="#assumptions" data-route="assumptions"><span class="tab-icon" aria-hidden="true">%</span><span class="tab-full">Assumptions</span><span class="tab-short" aria-hidden="true">Assume</span></a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
