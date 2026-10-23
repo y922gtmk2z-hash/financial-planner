@@ -93,17 +93,24 @@
     const debts = profile.debts.map((d) => ({
       bal: d.balance || 0, rate: FP.summary.debtRate(d, a), pay: d.monthlyPayment || 0,
     }));
+    // Student loan: tracked only when there's a plan and a balance. Otherwise
+    // repayments simply continue while working.
+    const slPlan = profile.income.studentLoanPlan;
+    const slTracked = FP.studentLoan.tracked(profile);
+    let slBal = slTracked ? profile.income.studentLoanBalance : 0;
+    const slWriteOff = slTracked ? FP.studentLoan.writeOffYear(slPlan, profile.income.studentLoanStartYear, cfg) : null;
+
     const spendMonthly0 = sum(profile.spending, (r) => r.monthly || 0);
     const relief = (cfg.reliefAtSourceRate || 0) / 100;
 
     const snapshot = (y, extra) => {
       const debtTotal = sum(debts, (d) => d.bal);
       const assets = home + cash + isa + gia + pension + other;
-      const liabilities = mBal + debtTotal + shortfall;
+      const liabilities = mBal + debtTotal + slBal + shortfall;
       return {
         y, year: startYear + y, age: age0 + y,
         home, mortgage: mBal, equity: home - mBal, cash, isa, gia, pension, other,
-        debts: debtTotal, shortfall, assets, liabilities, netWorth: assets - liabilities,
+        debts: debtTotal, studentLoan: slBal, shortfall, assets, liabilities, netWorth: assets - liabilities,
         inflationFactor: FP.growth.inflationFactor(a.inflation, y),
         ...extra,
       };
@@ -123,6 +130,8 @@
       let bonus = 0;
       let takeHome = 0;
       let pensionFromPay = 0;
+      let slDue = 0;
+      let slPay = 0;
       if (working) {
         const sf = FP.growth.compound(1, a.salaryGrowth, g);
         const input = FP.tax.inputFromProfile(profile);
@@ -133,6 +142,32 @@
         bonus = th.bonus;
         takeHome = th.takeHome;
         pensionFromPay = th.pensionIntoPot;
+        slDue = th.studentLoan;
+        slPay = th.niablePay;
+      }
+
+      // Student loan balance: written off in April of the write-off year;
+      // otherwise interest is added and repayments taken month by month.
+      // Once it's cleared, repayments stop and take-home rises.
+      let slRepaid = slDue;
+      let slInterest = 0;
+      let slWrittenOff = 0;
+      if (slTracked) {
+        if (slBal > 0 && slWriteOff != null && startYear + g >= slWriteOff) {
+          slWrittenOff = slBal;
+          slBal = 0;
+        }
+        slRepaid = 0;
+        const rate = FP.studentLoan.interestRate(slPlan, slPay, cfgY, profile.income.studentLoanRate);
+        for (let m = 0; m < 12 && slBal > 0.005; m += 1) {
+          const interest = slBal * rate / 100 / 12;
+          const paid = Math.min(slBal + interest, slDue / 12);
+          slBal = slBal + interest - paid;
+          slInterest += interest;
+          slRepaid += paid;
+        }
+        if (slBal <= 0.5) slBal = 0;
+        takeHome += slDue - slRepaid;
       }
       const statePension = startAge >= a.statePensionAge ? (a.statePension || 0) * priceFactor : 0;
       const statePensionTax = FP.tax.incomeTaxOnly(statePension, region, cfgY);
@@ -246,6 +281,7 @@
 
       rows.push(snapshot(y, {
         working, salary, bonus, takeHome, pensionFromPay, statePension, statePensionTax,
+        studentLoanRepaid: slRepaid, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
         netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
       }));
     }
@@ -259,7 +295,10 @@
       });
     }
 
-    return { ok: true, rows, years, startYear, shares, warnings, events: events(rows, profile, a) };
+    return {
+      ok: true, rows, years, startYear, shares, warnings,
+      events: { ...events(rows, profile, a), studentLoan: studentLoanEvents(rows, slTracked, slWriteOff) },
+    };
   }
 
   function events(rows, profile, a) {
@@ -277,13 +316,33 @@
     };
   }
 
+  /*
+   * When the student loan ends: { tracked, clearedRow, writtenOffRow, writtenOff
+   * (amount), writeOffYear, owingAtEnd }. Rows are null when it doesn't happen
+   * within the projection.
+   */
+  function studentLoanEvents(rows, tracked, writeOffYear) {
+    if (!tracked) return { tracked: false };
+    const writtenOffRow = rows.find((r) => r.studentLoanWrittenOff > 0) || null;
+    const clearedRow = writtenOffRow ? null : rows.find((r, i) => i > 0 && r.studentLoan === 0) || null;
+    const last = rows[rows.length - 1];
+    return {
+      tracked: true, clearedRow, writtenOffRow, writeOffYear,
+      // Written off in April of writeOffYear, at the start of writtenOffRow's year.
+      writtenOffAge: writtenOffRow ? writtenOffRow.age - 1 : null,
+      writtenOff: writtenOffRow ? writtenOffRow.studentLoanWrittenOff : 0,
+      owingAtEnd: last.studentLoan,
+    };
+  }
+
   function fmt(n) {
     return `£${Math.round(n).toLocaleString('en-GB')}`;
   }
 
   // A row's money values in today's money.
   const MONEY_KEYS = [
-    'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'shortfall', 'assets',
+    'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'studentLoan', 'shortfall', 'assets',
+    'studentLoanRepaid', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
     'netIncome', 'spending', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',

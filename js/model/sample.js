@@ -22,6 +22,8 @@
           { id: 'sample-b2', amount: 500, month: 'dec' },
         ],
         studentLoanPlan: 'plan2',
+        studentLoanBalance: 41000,
+        studentLoanStartYear: 2017,
         region: 'rUK',
         pensionMethod: 'netPay',
       },

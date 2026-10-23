@@ -24,6 +24,8 @@
       { label: 'HMRC: National Insurance rates and thresholds', url: 'https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027' },
       { label: 'Scottish Government: Scottish Income Tax 2026 to 2027', url: 'https://www.gov.scot/publications/scottish-income-tax-rates-and-bands/pages/2026-to-2027/' },
       { label: 'gov.uk: Repaying your student loan', url: 'https://www.gov.uk/repaying-your-student-loan/what-you-pay' },
+      { label: 'gov.uk: Student loan interest rates', url: 'https://www.gov.uk/government/news/student-loans-interest-rates-and-repayment-threshold-announcement--7' },
+      { label: 'gov.uk: When your student loan gets written off', url: 'https://www.gov.uk/repaying-your-student-loan/when-your-student-loan-gets-written-off-or-cancelled' },
     ],
 
     personalAllowance: 12570,
@@ -58,12 +60,18 @@
     },
 
     // Yearly repayment thresholds; repay `rate`% of income above the threshold.
+    // interest: % a year for the interest year 1 Sep 2026 to 31 Aug 2027 (RPI 4.1%,
+    //   with a temporary 6% cap on Plan 2 and postgraduate loans). Plan 2 interest
+    //   slides from interestMin at the repayment threshold to interestMax at
+    //   interestUpperThreshold. Rates are reset every September - check them.
+    // writeOffYears: written off this many years after the April you were first
+    //   due to repay (newer loans; some older Plan 1 and Plan 4 loans end at 65).
     studentLoans: {
-      plan1: { threshold: 26900, rate: 9 },
-      plan2: { threshold: 29385, rate: 9 },
-      plan4: { threshold: 33795, rate: 9 },
-      plan5: { threshold: 25000, rate: 9 },
-      postgrad: { threshold: 21000, rate: 6 },
+      plan1: { threshold: 26900, rate: 9, interest: 4.1, writeOffYears: 25 },
+      plan2: { threshold: 29385, rate: 9, interestMin: 4.1, interestMax: 6.0, interestUpperThreshold: 52885, writeOffYears: 30 },
+      plan4: { threshold: 33795, rate: 9, interest: 4.1, writeOffYears: 30 },
+      plan5: { threshold: 25000, rate: 9, interest: 4.1, writeOffYears: 40 },
+      postgrad: { threshold: 21000, rate: 6, interest: 6.0, writeOffYears: 30 },
     },
 
     // Relief-at-source pensions: the provider claims this rate back on your behalf.

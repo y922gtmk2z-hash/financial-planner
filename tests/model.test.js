@@ -69,7 +69,7 @@ test('summary: net worth, equity and outgoings for the sample household', () => 
   const p = FP.sample();
   const s = FP.summary.compute(p, null);
   assert.equal(s.assets.total, 325000 + 14000 + 22000 + 3500 + 61000 + 6000);
-  assert.equal(s.liabilities.total, 198000 + 7800 + 1200);
+  assert.equal(s.liabilities.total, 198000 + 7800 + 1200 + 41000); // includes the student loan
   assert.equal(s.netWorth, s.assets.total - s.liabilities.total);
   assert.equal(s.home.equity, 325000 - 198000);
   assert.equal(s.cashFlow.surplus, null);

@@ -28,6 +28,7 @@
   --series-6: #008300;
   --series-7: #6250d6;
   --series-8: #e34948;
+  --series-neutral: #8a8983;
 
   --radius: 12px;
   --gutter: 16px;
@@ -64,6 +65,7 @@
     --series-6: #008300;
     --series-7: #9085e9;
     --series-8: #e66767;
+    --series-neutral: #8f8e86;
   }
 }
 
@@ -484,3 +486,4 @@ fieldset.row-card { min-width: 0; }
   .tabbar a { font-size: 0.62rem; }
   .save-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+.sl-outcome { margin-top: 12px; font-weight: 600; }

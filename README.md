@@ -23,8 +23,8 @@ form, or **Keep these figures as mine** to edit the sample.
 | Screen | What it does |
 | --- | --- |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, any number of bonuses with the month each is paid), and monthly spending by category. |
-| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, and how much of your next £100 pay rise you'd keep. Feeds Today's cash flow automatically. |
+| **Setup** | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid), and monthly spending by category. |
+| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, the surplus split and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
 | **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. |
@@ -73,8 +73,8 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 All income tax, National Insurance and student loan rates and thresholds live in one
 file per tax year: **`js/config/tax-2026-27.js`** (6 April 2026 – 5 April 2027). It
 includes rest-of-UK and Scottish bands, the personal allowance taper over £100,000,
-employee NI, student loan plans 1, 2, 4, 5 and postgraduate, and links to the
-official sources.
+employee NI, student loan plans 1, 2, 4, 5 and postgraduate (thresholds, interest
+rates and write-off terms), and links to the official sources.
 
 **These figures must be checked against HMRC, gov.scot and gov.uk at the start of
 each tax year.** The Income screen shows a warning once today's date is outside the
@@ -86,12 +86,31 @@ tax year in the file. To update:
    file.
 3. Update the expected values in `tests/tax.test.js` and run `npm test`.
 
+## Student loans
+
+Enter your plan, your **balance** (from your Student Loans Company account) and the
+**year you were first due to repay** (the April after you left your course). The
+projection then adds interest and takes repayments from your pay each month. Once
+the loan is repaid, repayments stop and your take-home pay rises. Any balance left is
+**written off** in April, 25 years after your first repayment year (Plan 1), 30 years
+(Plans 2 and 4, postgraduate) or 40 years (Plan 5). The Income and Future screens and
+the scenario comparison show when it ends. The loan counts as a debt in your net
+worth until then.
+
+Interest rates for the year from 1 September 2026 are in the tax config: RPI 4.1%.
+Plan 2 slides from 4.1% to a temporary 6% cap with income (between £29,385 and
+£52,885). Postgraduate loans are 6%. You can enter your own rate under **Advanced**.
+Rates are reset every September and are held at today's level in projections. Some
+older Plan 1 and Plan 4 loans are written off at 65 instead. Without a balance,
+repayments simply carry on until you retire.
+
 ## How the projection works
 
 Each year, in order:
 
 1. **Income** — salary and bonuses grow with salary growth and are taxed with that
-   year's rules (thresholds frozen or raised with inflation). Salary and workplace
+   year's rules (thresholds frozen or raised with inflation). Student loan repayments
+   stop once the loan is repaid or written off. Salary and workplace
    pension contributions stop at retirement age; State Pension starts at State Pension
    age.
 2. **Growth** — home, cash, investments (after fees) and pension (after fees) grow at
@@ -108,8 +127,8 @@ Each year, in order:
    investments. Anything left is shown as an unfunded shortfall, with a warning.
 
 **Not modelled:** tax on savings and investments, higher-rate relief on extra pension
-contributions, student loan balances and write-off (repayments continue until
-retirement), the pension lump-sum allowance, inheritance, and changes to your mortgage
+contributions, student loan repayments on pension income, holding both an
+undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance, and changes to your mortgage
 after its term. Money moves at the end of each year, so contributions start growing
 the following year.
 
@@ -125,7 +144,7 @@ js/model/scenarios.js      workspace of scenarios: copy, rename, delete, differe
 js/model/sample.js         fictional sample household and example scenarios
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
-                           growth, projection, compare
+                           student loan, growth, projection, compare
 js/ui/*.js                 one file per screen, plus field, chart and DOM helpers
 js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
@@ -142,11 +161,14 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-73 tests cover:
+83 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Student loans:** interest by plan (Plan 2 by income), write-off years, repayment
+  until cleared (then take-home rises), write-off of what's left, balances that grow,
+  and custom rates.
 - **Compound growth and inflation** conversion.
 - **Mortgage amortisation:** payment formula, overpayments, rate changes, the
   overpayment limit, and no term left.

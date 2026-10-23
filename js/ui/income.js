@@ -95,6 +95,7 @@
           input.studentLoanPlan !== 'none' ? `Student loan ${PLAN_LABELS[input.studentLoanPlan]}` : 'No student loan',
         ])),
       breakdownCard(r),
+      studentLoanCard(p, r),
       bandsCard(r),
       h('section', { class: 'card', 'aria-labelledby': 'notes-h' },
         h('h2', { id: 'notes-h' }, 'How this is worked out'),
@@ -142,6 +143,48 @@
           r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
       lumpy ? h('p', { class: 'muted small' },
         `The year is ${12 - bps.length} regular month${12 - bps.length === 1 ? '' : 's'} plus ${bps.map((b) => monthName(b.month)).join(', ')}.`) : null);
+  }
+
+  // Balance, interest and when the loan ends (from the projection).
+  function studentLoanCard(p, r) {
+    const inc = p.income;
+    const plan = inc.studentLoanPlan;
+    if (plan === 'none') return null;
+    const head = h('h2', { id: 'sl-h' }, 'Your student loan');
+    const writeOff = FP.studentLoan.writeOffYear(plan, inc.studentLoanStartYear);
+    if (!FP.studentLoan.tracked(p)) {
+      return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
+        h('p', null, `You\u2019re repaying ${money(r.studentLoan)} a year (${money(r.studentLoan / 12)} a month).`),
+        h('p', { class: 'muted' }, 'Add your balance and the year you were first due to repay (above) to see when your loan will be repaid or written off. Until then, the projection keeps repayments going until you retire.'));
+    }
+    const rate = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, inc.studentLoanRate);
+    const interest = inc.studentLoanBalance * rate / 100;
+    const proj = FP.projection.project(p);
+    const sl = proj.ok ? proj.events.studentLoan : null;
+    let outcome = null;
+    if (sl && sl.clearedRow) {
+      outcome = `On these assumptions you\u2019d repay it in ${sl.clearedRow.year}, at age ${sl.clearedRow.age}${writeOff ? ` \u2014 ${writeOff - sl.clearedRow.year + 1} years before it would be written off` : ''}.`;
+    } else if (sl && sl.writtenOffRow) {
+      const left = FP.projection.toReal(proj.rows[sl.writtenOffRow.y]).studentLoanWrittenOff;
+      outcome = `On these assumptions it wouldn\u2019t be repaid in full: about ${money(left)} (in today\u2019s money) would be written off in April ${writeOff}, at age ${sl.writtenOffAge}.`;
+    } else if (sl) {
+      outcome = `On these assumptions you\u2019d still owe about ${money(FP.projection.toReal(proj.rows[proj.years]).studentLoan)} (today\u2019s money) at ${proj.rows[proj.years].age}.`;
+    }
+    return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
+      h('dl', { class: 'rows' }, [
+        ['Balance today', money(inc.studentLoanBalance)],
+        ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && inc.studentLoanRate == null ? ' (depends on income)' : ''}`],
+        ['Interest this year (about)', money(interest)],
+        ['Repaying this year', money(r.studentLoan)],
+        ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
+      ].map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
+      r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
+      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Setup to project when it ends.'),
+      chips([
+        `Interest rates for ${FP.taxConfig.taxYear} \u2014 reset each September`,
+        'Rates held at today\u2019s level in projections',
+        'Check your balance and dates with the Student Loans Company',
+      ]));
   }
 
   function bandsCard(r) {

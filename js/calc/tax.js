@@ -253,7 +253,7 @@
     });
     const studentLoans = {};
     Object.entries(cfg.studentLoans).forEach(([plan, rule]) => {
-      studentLoans[plan] = { ...rule, threshold: up(rule.threshold) };
+      studentLoans[plan] = { ...rule, threshold: up(rule.threshold), interestUpperThreshold: up(rule.interestUpperThreshold) };
     });
     return {
       ...cfg,
