@@ -18,9 +18,9 @@
       surplusMonthly: today.cashFlow.surplus,
       netWorthToday: today.netWorth,
       projection: proj,
-      ok: proj.ok,
+      ok: proj.ok && FP.summary.checklist(profile).ready,
     };
-    if (!proj.ok) return out;
+    if (!out.ok) return out;
     const rows = real ? proj.rows.map(FP.projection.toReal) : proj.rows;
     const at = (row) => (row ? rows[row.y] : null);
     const ev = proj.events;
@@ -33,6 +33,7 @@
       mortgageFreeAge: ev.hasMortgage ? (ev.mortgageFree ? ev.mortgageFree.age : null) : undefined,
       runsOutAge: ev.runsOut ? ev.runsOut.age : null,
       studentLoan: ev.studentLoan,
+      retirementSpend: FP.projection.retirementSpend(profile),
     };
   }
 

@@ -150,5 +150,35 @@
     return `£${Math.round(n).toLocaleString('en-GB')}`;
   }
 
-  FP.summary = { compute, ASSET_ITEMS, debtRate };
+  /*
+   * What's still missing from the profile. Blocking items stop the projection
+   * being shown (without them it would be badly wrong); the others are worth
+   * adding but can genuinely be zero. `target` is where to enter it in Setup.
+   */
+  function checklist(profile) {
+    const a = profile.assumptions;
+    const age = profile.about.age;
+    const working = age == null || age < a.retirementAge;
+    const spend = profile.spending.reduce((t, r) => t + num(r.monthly), 0);
+    const items = [
+      { id: 'age', label: 'Your age', done: age != null, blocking: true, target: 'about.age',
+        why: 'Needed to work out the years to retirement.' },
+      { id: 'spending', label: 'Your monthly spending', done: spend > 0, blocking: true, target: 'spending',
+        why: 'Without it, everything you take home would look like savings.' },
+      { id: 'salary', label: 'Your salary', done: !working || num(profile.income.grossSalary) > 0, blocking: false, target: 'income.grossSalary',
+        why: 'Leave it blank if you\u2019re not working.' },
+      { id: 'pension', label: 'Your pension pots', done: num(profile.assets.pension) > 0, blocking: false, target: 'assets.pension',
+        why: 'Fine to leave blank if you don\u2019t have one yet.' },
+      { id: 'cash', label: 'Your cash savings', done: num(profile.assets.cashSavings) > 0, blocking: false, target: 'assets.cashSavings',
+        why: 'Used for your emergency fund.' },
+    ];
+    return {
+      items,
+      ready: items.every((i) => i.done || !i.blocking),
+      blocking: items.filter((i) => i.blocking && !i.done),
+      optional: items.filter((i) => !i.blocking && !i.done),
+    };
+  }
+
+  FP.summary = { compute, checklist, ASSET_ITEMS, debtRate };
 })(globalThis.FP = globalThis.FP || {});

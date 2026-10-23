@@ -65,7 +65,7 @@ function profile() {
   p.spending = [];
   p.income.grossSalary = 50000;
   Object.assign(p.assumptions, { salaryGrowth: 0, savingsRate: 0, investmentReturn: 0, investmentFees: 0 });
-  Object.assign(p.leftover, { emergency: 0, cash: 30 });
+  Object.assign(p.leftover, { emergency: 0, cash: 40, mortgage: 0 });
   return p;
 }
 const project = (p) => FP.projection.project(p, { startYear: 2026, startMonth: 10 });
@@ -78,7 +78,7 @@ test('projection: savings feed the right balances and reduce the surplus', () =>
   close(r.regularSaving, 7200);
   close(r.surplus, plain.surplus - 7200);
   // Surplus split (30% cash, 50% invest) still applies to what's left
-  close(r.cash, 1200 + r.surplus * 0.4); // no mortgage: its 10% goes to cash too
+  close(r.cash, 1200 + r.surplus * 0.4);
   // £6,000 of ISA savings, then the split's investment share fills the rest of the £20,000 allowance
   close(r.isa, 20000);
   close(r.gia, 6000 + r.surplus * 0.5 - 20000);

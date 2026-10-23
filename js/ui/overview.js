@@ -12,7 +12,8 @@
     const real = FP.screens.future.getView() === 'real';
     const pay = FP.tax.forProfile(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
-    const proj = FP.projection.project(p);
+    const ready = FP.summary.checklist(p).ready;
+    const proj = ready ? FP.projection.project(p) : { ok: false };
     const rows = proj.ok ? (real ? proj.rows.map(FP.projection.toReal) : proj.rows) : null;
     const ev = proj.ok ? proj.events : null;
     const a = p.assumptions;
@@ -26,12 +27,21 @@
     const tiles = [
       tile('#income', 'Take-home pay', `${money(pay.takeHomeMonthly)}`, 'a month'),
       cf.savingsMonthly > 0 ? tile('#today', 'Regular savings', money(cf.savingsMonthly), 'a month') : null,
-      tile('#setup', cf.surplus < 0 ? 'Monthly shortfall' : 'Left over each month', money(Math.abs(cf.surplus)),
+      tile('#setup/leftover', cf.surplus < 0 ? 'Monthly shortfall' : 'Left over each month', money(Math.abs(cf.surplus)),
         cf.savingsMonthly > 0 ? 'after spending, debts and saving' : 'after spending and debts', cf.surplus < 0),
     ].filter(Boolean);
     if (proj.ok) {
       const retire = ev.retirement ? rows[ev.retirement.y] : null;
       const end = rows[ev.end.y];
+      const rs = FP.projection.retirementSpend(p);
+      if (rs) {
+        const short = rs.factor < 1;
+        tiles.push(tile('#future', short ? 'Retirement spending' : 'You could spend in retirement',
+          `${money(rs.monthly)} a month`,
+          short
+            ? `lasts to ${rs.endAge}: less than the ${money(rs.now)} you spend now`
+            : `to age ${rs.endAge}, today\u2019s money (you spend ${money(rs.now)} now)`, short));
+      }
       if (retire) {
         tiles.push(tile('#future', `Net worth at ${retire.age}`, money(retire.netWorth), `at retirement, ${moneyNote}`));
         tiles.push(tile('#future', `Pension pot at ${retire.age}`, money(retire.pension), moneyNote));
@@ -49,28 +59,63 @@
       }
       tiles.push(ev.runsOut
         ? tile('#future', 'Money runs short', `Age ${ev.runsOut.age}`, String(ev.runsOut.year), true)
-        : tile('#future', `Net worth at ${end.age}`, money(end.netWorth), moneyNote));
+        : tile('#future', `Net worth at ${end.age}`, money(end.netWorth), end.age < a.endAge ? `end of the 40-year projection, ${moneyNote}` : moneyNote));
     }
 
     FP.dom.add(root,
       h('h1', null, 'Overview'),
       h('p', { class: 'lead' }, 'Your plan at a glance. Tap any figure for the detail, or use the tabs below.'),
-      notices.length ? h('ul', { class: 'notices' }, notices.map((w) =>
-        h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
+      noticeList(notices),
+      FP.backup.nudge(ctx),
       h('a', { class: 'card hero hero-link', href: '#today' },
         h('span', { class: 'eyebrow' }, 'Net worth today'),
         h('span', { class: `hero-number${today.netWorth < 0 ? ' negative' : ''}` }, money(today.netWorth)),
         h('span', { class: 'muted' }, `${money(today.assets.total)} owned − ${money(today.liabilities.total)} owed`),
         h('span', { class: 'go', 'aria-hidden': 'true' }, '›')),
+      FP.checklist.card(p),
       h('div', { class: 'tile-grid' }, tiles),
-      proj.ok ? chartCard(rows, ev, a, moneyNote) : h('section', { class: 'card' },
-        h('p', null, proj.message), h('a', { href: '#setup' }, 'Go to Setup')),
+      ready ? FP.checklist.note(p) : null,
+      proj.ok ? chartCard(rows, ev, a, moneyNote) : ready ? h('section', { class: 'card' },
+        h('p', null, proj.message), h('a', { href: '#setup' }, 'Go to Setup')) : null,
+      ready ? ideasCard(p) : null,
       h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
         h('h2', { id: 'next-h' }, 'Explore'),
         h('ul', null,
           link('#setup', 'Edit your details', 'Change any figure, then calculate again'),
           link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
           link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`))));
+  }
+
+  // The first notice in full; any others behind "N more".
+  function noticeList(notices) {
+    if (!notices.length) return null;
+    const item = (w) => h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text);
+    const sorted = notices.slice().sort((x, y) => (x.level === 'warn' ? 0 : 1) - (y.level === 'warn' ? 0 : 1));
+    return [
+      h('ul', { class: 'notices' }, item(sorted[0])),
+      sorted.length > 1 ? h('details', { class: 'more-notices' },
+        h('summary', null, `${sorted.length - 1} more ${sorted.length === 2 ? 'note' : 'notes'}`),
+        h('ul', { class: 'notices' }, sorted.slice(1).map(item))) : null,
+    ];
+  }
+
+  function firstSentence(text) {
+    const m = text.match(/^.*?[.!?](?=\s|$)/);
+    return m ? m[0] : text;
+  }
+
+  // The ideas you haven't ticked off or hidden yet, most pressing first.
+  function ideasCard(p) {
+    const r = FP.suggest.analyse(p);
+    const marks = p.ideas || {};
+    const open = r.suggestions.filter((x) => x.tone !== 'good' && !marks[x.id])
+      .sort((x, y) => (x.tone === 'warn' ? 0 : 1) - (y.tone === 'warn' ? 0 : 1));
+    if (!open.length) return null;
+    return h('section', { class: 'card next-steps', 'aria-labelledby': 'ideas-h' },
+      h('h2', { id: 'ideas-h' }, `${open.length} ${open.length === 1 ? 'idea' : 'ideas'} to look at`),
+      h('ul', null, open.slice(0, 3).map((x) => h('li', null, h('a', { href: '#setup/ideas' },
+        h('strong', null, `${x.tone === 'warn' ? '! ' : ''}${x.title}`), h('span', null, firstSentence(x.text)), h('span', { class: 'go', 'aria-hidden': 'true' }, '›'))))),
+      h('p', { class: 'muted small' }, open.length > 3 ? `And ${open.length - 3} more. ` : '', h('a', { href: '#setup/ideas' }, 'See all ideas'), ' \u2014 general rules of thumb, not advice.'));
   }
 
   function tile(href, label, value, sub, warn) {

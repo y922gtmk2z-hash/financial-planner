@@ -103,3 +103,22 @@ test('compare: real values are nominal divided by inflation', () => {
   const f = nominal.projection.rows[nominal.end.y].inflationFactor;
   assert.ok(Math.abs(real.end.netWorth - nominal.end.netWorth / f) < 0.01);
 });
+
+test('what-if presets copy the baseline with one change, keeping the scenario you are on', () => {
+  const ws = FP.sampleWorkspace();
+  ws.scenarios = ws.scenarios.slice(0, 1);
+  const base = ws.scenarios[0];
+  const c = FP.scenarios.fromPreset(ws, 'retireEarlier');
+  assert.equal(c.name, `Retire at ${base.profile.assumptions.retirementAge - 2}`);
+  assert.equal(c.profile.assumptions.retirementAge, base.profile.assumptions.retirementAge - 2);
+  assert.equal(ws.activeId, base.id);
+  const diffs = FP.scenarios.differences(base.profile, c.profile);
+  assert.deepEqual(diffs.map((d) => d.label), ['Retirement age']);
+  const o = FP.scenarios.fromPreset(ws, 'overpay');
+  assert.equal(o.profile.mortgage.monthlyOverpayment, base.profile.mortgage.monthlyOverpayment + 200);
+  const w = FP.scenarios.fromPreset(ws, 'weakerMarkets');
+  assert.equal(w.profile.assumptions.investmentReturn, base.profile.assumptions.investmentReturn - 2);
+  // Not offered when it doesn't apply.
+  base.profile.mortgage.balance = 0;
+  assert.equal(FP.scenarios.fromPreset(ws, 'overpay'), null);
+});

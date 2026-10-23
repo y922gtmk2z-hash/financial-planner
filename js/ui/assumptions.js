@@ -35,8 +35,24 @@
     });
   }
 
+  // Assumptions that are entered in Setup (e.g. your mortgage rate) are shown
+  // here with a link, so each figure has one place to change it.
+  const IN_SETUP = new Set(FP.profile.SECTIONS.flatMap((sec) => sec.fields)
+    .filter((f) => f.path.startsWith('assumptions.')).map((f) => f.path.slice(12)));
+
+  function setupRow(d, p) {
+    const v = p.assumptions[d.key];
+    const value = v == null ? 'Not set' : d.unit === 'money' ? FP.dom.money(v) : `${v}${A.UNIT_SUFFIX[d.unit] ? ` ${A.UNIT_SUFFIX[d.unit]}`.replace(' %', '%') : ''}`;
+    return h('div', { class: 'field in-setup' },
+      h('dl', { class: 'facts' }, h('div', null, h('dt', null, d.label),
+        h('dd', null, value, ' ', h('a', { href: `#setup/assumptions.${d.key}`, class: 'edit-link', 'aria-label': `Change ${d.label.toLowerCase()} in Setup` }, 'Change in Setup')))),
+      h('p', { class: 'help' }, d.help),
+      h('p', { class: 'meta' }, `Default ${defaultText(d)} \u00b7 set ${FP.dom.date(d.setOn)}`));
+  }
+
   function row(d, ctx, onChange) {
     const p = ctx.profile();
+    if (IN_SETUP.has(d.key)) return setupRow(d, p);
     const field = { ...FP.profile.assumptionField(d.key), help: d.help, suffix: A.UNIT_SUFFIX[d.unit] };
     const meta = h('p', { class: 'meta' });
     const holder = h('div');

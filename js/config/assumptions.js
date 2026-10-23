@@ -67,7 +67,7 @@
     {
       key: 'mortgageRate', group: 'borrowing', label: 'Mortgage interest rate', unit: 'pct',
       default: 4.5, min: 0, max: 25, setOn: SET_ON,
-      help: 'The rate on your mortgage today. Also shown in Setup — both edit the same value.',
+      help: 'The rate on your mortgage today. Entered in Setup.',
     },
     {
       key: 'mortgageRateChangeYear', group: 'borrowing', label: 'Rate changes after (years)', unit: 'year',
@@ -90,14 +90,23 @@
       help: 'Warn when yearly overpayments exceed this share of the balance. 10% is a common early-repayment-charge limit — check your own deal.',
     },
     {
+      key: 'capOverpayments', group: 'borrowing', label: 'Overpaying from leftover money', unit: 'choice',
+      default: 'limit', setOn: SET_ON, advanced: true,
+      options: [
+        { value: 'limit', label: 'Stay within the overpayment limit' },
+        { value: 'none', label: 'No limit' },
+      ],
+      help: 'With the limit, the mortgage share of your leftover money stops at the overpayment warning level each year, and the rest goes to your other choices. Your fixed monthly overpayment in Setup isn\u2019t limited.',
+    },
+    {
       key: 'employeePensionPct', group: 'pension', label: 'Your pension contribution', unit: 'pctOfPay',
       default: 5, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share of gross salary you pay into your pension. Also shown in Setup.',
+      help: 'Share of gross salary you pay into your pension. Entered in Setup.',
     },
     {
       key: 'employerPensionPct', group: 'pension', label: 'Employer pension contribution', unit: 'pctOfPay',
       default: 3, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share of gross salary your employer adds. Also shown in Setup.',
+      help: 'Share of gross salary your employer adds. Entered in Setup.',
     },
     {
       key: 'retirementAge', group: 'pension', label: 'Retirement age', unit: 'age',

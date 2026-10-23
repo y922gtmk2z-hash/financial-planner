@@ -8,6 +8,7 @@
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
   let saveTimer = null;
+  let changedSinceLoad = false;
 
   const main = document.getElementById('main');
   const banner = document.getElementById('sample-banner');
@@ -26,6 +27,7 @@
       ctx.changed();
     },
     changed() {
+      changedSinceLoad = true;
       clearTimeout(saveTimer);
       status.textContent = 'Saving…';
       saveTimer = setTimeout(save, 300);
@@ -53,6 +55,11 @@
   function save() {
     clearTimeout(saveTimer);
     const ok = FP.store.save(workspace);
+    // When you last changed something (for the backup reminder).
+    if (ok && changedSinceLoad) {
+      FP.store.pref('lastChange', new Date().toISOString());
+      changedSinceLoad = false;
+    }
     status.textContent = ok ? 'Saved on this device' : 'Not saved — browser storage unavailable';
     status.classList.toggle('bad', !ok);
   }
@@ -70,7 +77,7 @@
     banner.hidden = !isSample();
     if (banner.hidden) return;
     FP.dom.fill(banner,
-      h('p', null, h('strong', null, 'You’re looking at fictional sample data. '), 'Edit it in Setup, or start with an empty form.'),
+      h('p', null, h('strong', null, 'This is a fictional example household. '), 'Look around, then put in your own figures.'),
       h('div', { class: 'button-row' },
         h('button', {
           type: 'button', class: 'small',
@@ -81,20 +88,23 @@
             location.hash = '#setup';
             route();
           },
-        }, 'Start with my own data'),
+        }, 'Start with my own figures'),
         h('button', {
-          type: 'button', class: 'small secondary',
+          type: 'button', class: 'link',
           onclick: () => {
             workspace.scenarios.forEach((s) => { s.profile.isSample = false; });
             save();
             drawBanner();
           },
-        }, 'Keep these figures as mine')));
+        }, 'or edit this example as mine')));
   }
 
   // Shows which scenario every screen is editing, and lets you switch.
+  // Hidden until there's more than one scenario (the Scenarios tab adds them).
   function drawScenarioBar() {
     const list = workspace.scenarios;
+    scenarioBar.hidden = list.length < 2;
+    if (scenarioBar.hidden) return;
     const current = FP.scenarios.active(workspace);
     const select = h('select', { id: 'scenario-select', 'aria-label': 'Scenario you are viewing and editing' },
       list.map((s, i) => h('option', { value: s.id, selected: s.id === current.id }, i === 0 ? `${s.name} (baseline)` : s.name)));
@@ -102,13 +112,32 @@
     FP.dom.fill(scenarioBar,
       h('label', { for: 'scenario-select', class: 'scenario-label' }, 'Scenario'),
       h('div', { class: 'input-wrap scenario-select' }, select),
-      h('a', { href: '#scenarios', class: 'header-link' }, list.length > 1 ? 'Compare' : 'Add scenario'));
+      h('a', { href: '#scenarios', class: 'header-link' }, 'Compare'));
     scenarioBar.classList.toggle('not-baseline', !FP.scenarios.isBaseline(workspace, current.id));
   }
 
+  // "#setup/about.age" or "#setup/leftover": a screen, then optionally a
+  // field (by its profile path) or a section (by id) to scroll to.
+  function parseHash() {
+    const [name, ...rest] = (location.hash || '#overview').slice(1).split('/');
+    return { id: ROUTES.includes(name) ? name : 'overview', target: rest.length ? decodeURIComponent(rest.join('/')) : null };
+  }
+
+  function goToTarget(target) {
+    const el = document.getElementById(target)
+      || main.querySelector(`[data-path="${CSS.escape(target)}"]`);
+    if (!el) return false;
+    el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true })); // e.g. Setup opens the right step
+    for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    el.scrollIntoView({ block: 'center' });
+    const input = el.matches('input, select, button') ? el : el.querySelector('input[inputmode], select') || el.querySelector('input');
+    if (input) input.focus({ preventScroll: true });
+    else { el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true }); }
+    return true;
+  }
+
   function route() {
-    const name = (location.hash || '#overview').slice(1);
-    const id = ROUTES.includes(name) ? name : 'overview';
+    const { id, target } = parseHash();
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -118,14 +147,15 @@
     main.replaceChildren();
     FP.screens[id].render(main, ctx);
     document.title = `${FP.screens[id].title} · Finance planner`;
+    return target;
   }
 
   window.addEventListener('hashchange', () => {
     save();
-    route();
+    const target = route();
     window.scrollTo(0, 0);
     header.classList.remove('is-hidden');
-    main.focus({ preventScroll: true });
+    if (!(target && goToTarget(target))) main.focus({ preventScroll: true });
   });
 
   // The header (with Setup) stays pinned to the top, slides away while you
@@ -138,9 +168,19 @@
     lastY = y;
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
+  // Lets things pinned under the header (Setup's steps) sit just below it.
+  const setHeaderHeight = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  window.addEventListener('resize', setHeaderHeight);
+  setHeaderHeight();
   window.addEventListener('pagehide', save);
+
+  // The full disclaimer shows on your first visit; after that it's one line (tap for more).
+  const disclaimer = document.getElementById('disclaimer');
+  disclaimer.open = !FP.store.pref('seenDisclaimer');
+  FP.store.pref('seenDisclaimer', '1');
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : 'Sample data';
   if (loaded.error) toast(loaded.error);
-  route();
+  const firstTarget = route();
+  if (firstTarget) goToTarget(firstTarget);
 })(globalThis.FP = globalThis.FP || {});

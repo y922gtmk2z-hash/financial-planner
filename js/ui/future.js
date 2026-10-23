@@ -43,12 +43,26 @@
         value: view,
         onChange: (v) => { view = v; setView(v); draw(); },
       })),
-      results,
-      FP.leftoverCard.render(ctx, { onChange: draw }));
+      leftoverFold(ctx, draw),
+      results);
     draw();
   }
 
+  // The leftover money card, folded away above the results: open it to change
+  // what you do with the money and watch the projection update.
+  function leftoverFold(ctx, draw) {
+    const p = ctx.profile();
+    if (!FP.summary.checklist(p).ready) return null;
+    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
+    if (!(left > 0)) return null;
+    return h('details', { class: 'leftover-fold' },
+      h('summary', null, h('span', null, 'Your leftover money: ', h('strong', null, `${FP.dom.money(left)} a month`)), h('span', { class: 'muted small' }, 'Change what you do with it')),
+      FP.leftoverCard.render(ctx, { onChange: draw }));
+  }
+
   function resultsView(p, view) {
+    const missing = FP.checklist.card(p);
+    if (missing) return missing;
     const r = FP.projection.project(p);
     if (!r.ok) {
       return h('section', { class: 'card' }, h('p', null, r.message), h('a', { href: '#setup' }, 'Go to Setup'));
@@ -97,6 +111,15 @@
         : tile(`Net worth at ${end.age}`, money(end.netWorth), String(end.year)),
     ].filter(Boolean);
 
+    // Net worth if investment and pension returns are 2 points a year lower or higher.
+    const range = (shift) => {
+      const q = JSON.parse(JSON.stringify(p));
+      q.assumptions.investmentReturn += shift;
+      q.assumptions.pensionGrowth += shift;
+      const rr = FP.projection.project(q);
+      return (real ? rr.rows.map(FP.projection.toReal) : rr.rows).map((x) => x.netWorth);
+    };
+    const band = { label: 'Returns \u00b12 points', color: '--series-7', low: range(-2), high: range(2) };
     const netSeries = [
       { label: 'Net worth', color: '--series-7', values: rows.map((x) => x.netWorth) },
       { label: 'Home equity', color: '--series-1', values: rows.map((x) => x.equity) },
@@ -114,13 +137,14 @@
 
       h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
         h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
-        FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))),
+        FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))
+          .concat({ label: 'If returns are 2 points lower or higher', color: '--series-7', band: true })),
         FP.chart.timeChart({
-          type: 'line', series: netSeries, markers,
+          type: 'line', series: netSeries, markers, band,
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
         }),
-        h('p', { class: 'muted small' }, 'Ages along the bottom. Home equity = home value minus mortgage.'),
+        h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${money(band.low[band.low.length - 1])} to ${money(band.high[band.high.length - 1])}). Real returns vary from year to year, so the actual path could fall outside it.`),
         keyAssumptions),
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },
@@ -195,7 +219,8 @@
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
         h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before your leftover money is shared out, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
-        h('li', null, `Your emergency fund share goes to cash until your cash savings cover ${leftover.emergencyMonths} months of that year\u2019s spending, mortgage and debt payments. Once it\u2019s full, the share goes to your other choices in proportion (or to cash if there are none).`),
+        h('li', null, `Your emergency fund share goes to cash until your cash savings cover ${leftover.emergencyMonths} months of that year\u2019s spending, mortgage and debt payments. Extra debt payments clear the most expensive debt first. ${a.capOverpayments === 'none' ? 'Mortgage overpayments from leftover money have no limit.' : `Mortgage overpayments from leftover money stay within ${a.overpaymentLimitPct}% of the balance a year.`} When a choice can\u2019t take its share (the fund is full, a debt is paid off, or you\u2019ve retired), the share goes to your other choices in proportion, or to cash if there are none.`),
+        h('li', null, `\u201cYou could spend in retirement\u201d on Overview is the most you could spend each month from retirement, in today\u2019s money, so that your money lasts to age ${a.endAge} (this runs past the 40-year limit of the charts). It doesn\u2019t sell your home, and your mortgage and debt payments are on top.`),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
         h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
   }

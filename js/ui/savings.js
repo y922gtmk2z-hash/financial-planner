@@ -8,7 +8,7 @@
   const { h, money } = FP.dom;
 
   function render(ctx) {
-    const card = h('section', { class: 'card', 'aria-labelledby': 'sec-savings' });
+    const card = h('section', { class: 'card', id: 'savings', 'aria-labelledby': 'sec-savings' });
     const totals = h('div', { class: 'savings-totals', role: 'status' });
 
     const drawTotals = () => {

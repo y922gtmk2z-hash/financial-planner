@@ -31,6 +31,7 @@
         ctx.storageError ? h('p', { class: 'notice warn' }, ctx.storageError) : null),
       h('section', { class: 'card' },
         h('h2', null, 'Back up or move your data'),
+        backupStatus(),
         h('div', { class: 'button-row' },
           h('button', { type: 'button', onclick: () => exportFile(ctx) }, 'Export to a file'),
           h('label', { for: 'import-file', class: 'button secondary', tabindex: '0',
@@ -60,6 +61,14 @@
         h('p', { class: 'muted' }, '“Clear all data” removes everything this planner saved in your browser and leaves you with an empty form.')));
   }
 
+  function backupStatus() {
+    const b = FP.backup.status();
+    return h('p', { class: b.due ? 'notice info' : 'muted' },
+      b.lastExport
+        ? `Last exported on ${FP.dom.date(b.lastExport.slice(0, 10))}${b.changedSince ? ', and you\u2019ve made changes since.' : '.'}`
+        : 'You haven\u2019t exported a backup from this browser yet.');
+  }
+
   function exportFile(ctx) {
     const blob = new Blob([FP.store.exportJson(ctx.workspace())], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -67,9 +76,43 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
+    FP.store.pref('lastExport', new Date().toISOString());
+    FP.store.pref('backupNudgeUntil', null);
+    ctx.rerender();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  const DAY = 24 * 60 * 60 * 1000;
+
+  /*
+   * Whether a backup is due: you've changed something since your last export
+   * (or never exported), and that export is over 30 days old.
+   */
+  function status(now) {
+    now = now || Date.now();
+    const lastExport = FP.store.pref('lastExport');
+    const lastChange = FP.store.pref('lastChange');
+    const changedSince = !!lastChange && (!lastExport || lastChange > lastExport);
+    const old = !lastExport || now - Date.parse(lastExport) > 30 * DAY;
+    return { lastExport, lastChange, changedSince, due: changedSince && old };
+  }
+
+  // A gentle reminder on Overview, which you can put off for 30 days.
+  function nudge(ctx) {
+    const until = FP.store.pref('backupNudgeUntil');
+    if (!status().due || (until && Date.now() < Date.parse(until))) return null;
+    if (ctx.workspace().scenarios.some((sc) => sc.profile.isSample)) return null;
+    const el = h('p', { class: 'notice info backup-nudge' },
+      h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
+      h('span', null, 'Your figures are saved only in this browser. ', h('a', { href: '#data' }, 'Export a backup'), ' so you don\u2019t lose them. ',
+        h('button', {
+          type: 'button', class: 'link',
+          onclick: () => { FP.store.pref('backupNudgeUntil', new Date(Date.now() + 30 * DAY).toISOString()); el.remove(); },
+        }, 'Not now')));
+    return el;
+  }
+
+  FP.backup = { status, nudge };
   FP.screens = FP.screens || {};
   FP.screens.data = { title: 'Data', render };
 })(globalThis.FP = globalThis.FP || {});

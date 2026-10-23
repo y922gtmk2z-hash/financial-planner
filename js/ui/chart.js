@@ -101,6 +101,7 @@
    *   xTitle: (i) => 'Age 38 (2026)'    (tooltip heading)
    *   series: [{ label, color, values: [] }]   (area: stacked in order; negatives stack downward)
    *   markers: [{ index, label }]        (dashed vertical lines)
+   *   band: { label, color, low: [], high: [] }   (line only: a shaded range behind the lines)
    *   ariaLabel
    * }
    */
@@ -140,6 +141,13 @@
         min = Math.min(min, stacks[si][i][1]);
         max = Math.max(max, stacks[si][i][1]);
       });
+    }
+    const band = opts.type === 'line' && opts.band ? opts.band : null;
+    if (band) {
+      for (let i = 0; i < n; i += 1) {
+        if (band.low[i] != null) min = Math.min(min, band.low[i]);
+        if (band.high[i] != null) max = Math.max(max, band.high[i]);
+      }
     }
     let ticks = niceTicks(min, max, 4);
     let yMin = ticks[0];
@@ -204,6 +212,14 @@
         svg.appendChild(lbl);
       });
 
+      // Range band, behind the lines
+      if (band) {
+        let d = '';
+        for (let i = 0; i < n; i += 1) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(band.high[i]).toFixed(1)}`;
+        for (let i = n - 1; i >= 0; i -= 1) d += `L${x(i).toFixed(1)},${y(band.low[i]).toFixed(1)}`;
+        svg.appendChild(s('path', { d: `${d}Z`, fill: `var(${band.color})`, class: 'band' }));
+      }
+
       // Series
       opts.series.forEach((ser, si) => {
         const pts = stacks[si];
@@ -254,6 +270,7 @@
             h('span', { class: 'swatch', style: `background:var(${it.ser.color})` }),
             h('span', { class: 'tip-label' }, it.ser.label),
             h('span', { class: 'tip-value' }, it.v == null ? '\u2014' : FP.dom.money(it.v))))),
+          band ? h('p', { class: 'tip-total' }, h('span', null, band.label), h('span', null, `${FP.dom.money(band.low[active])} \u2013 ${FP.dom.money(band.high[active])}`)) : null,
           opts.type === 'area' && opts.totalLabel
             ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, FP.dom.money(items.reduce((t, it) => t + (it.v || 0), 0))))
             : null);
@@ -304,7 +321,7 @@
   // Legend without values (for charts over time).
   function keys(items) {
     return h('ul', { class: 'legend legend-inline' }, items.map((it) => h('li', null,
-      h('span', { class: `swatch${it.line ? ' swatch-line' : ''}`, style: `background:var(${it.color})`, 'aria-hidden': 'true' }),
+      h('span', { class: `swatch${it.line ? ' swatch-line' : ''}${it.band ? ' swatch-band' : ''}`, style: `background:var(${it.color})`, 'aria-hidden': 'true' }),
       h('span', { class: 'legend-label' }, it.label))));
   }
 

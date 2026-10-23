@@ -153,8 +153,69 @@
     return out;
   }
 
+  const gbp = (n) => `\u00a3${Math.round(n).toLocaleString('en-GB')}`;
+
+  /*
+   * One-tap what-ifs, each a change to a copy of the baseline.
+   * applies(p): whether it makes sense for this profile; apply(p) changes the copy.
+   */
+  const PRESETS = [
+    {
+      id: 'retireEarlier', label: 'Retire 2 years earlier',
+      applies: (p) => p.about.age != null && p.assumptions.retirementAge - 2 > p.about.age,
+      name: (p) => `Retire at ${p.assumptions.retirementAge - 2}`,
+      apply: (p) => { p.assumptions.retirementAge -= 2; },
+    },
+    {
+      id: 'workLonger', label: 'Work 2 years longer',
+      applies: (p) => p.about.age != null && p.assumptions.retirementAge + 2 < p.assumptions.endAge,
+      name: (p) => `Retire at ${p.assumptions.retirementAge + 2}`,
+      apply: (p) => { p.assumptions.retirementAge += 2; },
+    },
+    {
+      id: 'overpay', label: 'Overpay the mortgage £200 a month more',
+      applies: (p) => (p.mortgage.balance || 0) > 0,
+      name: (p) => `Overpay ${gbp((p.mortgage.monthlyOverpayment || 0) + 200)} a month`,
+      apply: (p) => { p.mortgage.monthlyOverpayment = (p.mortgage.monthlyOverpayment || 0) + 200; },
+    },
+    {
+      id: 'spendLess', label: 'Spend 10% less',
+      applies: (p) => p.spending.some((r) => r.monthly > 0),
+      name: () => 'Spend 10% less',
+      apply: (p) => { p.spending.forEach((r) => { r.monthly = Math.round((r.monthly || 0) * 0.9); }); },
+    },
+    {
+      id: 'payRise', label: '10% pay rise',
+      applies: (p) => (p.income.grossSalary || 0) > 0,
+      name: (p) => `Pay rise to ${gbp(p.income.grossSalary * 1.1)}`,
+      apply: (p) => { p.income.grossSalary = Math.round(p.income.grossSalary * 1.1); },
+    },
+    {
+      id: 'weakerMarkets', label: 'Weaker markets (returns 2 points lower)',
+      applies: () => true,
+      name: () => 'Weaker markets',
+      apply: (p) => {
+        p.assumptions.investmentReturn -= 2;
+        p.assumptions.pensionGrowth -= 2;
+      },
+    },
+  ];
+
+  // Adds a what-if as a copy of the baseline, keeping the scenario you're on. Returns it, or null.
+  function fromPreset(ws, presetId) {
+    const preset = PRESETS.find((x) => x.id === presetId);
+    const base = ws.scenarios[0];
+    if (!preset || !preset.applies(base.profile) || ws.scenarios.length >= MAX_SCENARIOS) return null;
+    const keep = ws.activeId;
+    const copy = clone(ws, base.id, preset.name(base.profile));
+    preset.apply(copy.profile);
+    copy.profile.isSample = false;
+    ws.activeId = keep;
+    return copy;
+  }
+
   FP.scenarios = {
-    MAX_SCENARIOS, fromProfile, normalise, find, active, isBaseline,
-    clone, rename, remove, setActive, differences,
+    MAX_SCENARIOS, PRESETS, fromProfile, normalise, find, active, isBaseline,
+    clone, fromPreset, rename, remove, setActive, differences,
   };
 })(globalThis.FP = globalThis.FP || {});

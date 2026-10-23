@@ -15,7 +15,7 @@
    */
   function render(ctx, opts) {
     opts = opts || {};
-    const card = h('section', { class: 'card leftover', 'aria-labelledby': 'leftover-h' });
+    const card = h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' });
     const headline = h('div', { class: 'leftover-amount', role: 'status', 'aria-live': 'polite' });
     const rows = h('div', { class: 'leftover-rows' });
     const status = h('p', { class: 'split-status', role: 'status' });
@@ -110,9 +110,32 @@
       }
       suggested.hidden = !r.split;
 
-      FP.dom.fill(ideas, r.suggestions.map((s) => h('li', { class: `idea ${s.tone}` },
+      drawIdeas(r.suggestions);
+    }
+
+    // Ideas you can tick off or hide; those go into a folded list you can bring back from.
+    function drawIdeas(list) {
+      const p = ctx.profile();
+      const marks = p.ideas || (p.ideas = {});
+      const mark = (id, v) => {
+        if (v) marks[id] = v; else delete marks[id];
+        ctx.changed();
+        drawIdeas(list);
+      };
+      const open = list.filter((s) => s.tone === 'good' || !marks[s.id]);
+      const put = list.filter((s) => s.tone !== 'good' && marks[s.id]);
+      const idea = (s, actions) => h('li', { class: `idea ${s.tone}` },
         h('span', { class: 'idea-icon', 'aria-hidden': 'true' }, TONE_ICON[s.tone]),
-        h('div', null, h('strong', null, s.title), h('p', null, s.text)))));
+        h('div', null, h('strong', null, s.title), h('p', null, s.text), actions));
+      FP.dom.fill(ideas,
+        open.map((s) => idea(s, s.tone === 'good' ? null : h('div', { class: 'idea-actions' },
+          h('button', { type: 'button', class: 'link', onclick: () => mark(s.id, 'done'), 'aria-label': `Mark \u201c${s.title}\u201d as done` }, '\u2713 Done'),
+          h('button', { type: 'button', class: 'link muted', onclick: () => mark(s.id, 'hidden'), 'aria-label': `Hide \u201c${s.title}\u201d` }, 'Not for me')))),
+        put.length ? h('li', { class: 'ideas-put-away' }, h('details', null,
+          h('summary', null, `${put.length} done or hidden`),
+          h('ul', { class: 'ideas' }, put.map((s) => idea(s, h('div', { class: 'idea-actions' },
+            h('span', { class: 'muted small' }, marks[s.id] === 'done' ? '\u2713 Done' : 'Hidden'),
+            h('button', { type: 'button', class: 'link', onclick: () => mark(s.id, null) }, 'Bring back'))))))) : null);
     }
 
     FP.dom.fill(card,
@@ -126,6 +149,7 @@
       h('h3', null, 'Ideas based on your figures'),
       h('p', { class: 'help' }, 'General rules of thumb to consider — not financial advice.'),
       ideas);
+    ideas.id = 'ideas';
     drawFields();
     refresh();
     card.refresh = refresh;

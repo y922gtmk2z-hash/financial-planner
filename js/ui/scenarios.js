@@ -35,6 +35,7 @@
       h('h1', null, 'Scenarios'),
       h('p', { class: 'lead' }, 'Copy your plan, change anything — returns, house prices, overpayments, salary, retirement age — and compare the results side by side.'),
       list,
+      presetCard(ctx),
       createCard(ctx),
       quickCard(ctx, current, () => { draw(); drawList(); }),
       h('div', { class: 'view-toggle' }, FP.field.render({
@@ -111,6 +112,31 @@
       diffs.length > shown.length ? h('li', { class: 'muted' }, `and ${diffs.length - shown.length} more`) : null);
   }
 
+  // One tap adds a what-if next to your baseline.
+  function presetCard(ctx) {
+    const ws = ctx.workspace();
+    const base = ws.scenarios[0];
+    const full = ws.scenarios.length >= S.MAX_SCENARIOS;
+    const presets = S.PRESETS.filter((x) => x.applies(base.profile));
+    if (!presets.length) return null;
+    return h('section', { class: 'card', 'aria-labelledby': 'sc-preset-h' },
+      h('h2', { id: 'sc-preset-h' }, 'Try a what-if'),
+      h('p', { class: 'muted' }, `Each adds a copy of \u201c${base.name}\u201d with one change, and shows it side by side below.`),
+      full ? h('p', { class: 'muted' }, `You can have up to ${S.MAX_SCENARIOS} scenarios. Delete one to add another.`) : null,
+      h('div', { class: 'preset-row' }, presets.map((x) => h('button', {
+        type: 'button', class: 'secondary small', disabled: full,
+        onclick: () => {
+          const c = S.fromPreset(ws, x.id);
+          if (!c) return;
+          ctx.changed();
+          ctx.rerender();
+          ctx.toast(`Added \u201c${c.name}\u201d \u2014 compare it below`);
+          const table = document.getElementById('cmp-h');
+          if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+      }, x.label))));
+  }
+
   function createCard(ctx) {
     const ws = ctx.workspace();
     const full = ws.scenarios.length >= S.MAX_SCENARIOS;
@@ -134,7 +160,7 @@
           h('div', { class: 'field' }, h('label', { for: 'new-sc-name' }, 'Name'), h('div', { class: 'input-wrap' }, nameInput)),
           h('div', { class: 'field' }, h('label', { for: 'new-sc-from' }, 'Start from a copy of'), h('div', { class: 'input-wrap' }, from)),
           h('button', { type: 'button', onclick: create }, 'Create and edit'),
-          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it here, or on Setup, Income, Future and Assumptions.'),
+          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it here, or in Setup and Assumptions.'),
         ]);
   }
 
@@ -169,7 +195,8 @@
     const sums = ws.scenarios.map((sc) => ({ sc, s: FP.compare.summarise(sc.profile, real) }));
     const ok = sums.filter((x) => x.s.ok);
     if (!ok.length) {
-      return h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
+      return FP.checklist.card(ctx.profile(), { what: 'projections side by side' })
+        || h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
     }
     const commonAge = FP.compare.commonEndAge(sums.map((x) => x.s));
     const base = sums[0].s;
@@ -186,6 +213,7 @@
       { label: 'Retirement age', cell: (s) => String(s.retirementAge) },
       { label: 'Net worth at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.netWorth), delta(s.atRetirement.netWorth, base.atRetirement && base.atRetirement.netWorth)] : '—') },
       { label: 'Pension pot at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.pension), delta(s.atRetirement.pension, base.atRetirement && base.atRetirement.pension)] : '—') },
+      { label: 'Could spend in retirement (a month, today\u2019s money)', cell: (s) => (s.retirementSpend ? [money(s.retirementSpend.monthly), delta(s.retirementSpend.monthly, base.retirementSpend && base.retirementSpend.monthly)] : '\u2014') },
       { label: 'Mortgage-free', cell: (s) => ageText(s.mortgageFreeAge, 'Not in projection') },
       { label: 'Student loan', cell: (s) => studentLoanText(s.studentLoan) },
       { label: 'Money runs short', cell: (s) => (s.runsOutAge ? h('span', { class: 'negative' }, `Age ${s.runsOutAge}`) : 'No') },

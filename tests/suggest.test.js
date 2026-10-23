@@ -16,7 +16,7 @@ function profile(o) {
   return p;
 }
 const ids = (r) => r.suggestions.map((s) => s.id);
-const sum = (split) => split.emergency + split.cash + split.invest + split.mortgage + split.pension;
+const sum = (split) => split.emergency + split.debts + split.cash + split.invest + split.mortgage + split.pension;
 
 test('left over is take-home minus spending, debts and regular savings', () => {
   const p = profile({ savings: [{ id: 'x', type: 'cash', monthly: 100, grows: 'fixed' }] });
@@ -36,7 +36,7 @@ test('a small emergency fund comes first', () => {
   const r = FP.suggest.analyse(profile({ cash: 1000 }));
   assert.ok(ids(r).includes('emergency'));
   assert.equal(r.emergency.short, true);
-  assert.deepEqual(r.split, { emergency: 80, cash: 0, invest: 10, mortgage: 0, pension: 10 });
+  assert.deepEqual(r.split, { emergency: 80, debts: 0, cash: 0, invest: 10, mortgage: 0, pension: 10 });
   const e = r.suggestions.find((s) => s.id === 'emergency');
   assert.match(e.text, /target is 3/);
   assert.match(e.text, /Putting 80% of what’s left/);
@@ -57,15 +57,19 @@ test('expensive debts are flagged, most expensive first', () => {
   assert.match(d.title, /Clear Card first/);
   assert.match(d.text, /Loan \(8%\) is next/);
   assert.doesNotMatch(d.text, /Cheap/);
-  // Emergency fund already full: mostly cash to clear the debts, plus a top-up.
-  assert.deepEqual(r.split, { emergency: 10, cash: 70, invest: 10, mortgage: 0, pension: 10 });
+  assert.match(d.text, /Paying off debts faster/);
+  // Emergency fund already full: mostly to the debts, plus a top-up.
+  assert.deepEqual(r.split, { emergency: 10, debts: 70, cash: 0, invest: 10, mortgage: 0, pension: 10 });
+  // Fund short too: shared between the two.
+  const both = FP.suggest.analyse(profile({ cash: 500, debts: [{ id: 'b', name: 'Card', balance: 1000, rate: 24, monthlyPayment: 50 }] }));
+  assert.deepEqual(both.split, { emergency: 50, debts: 40, cash: 0, invest: 0, mortgage: 0, pension: 10 });
 });
 
 test('basic-rate taxpayer with a mortgage dearer than cash', () => {
   const r = FP.suggest.analyse(profile({ mortgage: true, spend: 500 }));
   assert.ok(ids(r).includes('mortgage'));
   assert.ok(!ids(r).includes('relief'));
-  assert.deepEqual(r.split, { emergency: 10, cash: 0, invest: 50, mortgage: 20, pension: 20 });
+  assert.deepEqual(r.split, { emergency: 10, debts: 0, cash: 0, invest: 50, mortgage: 20, pension: 20 });
 });
 
 test('no mortgage: nothing goes to overpayments', () => {
@@ -83,7 +87,7 @@ test('higher-rate taxpayers get a bigger pension share', () => {
 test('between £100k and £125k: mostly pension', () => {
   const r = FP.suggest.analyse(profile({ salary: 110000 }));
   assert.ok(ids(r).includes('taper'));
-  assert.deepEqual(r.split, { emergency: 10, cash: 0, invest: 20, mortgage: 0, pension: 70 });
+  assert.deepEqual(r.split, { emergency: 10, debts: 0, cash: 0, invest: 20, mortgage: 0, pension: 70 });
 });
 
 test('the emergency fund target is your choice', () => {

@@ -28,22 +28,52 @@
     return list.reduce((s, x) => s + (fn ? fn(x) : x), 0);
   }
 
+  const SPLIT_KEYS = ['emergency', 'debts', 'cash', 'invest', 'mortgage', 'pension'];
+
   /*
-   * The leftover split ({ emergency, cash, invest, mortgage, pension } in %) as
-   * fractions. Under 100% in total: the rest goes to cash. Over 100%: scaled
-   * down proportionally.
+   * The leftover split ({ emergency, debts, cash, invest, mortgage, pension } in
+   * %) as fractions. Under 100% in total: the rest goes to cash. Over 100%:
+   * scaled down proportionally.
    */
   function splitShares(split) {
     const src = split || {};
-    const raw = ['emergency', 'cash', 'invest', 'mortgage', 'pension'].map((k) => Math.max(0, src[k] || 0));
+    const raw = SPLIT_KEYS.map((k) => Math.max(0, src[k] || 0));
     const total = sum(raw);
     const scale = total > 100 ? 1 / total : 1 / 100;
-    const [emergency, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
+    const [emergency, debts, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
     const remainder = total < 100 ? (100 - total) / 100 : 0;
     return {
-      emergency, cash: cash + remainder, invest, mortgage, pension, total,
+      emergency, debts, cash: cash + remainder, invest, mortgage, pension, total,
       status: total === 100 ? 'ok' : total < 100 ? 'under' : 'over',
     };
+  }
+
+  /*
+   * Shares out `total` by `shares`, where each choice can take at most caps[key]
+   * (for example the mortgage once it's cleared, or the emergency fund once it's
+   * full). Whatever a choice can't take goes to the others in proportion; if
+   * none can take it, it goes to cash.
+   */
+  function allocate(total, shares, caps) {
+    const out = {};
+    SPLIT_KEYS.forEach((k) => { out[k] = 0; });
+    let open = SPLIT_KEYS.filter((k) => shares[k] > 0);
+    let left = total;
+    while (left > 1e-9 && open.length) {
+      const w = sum(open, (k) => shares[k]);
+      const want = {};
+      open.forEach((k) => { want[k] = left * shares[k] / w; });
+      const full = open.filter((k) => out[k] + want[k] > caps[k] + 1e-9);
+      if (!full.length) {
+        open.forEach((k) => { out[k] += want[k]; });
+        left = 0;
+        break;
+      }
+      full.forEach((k) => { left -= caps[k] - out[k]; out[k] = caps[k]; });
+      open = open.filter((k) => !full.includes(k));
+    }
+    out.cash += Math.max(0, left);
+    return out;
   }
 
   // Smallest gross pension withdrawal that leaves `need` after tax.
@@ -67,7 +97,7 @@
     const a = profile.assumptions;
     const age0 = profile.about.age;
     if (age0 == null) return { ok: false, reason: 'age', message: 'Enter your age in Setup to see a projection.' };
-    const years = Math.min(MAX_YEARS, (a.endAge || 0) - age0);
+    const years = Math.min(opts.maxYears || MAX_YEARS, (a.endAge || 0) - age0);
     if (years < 1) return { ok: false, reason: 'endAge', message: 'Your projection end age must be after your current age.' };
 
     const now = new Date();
@@ -238,7 +268,8 @@
       });
 
       // 4. Spending, regular savings (while working) and surplus
-      const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g);
+      // opts.retirementSpending scales spending once you've retired (used to find what you could afford).
+      const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g) * (working ? 1 : (opts.retirementSpending == null ? 1 : opts.retirementSpending));
       const yearStartsAfterCashLimit = startMonthIndex + 12 * g >= cashLimitFromIndex;
       const saved = working
         ? FP.savings.forYear(profile.savings, {
@@ -266,41 +297,59 @@
       // 6. Allocate a surplus or fund a deficit
       // The emergency fund aims to cover this much of the year's essential outgoings.
       const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
-      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
       if (surplus >= 0) {
         let s = surplus;
         const repay = Math.min(s, shortfall);
         shortfall -= repay;
         s -= repay;
 
-        // The emergency fund share tops cash up to the target; once it's full,
-        // the rest of that share goes to the other choices in proportion.
-        const toEmergency = Math.min(s * shares.emergency, Math.max(0, emergencyTarget - cash));
-        const rest = s - toEmergency;
-        const others = shares.cash + shares.invest + shares.mortgage + shares.pension;
-        const w = others > 0 ? rest / others : 0;
-        let toCash = others > 0 ? w * shares.cash : rest;
-        let toPension = w * shares.pension;
-        const toInvest = w * shares.invest;
-        const toMortgage = Math.min(w * shares.mortgage, mBal);
-        toCash += w * shares.mortgage - toMortgage;
-        if (!working) { toCash += toPension; toPension = 0; }
+        // What each choice can take this year. The emergency fund tops cash up
+        // to its target, debts and the mortgage take what's owed (overpayments
+        // within the limit unless you've turned that off), and pension
+        // contributions stop when you retire.
+        const caps = {
+          emergency: Math.max(0, emergencyTarget - cash),
+          debts: sum(debts, (d) => d.bal),
+          cash: Infinity,
+          invest: Infinity,
+          mortgage: a.capOverpayments === 'none' ? mBal : Math.min(mBal, Math.max(0, allowance - overpaid)),
+          pension: working ? Infinity : 0,
+        };
+        const share = allocate(s, shares, caps);
+        const toEmergency = share.emergency;
+        const toCash = share.cash;
+        const toPension = share.pension;
+        const toInvest = share.invest;
+        const toMortgage = share.mortgage;
+        const toDebts = share.debts;
 
         mBal -= toMortgage;
         if (mBal <= 0.005) mBal = 0;
+        // Extra debt payments clear the most expensive debt first.
+        let extra = toDebts;
+        debts.slice().sort((x, z) => z.rate - x.rate).forEach((d) => {
+          const paid = Math.min(extra, d.bal);
+          d.bal -= paid;
+          extra -= paid;
+          if (d.bal <= 0.005) d.bal = 0;
+        });
         const intoIsa = Math.min(toInvest, isaRoomLeft);
         isa += intoIsa;
         gia += toInvest - intoIsa;
         const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
         pension += grossPension;
         cash += toEmergency + toCash;
-        Object.assign(flow, { toEmergency, toCash, toInvest, toMortgage, toPension: grossPension });
-
-        const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
-        if (mStart > 0 && overpaid + toMortgage > allowance + 0.5) {
-          warnOnce('overpay', `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + toMortgage)} exceed ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider a smaller mortgage share of the surplus.`);
-        }
-      } else {
+        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension });
+      }
+      // (Not in the year it's paid off, when the limit on a small balance means little.)
+      if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
+        warnOnce('overpay', flow.toMortgage > 0
+          ? `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + flow.toMortgage)} are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee. Keep overpayments from your leftover money within the limit in Assumptions, or lower your monthly overpayment.`
+          : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Setup.`);
+      }
+      if (surplus < 0) {
         let need = -surplus;
         const canDrawPension = !working && startAge >= a.pensionAccessAge;
         if (canDrawPension && pension > 0) {
@@ -400,11 +449,60 @@
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
+  /*
+   * How much you could spend in retirement without running short before the
+   * end age: the highest monthly spending (in today's money, at the start of
+   * retirement) that keeps every year funded. Mortgage and debt payments are on
+   * top, and your home isn't sold. This runs all the way to your end age, past
+   * the 40-year limit on the shown projection. Returns null when there are no
+   * retirement years or no spending entered; else { monthly, now, factor, endAge }.
+   */
+  // It runs the projection ~30 times, so results are remembered for recent inputs
+  // (Scenarios redraws every scenario as you type).
+  const spendCache = new Map();
+
+  function retirementSpend(profile, opts) {
+    const key = JSON.stringify([profile, opts || null, new Date().getFullYear(), new Date().getMonth()]);
+    if (spendCache.has(key)) return spendCache.get(key);
+    const result = solveRetirementSpend(profile, opts);
+    spendCache.set(key, result);
+    if (spendCache.size > 30) spendCache.delete(spendCache.keys().next().value);
+    return result;
+  }
+
+  function solveRetirementSpend(profile, opts) {
+    opts = { ...opts, maxYears: 100 };
+    const base = project(profile, opts);
+    if (!base.ok || !base.events.retirement || base.events.retirement.y >= base.rows.length - 1) return null;
+    const now = sum(profile.spending, (r) => r.monthly || 0);
+    if (!(now > 0)) return null;
+    const lasts = (factor) => {
+      const r = project(profile, { ...opts, retirementSpending: factor });
+      return r.rows[r.rows.length - 1].shortfall <= 0.5;
+    };
+    let lo = 0;
+    let hi = 1;
+    if (lasts(hi)) {
+      while (hi < 16 && lasts(hi * 2)) hi *= 2;
+      lo = hi;
+      hi *= 2;
+    }
+    for (let i = 0; i < 24; i += 1) {
+      const mid = (lo + hi) / 2;
+      if (lasts(mid)) lo = mid; else hi = mid;
+    }
+    const a = profile.assumptions;
+    const ret = base.events.retirement;
+    // Spending grows from now; in today's money at the start of retirement.
+    const atRetirement = now * FP.growth.compound(1, a.spendingGrowth, ret.y) / ret.inflationFactor;
+    return { factor: lo, monthly: atRetirement * lo, now, endAge: base.events.end.age, capped: lo >= 16 };
+  }
+
   function toReal(row) {
     const out = { ...row };
     MONEY_KEYS.forEach((k) => { if (typeof row[k] === 'number') out[k] = row[k] / row.inflationFactor; });
     return out;
   }
 
-  FP.projection = { MAX_YEARS, project, splitShares, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, splitShares, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});

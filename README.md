@@ -32,27 +32,39 @@ holds the build plan only, not the site, so don't choose it as the Pages folder.
 `npm test` checks that every path in `index.html` stays relative.
 
 The first time you open it, it shows a **clearly fictional sample household** with two
-example scenarios. Use **Start with my own data** in the banner to begin with an empty
-form, or **Keep these figures as mine** to edit the sample.
+example scenarios. Use **Start with my own figures** in the banner to begin with an empty
+form, or **edit this example as mine** to keep the sample figures.
 
 ## Screens
 
 **How it's laid out:** the header at the top (with **Setup** and **Your data**) stays
 pinned, slides away as you scroll down and comes back as soon as you scroll up, so
-you can get back to Setup at any time. When you've entered your figures, **Calculate
-my plan** at the bottom of Setup takes you to the **Overview**. The tabs at the bottom
-drill into each part of your plan.
+you can get back to Setup at any time. The first time, Setup takes you **step by step**
+(You and your pay → What you own → Mortgage and debts → Monthly spending → Saving and
+your leftover money), with a step bar showing what's done; once the essentials are in,
+it opens as one page for quick edits, and you can switch either way. A strip pinned
+above the tabs shows your take-home pay and what's left over as you type. **See my
+plan** takes you to the **Overview**, and the tabs at the bottom drill into each part
+of your plan. Every figure has one place to enter it, in Setup: other screens link
+straight to the field (for example `#setup/income.grossSalary`).
+
+Until your age and monthly spending are entered, Overview, Future and Scenarios show
+a **Finish your plan** checklist instead of a projection: without spending, everything
+you take home would look like savings.
+
+The disclaimer is shown in full on your first visit, then as one line you can open.
+The scenario picker appears once you have more than one scenario.
 
 | Screen | What it does |
 | --- | --- |
-| **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, monthly surplus, net worth and pension at retirement, when the mortgage and student loan end, any warnings, and a net-worth chart. Every figure links to the tab with the detail. |
+| **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, what's left over each month, **what you could spend in retirement** so your money lasts to your end age, net worth and pension at retirement, when the mortgage and student loan end, the **ideas** still to look at, any notes, and a net-worth chart. Every figure links to the tab with the detail. |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, **regular savings**, and **your leftover money** (what's left each month, what to do with it, and suggestions). Ends with **Calculate my plan**. |
-| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
-| **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, your leftover money and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
-| **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. |
-| **Your data** (header link) | Privacy notes, JSON export/import, load sample data, and **Clear all data**. |
+| **Setup** (header) | Enter everything once, step by step or on one page: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, **regular savings**, and **your leftover money** (what's left each month, what to do with it, and suggestions). Ends with **See my plan**. |
+| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. A **Based on** list shows the figures used, each with a link to change it in Setup. Feeds Today's cash flow automatically. |
+| **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, your leftover money (folded above the results) and a full year-by-year table. |
+| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), or copy it and change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
+| **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (mortgage rate, pension %) link there. |
+| **Your data** (header link) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
 
 Basic inputs are shown first; less common ones are under **Advanced**. Every input
 is checked as you type, with plain-English errors. Blank boxes count as £0.
@@ -65,6 +77,8 @@ is checked as you type, with plain-English errors. Blank boxes count as £0.
 - **Export** saves every scenario to a JSON file; **Import** loads one back (it is
   checked and cleaned up first, and older single-plan exports still work).
 - **Clear all data** removes everything the planner stored in this browser.
+- Once you've changed your figures and haven't exported in 30 days (or ever), Overview
+  reminds you to **export a backup**; "Not now" puts it off for 30 days.
 - Exported files (`finance-planner-export-*.json`) are git-ignored so personal data is
   never committed. The sample data is fictional.
 - **On GitHub Pages**, browser storage is shared by every project site under the same
@@ -90,13 +104,14 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Retirement age / projection end age | 67 / 95 |
 | Default rate for other debts | 7.0% |
 | Overpayment warning | above 10% of the balance a year |
+| Overpaying from leftover money | stays within the overpayment limit (or no limit) |
 | Tax thresholds in future years | frozen (or rise with inflation) |
 | Student loan interest in future years | current rates (or follow inflation) |
 | State Pension | £12,547.60 a year (£241.30 a week, 2026/27) from age 67, rising with inflation |
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
-| Leftover money (your choice, in Setup) | 10% emergency fund (target: 3 months of outgoings), 20% cash, 50% investments, 10% mortgage overpayment, 10% pension |
+| Leftover money (your choice, in Setup) | 10% emergency fund (target: 3 months of outgoings), 0% paying off debts faster, 20% cash, 50% investments, 10% mortgage overpayment, 10% pension |
 
 ## Tax rules — check every tax year
 
@@ -121,11 +136,17 @@ tax year in the file. To update:
 
 At the end of Setup (and on Future), **Your leftover money** shows how much is left
 each month after spending, mortgage and debts, and regular savings. Bonus months add
-more. You then choose what to do with it: your **emergency fund**, **cash savings**,
-**investments** (ISA first), **mortgage overpayments** or **extra pension
-contributions**. Each choice shows what it comes to in £ a month, and the projection
-shares out each year's leftover money the same way. Anything you don't allocate goes
-to cash.
+more. You then choose what to do with it: your **emergency fund**, **paying off debts
+faster** (most expensive first), **cash savings**, **investments** (ISA first),
+**mortgage overpayments** or **extra pension contributions**. Each choice shows what it
+comes to in £ a month, and the projection shares out each year's leftover money the
+same way. Anything you don't allocate goes to cash.
+
+When a choice can't take its share in a year, the share goes to your other choices in
+proportion (or to cash if there are none): the emergency fund once it's full, debts and
+the mortgage once they're paid off, pension contributions once you retire, and
+mortgage overpayments above your lender's limit (10% of the balance a year by default;
+you can turn this off in Assumptions).
 
 The **emergency fund** has a target you set, in months of essential outgoings
 (spending, mortgage and debt payments; 3 by default). The card shows how many months
@@ -136,7 +157,7 @@ it goes to your other choices in proportion, so it only tops up as costs rise.
 Below that are **ideas based on your figures**, general rules of thumb rather than
 advice:
 
-- clear debts that cost more than savings earn;
+- clear debts that cost at least 2 points more than savings earn;
 - build an emergency fund of 3–6 months of essential outgoings;
 - higher-rate pension tax relief, and avoiding the 60% band between £100k and £125k;
 - checking for employer pension matching;
@@ -144,9 +165,14 @@ advice:
 - using the ISA allowance;
 - not rushing to repay a student loan that will be written off.
 
+Mark an idea **✓ Done** or **Not for me** and it moves into a folded list you can bring
+it back from; Overview shows how many are left and the top three.
+
 A **suggested split** follows from these, and always includes the emergency fund:
-80% while it's below your target, then 10% to keep it topped up. **Use this split** applies it. This used to be the "surplus
-split" in Assumptions; existing saved splits carry over.
+80% while it's below your target (50% with 40% to expensive debts if you have both),
+then 10% to keep it topped up, with 70% to paying off expensive debts if you have any.
+**Use this split** applies it. This used to be the "surplus split" in Assumptions;
+existing saved splits carry over.
 
 ## Regular savings
 
@@ -228,9 +254,11 @@ Each year, in order:
    overpayments, so overpayments shorten the term; the payment is recalculated if the
    rate changes). Other debts are paid until cleared.
 4. **Spending** grows with spending growth and carries on unchanged in retirement.
-5. **Surplus** first repays any earlier shortfall, then is split between cash,
-   investments (ISA first, up to the allowance), a mortgage lump sum and pension (with
-   20% relief added).
+5. **Leftover money** first repays any earlier shortfall, then is shared out as you
+   chose: the emergency fund (cash, up to your target), extra debt payments (most
+   expensive first), cash, investments (ISA first, up to the allowance), a mortgage lump
+   sum (within the overpayment limit) and pension (with 20% relief added). A share a
+   choice can't take goes to the others in proportion.
 6. **Deficit** — in retirement, drawn from your pension first (from the access age;
    25% of each withdrawal tax-free, the rest taxed as income), then cash, then
    investments. Anything left is shown as an unfunded shortfall, with a warning.
@@ -240,6 +268,12 @@ contributions, student loan repayments on pension income, holding both an
 undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance, and changes to your mortgage
 after its term. Money moves at the end of each year, so contributions start growing
 the following year.
+
+**What you could spend in retirement** (Overview and Scenarios) re-runs the projection
+to your end age, past the 40-year limit of the charts, to find the highest monthly
+spending from retirement (in today's money) that never runs short. It doesn't sell your
+home; mortgage and debt payments are on top. The **range on the net worth chart** re-runs
+it with investment and pension returns 2 points a year lower and higher.
 
 ## Project layout
 
@@ -254,7 +288,7 @@ js/model/sample.js         fictional sample household and example scenarios
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
-js/ui/*.js                 one file per screen, plus field, chart and DOM helpers
+js/ui/*.js                 one file per screen, plus field, chart, checklist and DOM helpers
 js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
 docs/PLAN.md               build plan
@@ -270,7 +304,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-129 tests cover:
+136 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
@@ -278,8 +312,8 @@ npm test   # Node 18+, no dependencies to install
 - **Leftover money and suggestions:** what's left, each suggestion's trigger
   (shortfall, emergency fund, expensive debts, higher rate, the 60% band, mortgage, ISA
   room, student loan write-off), the suggested splits always adding up to 100% and
-  including the emergency fund, the fund filling to your target then passing its share on, and
-  older saved splits carrying over.
+  including the emergency fund (and debts when they're expensive), the fund filling to
+  your target then passing its share on, and older saved splits carrying over.
 - **Regular savings:** totals by type, contributions to the right balances, the ISA
   allowance and cash ISA limit (from April 2027, not for over-65s), amounts rising
   with pay, savings reducing the surplus, stopping at retirement, and import checks.
@@ -294,13 +328,15 @@ npm test   # Node 18+, no dependencies to install
 - **Mortgage amortisation:** payment formula, overpayments, rate changes, the
   overpayment limit, and no term left.
 - **Projection engine:** each asset's growth, the mortgage matching the standalone
-  calculator, how leftover money is shared out and the ISA allowance, salary and bonus growth, retirement,
+  calculator, how leftover money is shared out (a share a choice can't use going to the
+  others, extra debt payments most expensive first, overpayments within the limit) and
+  the ISA allowance, what you could spend in retirement, salary and bonus growth, retirement,
   shortfalls, State Pension, taxed pension drawdown, the pension access age, negative
   equity, and debts being paid off.
 - **Scenarios:** copying, the limit, rename and delete, differences, comparison,
-  upgrading older data.
-- **Data handling:** parsing and validation, cleaning up imported data,
-  export/import round trips.
+  one-tap what-ifs, upgrading older data.
+- **Data handling:** parsing and validation, cleaning up imported data (including ideas
+  you've ticked off), export/import round trips, and the "Finish your plan" checklist.
 - **Checks on the source:** no code can make network requests, every script is
   loaded, every path stays relative (for GitHub Pages), and every route has a screen,
   with Setup in the header and the views as tabs.

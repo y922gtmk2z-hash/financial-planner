@@ -3,7 +3,7 @@
  * no DOM. These are general rules of thumb to consider - not advice.
  *
  * Returns { left, essentials, emergency, suggestions: [{ id, tone, title, text }],
- *           split: { emergency, cash, invest, mortgage, pension } | null, splitReason }
+ *           split: { emergency, debts, cash, invest, mortgage, pension } | null, splitReason }
  * tone: 'warn' (fix first), 'tip' (worth considering), 'good' (already fine).
  */
 (function (FP) {
@@ -65,7 +65,7 @@
     if (expensive.length) {
       const d = expensive[0];
       add('debt', 'warn', `Clear ${d.name} first`,
-        `It costs ${d.rate}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${x.rate}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Raise the monthly payment in Setup.`);
+        `It costs ${d.rate}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${x.rate}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into \u201cPaying off debts faster\u201d (most expensive first), or raise the monthly payment in Setup.`);
     }
 
     const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
@@ -133,26 +133,33 @@
   // it's full so it keeps up with rising costs (the projection passes on
   // anything beyond the target).
   function suggestSplit(s) {
+    const months = s.emergency.targetMonths || EMERGENCY_MIN_MONTHS;
+    if (s.emergency.short && s.expensive) {
+      return {
+        split: { emergency: 50, debts: 40, cash: 0, invest: 0, mortgage: 0, pension: 10 },
+        reason: `Split between your emergency fund (until it covers ${months} months) and clearing expensive debts. In your projection, each share moves to your other choices once it\u2019s done.`,
+      };
+    }
     if (s.emergency.short) {
       return {
-        split: { emergency: 80, cash: 0, invest: 10, mortgage: 0, pension: 10 },
-        reason: `Mostly into your emergency fund until it covers ${s.emergency.targetMonths || EMERGENCY_MIN_MONTHS} months${s.expensive ? ', while you pay extra off expensive debts' : ''}. In your projection, this share moves to your other choices once the fund is full.`,
+        split: { emergency: 80, debts: 0, cash: 0, invest: 10, mortgage: 0, pension: 10 },
+        reason: `Mostly into your emergency fund until it covers ${months} months. In your projection, this share moves to your other choices once the fund is full.`,
       };
     }
     if (s.expensive) {
       return {
-        split: { emergency: 10, cash: 70, invest: 10, mortgage: 0, pension: 10 },
-        reason: 'Mostly cash for now, to put towards clearing expensive debts, with a top-up to keep your emergency fund at its target. Revisit once the debts are gone.',
+        split: { emergency: 10, debts: 70, cash: 0, invest: 10, mortgage: 0, pension: 10 },
+        reason: 'Mostly towards clearing expensive debts, with a top-up to keep your emergency fund at its target. In your projection, the debt share moves to your other choices once they\u2019re paid off.',
       };
     }
     if (s.inTaper) {
-      return { split: { emergency: 10, cash: 0, invest: 20, mortgage: 0, pension: 70 }, reason: 'Mostly pension, to win back the personal allowance you lose between £100,000 and £125,140, with a top-up to keep your emergency fund at its target.' };
+      return { split: { emergency: 10, debts: 0, cash: 0, invest: 20, mortgage: 0, pension: 70 }, reason: 'Mostly pension, to win back the personal allowance you lose between £100,000 and £125,140, with a top-up to keep your emergency fund at its target.' };
     }
     const emergency = 10;
     const pension = s.topRate >= 40 ? 40 : 20;
     const mortgage = s.hasMortgage && s.mortgageBeatsCash ? (s.topRate >= 40 ? 10 : 20) : 0;
     return {
-      split: { emergency, cash: 0, invest: 100 - emergency - pension - mortgage, mortgage, pension },
+      split: { emergency, debts: 0, cash: 0, invest: 100 - emergency - pension - mortgage, mortgage, pension },
       reason: [
         'A top-up to keep your emergency fund at its target as costs rise',
         s.topRate >= 40 ? 'a bigger pension share for higher-rate tax relief' : 'some pension for tax relief',
