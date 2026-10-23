@@ -342,7 +342,8 @@
         cash += toEmergency + toCash;
         Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension });
       }
-      if (mStart > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
+      // (Not in the year it's paid off, when the limit on a small balance means little.)
+      if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
         warnOnce('overpay', flow.toMortgage > 0
           ? `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + flow.toMortgage)} are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee. Keep overpayments from your leftover money within the limit in Assumptions, or lower your monthly overpayment.`
           : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Setup.`);

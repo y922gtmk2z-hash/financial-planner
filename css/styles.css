@@ -133,6 +133,9 @@ p { margin: 0 0 10px; }
   font-size: 0.85rem; border-radius: 0;
 }
 @media (min-width: 792px) { .disclaimer { border-radius: var(--radius); } }
+.disclaimer summary { cursor: pointer; }
+.disclaimer p { margin: 4px 0 0; }
+.sample-banner .button-row { align-items: center; }
 
 .sample-banner {
   max-width: 760px; margin: 0 auto 8px; padding: 12px 14px;
@@ -574,3 +577,7 @@ fieldset.row-card { min-width: 0; }
 .idea.warn .idea-icon, .idea.warn strong { color: var(--warn-ink); }
 .idea.good .idea-icon { color: var(--good); }
 .idea.tip .idea-icon { color: var(--accent); }
+
+.more-notices { margin: -4px 0 12px; font-size: 0.9rem; }
+.more-notices summary { cursor: pointer; color: var(--accent); }
+.more-notices .notices { margin-top: 8px; }

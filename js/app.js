@@ -70,7 +70,7 @@
     banner.hidden = !isSample();
     if (banner.hidden) return;
     FP.dom.fill(banner,
-      h('p', null, h('strong', null, 'You’re looking at fictional sample data. '), 'Edit it in Setup, or start with an empty form.'),
+      h('p', null, h('strong', null, 'This is a fictional example household. '), 'Look around, then put in your own figures.'),
       h('div', { class: 'button-row' },
         h('button', {
           type: 'button', class: 'small',
@@ -81,20 +81,23 @@
             location.hash = '#setup';
             route();
           },
-        }, 'Start with my own data'),
+        }, 'Start with my own figures'),
         h('button', {
-          type: 'button', class: 'small secondary',
+          type: 'button', class: 'link',
           onclick: () => {
             workspace.scenarios.forEach((s) => { s.profile.isSample = false; });
             save();
             drawBanner();
           },
-        }, 'Keep these figures as mine')));
+        }, 'or edit this example as mine')));
   }
 
   // Shows which scenario every screen is editing, and lets you switch.
+  // Hidden until there's more than one scenario (the Scenarios tab adds them).
   function drawScenarioBar() {
     const list = workspace.scenarios;
+    scenarioBar.hidden = list.length < 2;
+    if (scenarioBar.hidden) return;
     const current = FP.scenarios.active(workspace);
     const select = h('select', { id: 'scenario-select', 'aria-label': 'Scenario you are viewing and editing' },
       list.map((s, i) => h('option', { value: s.id, selected: s.id === current.id }, i === 0 ? `${s.name} (baseline)` : s.name)));
@@ -102,7 +105,7 @@
     FP.dom.fill(scenarioBar,
       h('label', { for: 'scenario-select', class: 'scenario-label' }, 'Scenario'),
       h('div', { class: 'input-wrap scenario-select' }, select),
-      h('a', { href: '#scenarios', class: 'header-link' }, list.length > 1 ? 'Compare' : 'Add scenario'));
+      h('a', { href: '#scenarios', class: 'header-link' }, 'Compare'));
     scenarioBar.classList.toggle('not-baseline', !FP.scenarios.isBaseline(workspace, current.id));
   }
 
@@ -158,6 +161,11 @@
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
   window.addEventListener('pagehide', save);
+
+  // The full disclaimer shows on your first visit; after that it's one line (tap for more).
+  const disclaimer = document.getElementById('disclaimer');
+  disclaimer.open = !FP.store.pref('seenDisclaimer');
+  FP.store.pref('seenDisclaimer', '1');
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : 'Sample data';
   if (loaded.error) toast(loaded.error);

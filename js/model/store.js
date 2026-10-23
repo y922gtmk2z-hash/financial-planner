@@ -90,5 +90,17 @@
     return { ok: true, workspace: workspaceFrom(data) };
   }
 
-  FP.store = { KEY, STORE_VERSION, load, save, clear, exportJson, importJson };
+  // Small per-browser preferences (which view, what you've dismissed). Removed by clear().
+  function pref(name, value) {
+    const s = storage();
+    const key = `ukfp.pref.${name}`;
+    try {
+      if (value === undefined) return s ? s.getItem(key) : null;
+      if (!s) return null;
+      if (value === null) s.removeItem(key); else s.setItem(key, String(value));
+    } catch (e) { /* storage blocked */ }
+    return null;
+  }
+
+  FP.store = { KEY, STORE_VERSION, load, save, clear, exportJson, importJson, pref };
 })(globalThis.FP = globalThis.FP || {});

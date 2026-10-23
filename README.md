@@ -32,8 +32,8 @@ holds the build plan only, not the site, so don't choose it as the Pages folder.
 `npm test` checks that every path in `index.html` stays relative.
 
 The first time you open it, it shows a **clearly fictional sample household** with two
-example scenarios. Use **Start with my own data** in the banner to begin with an empty
-form, or **Keep these figures as mine** to edit the sample.
+example scenarios. Use **Start with my own figures** in the banner to begin with an empty
+form, or **edit this example as mine** to keep the sample figures.
 
 ## Screens
 

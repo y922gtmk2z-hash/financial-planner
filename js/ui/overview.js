@@ -56,8 +56,7 @@
     FP.dom.add(root,
       h('h1', null, 'Overview'),
       h('p', { class: 'lead' }, 'Your plan at a glance. Tap any figure for the detail, or use the tabs below.'),
-      notices.length ? h('ul', { class: 'notices' }, notices.map((w) =>
-        h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
+      noticeList(notices),
       h('a', { class: 'card hero hero-link', href: '#today' },
         h('span', { class: 'eyebrow' }, 'Net worth today'),
         h('span', { class: `hero-number${today.netWorth < 0 ? ' negative' : ''}` }, money(today.netWorth)),
@@ -74,6 +73,19 @@
           link('#setup', 'Edit your details', 'Change any figure, then calculate again'),
           link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
           link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`))));
+  }
+
+  // The first notice in full; any others behind "N more".
+  function noticeList(notices) {
+    if (!notices.length) return null;
+    const item = (w) => h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text);
+    const sorted = notices.slice().sort((x, y) => (x.level === 'warn' ? 0 : 1) - (y.level === 'warn' ? 0 : 1));
+    return [
+      h('ul', { class: 'notices' }, item(sorted[0])),
+      sorted.length > 1 ? h('details', { class: 'more-notices' },
+        h('summary', null, `${sorted.length - 1} more ${sorted.length === 2 ? 'note' : 'notes'}`),
+        h('ul', { class: 'notices' }, sorted.slice(1).map(item))) : null,
+    ];
   }
 
   function tile(href, label, value, sub, warn) {
