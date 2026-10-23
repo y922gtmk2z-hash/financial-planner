@@ -154,7 +154,7 @@
     return h('details', { class: 'card' },
       h('summary', null, h('strong', null, 'Year-by-year table')),
       h('p', { class: 'muted small' }, `Amounts ${moneyNote}. Flows (income, spending, surplus) are for the year; balances are at the end of it.`),
-      h('div', { class: 'table-scroll tall' }, h('table', { class: 'data-table year-table' },
+      h('div', { class: 'table-scroll tall', tabindex: '0', role: 'region', 'aria-label': 'Year-by-year table' }, h('table', { class: 'data-table year-table' },
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, 'Age'), h('th', { scope: 'col' }, 'Year'),
           cols.map(([label]) => h('th', { scope: 'col', class: 'num' }, label)))),

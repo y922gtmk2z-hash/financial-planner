@@ -124,9 +124,9 @@
     const lumpy = bps.length > 0;
     return h('section', { class: 'card', 'aria-labelledby': 'bd-h' },
       h('h2', { id: 'bd-h' }, 'Breakdown'),
-      h('div', { class: 'table-scroll' }, h('table', { class: 'data-table breakdown' },
+      h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Pay breakdown table' }, h('table', { class: 'data-table breakdown' },
         h('thead', null, h('tr', null,
-          h('th', { scope: 'col' }, ''),
+          h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Item')),
           h('th', { scope: 'col', class: 'num' }, 'Year'),
           h('th', { scope: 'col', class: 'num' }, lumpy ? 'Regular month' : 'Month'),
           bps.map((b) => h('th', { scope: 'col', class: 'num' }, monthName(b.month))))),

@@ -191,9 +191,9 @@
       } : null,
     ].filter(Boolean);
 
-    const table = h('div', { class: 'table-scroll' }, h('table', { class: 'data-table compare-table' },
+    const table = h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Scenario comparison table' }, h('table', { class: 'data-table compare-table' },
       h('thead', null, h('tr', null,
-        h('th', { scope: 'col' }, ''),
+        h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Measure')),
         sums.map(({ sc }, i) => h('th', { scope: 'col', class: `num${sc.id === ws.activeId ? ' is-active' : ''}` },
           h('span', { class: 'swatch', style: `background:var(${COLORS[i]})`, 'aria-hidden': 'true' }), sc.name)))),
       h('tbody', null, rows.map((row) => h('tr', null,

@@ -7,7 +7,7 @@
   --border: #e0ded7;
   --text: #0b0b0b;
   --text-2: #52514e;
-  --text-3: #6f6e69;
+  --text-3: #62615c;
   --accent: #1c5cab;
   --accent-ink: #ffffff;
   --accent-soft: #e3eefb;
@@ -416,7 +416,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .stat-grid.tiles { grid-template-columns: 1fr 1fr; }
 @media (min-width: 560px) { .stat-grid.tiles { grid-template-columns: repeat(4, 1fr); } }
 .stat-grid.tiles strong { font-size: 1.1rem; display: block; }
-.stat-grid.tiles small { color: var(--text-3); font-size: 0.75rem; }
+.stat-grid.tiles small { color: var(--text-2); font-size: 0.75rem; }
 .split-status { font-size: 0.88rem; font-weight: 600; margin: 8px 0 0; }
 .split-status.ok { color: var(--good); }
 .split-status.off { color: var(--warn-ink); background: var(--warn-bg); padding: 6px 10px; border-radius: 8px; }
@@ -473,4 +473,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width: 420px) {
   .save-status { font-size: 0.72rem; max-width: 7.5rem; line-height: 1.2; }
   .header-right { gap: 8px; }
+}
+.table-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+fieldset.row-card { min-width: 0; }
+.tab-short { display: none; }
+@media (max-width: 360px) {
+  /* Very narrow phones: shorter tab labels (full name kept for screen readers) and a quieter header. */
+  .tab-full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .tab-short { display: inline; }
+  .tabbar a { font-size: 0.62rem; }
+  .save-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
