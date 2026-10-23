@@ -52,7 +52,8 @@
     return Math.max(0, pay - rule.threshold) * rule.rate / 100;
   }
 
-  // Whole-year figures, treating pay (and any bonus) as spread evenly over 12 months.
+  // Whole-year figures, treating pay as spread evenly over 12 months.
+  // input.bonus here is the year's total bonus.
   function yearly(input, cfg) {
     const salary = Math.max(0, input.salary || 0);
     const bonus = Math.max(0, input.bonus || 0);
@@ -128,61 +129,81 @@
     return out;
   }
 
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  // Valid bonuses as [{ amount, month }], dropping blanks and zeros.
+  function bonusList(input) {
+    return (Array.isArray(input.bonuses) ? input.bonuses : [])
+      .map((b) => ({ amount: Math.max(0, (b && b.amount) || 0), month: b && MONTHS.includes(b.month) ? b.month : 'spread' }))
+      .filter((b) => b.amount > 0);
+  }
+
   /*
-   * input: { salary, bonus, bonusMonth, employeePensionPct, employerPensionPct,
-   *          pensionMethod, studentLoanPlan, region: 'rUK' | 'scotland' }
+   * input: { salary, bonuses: [{ amount, month }], employeePensionPct,
+   *          employerPensionPct, pensionMethod, studentLoanPlan,
+   *          region: 'rUK' | 'scotland' }
    * Pension contributions are a % of salary (not bonus).
    *
-   * bonusMonth 'spread' (or blank) spreads the bonus evenly over the year.
-   * A month ('jan'...'dec') pays it in that month: NI and student loan are then
+   * A bonus with month 'spread' is spread evenly over the year. A bonus with a
+   * month ('jan'...'dec') is paid in that month: NI and student loan are then
    * worked out on that month's pay, as payroll does, and income tax uses the
-   * yearly (cumulative PAYE) position, so the bonus month carries the extra tax.
+   * yearly (cumulative PAYE) position, so bonus months carry the extra tax
+   * (shared in proportion to the bonus paid in each).
    *
-   * takeHomeMonthly is a regular month's pay (excluding a bonus paid in one month).
+   * takeHomeMonthly is a regular month's pay: it includes spread bonuses but
+   * not bonuses paid in a particular month.
    */
   function takeHome(input, cfg) {
     cfg = cfg || FP.taxConfig;
-    const year = yearly(input, cfg);
-    const inMonth = year.bonus > 0 && input.bonusMonth && input.bonusMonth !== 'spread' ? input.bonusMonth : null;
+    const bonuses = bonusList(input);
+    const total = bonuses.reduce((s, b) => s + b.amount, 0);
+    const spread = bonuses.filter((b) => b.month === 'spread').reduce((s, b) => s + b.amount, 0);
+    const year = yearly({ ...input, bonus: total }, cfg);
 
-    if (!inMonth) {
+    // Lump sums by month, in calendar order.
+    const lumps = MONTHS
+      .map((m) => ({ month: m, amount: bonuses.filter((b) => b.month === m).reduce((s, b) => s + b.amount, 0) }))
+      .filter((l) => l.amount > 0);
+
+    const shared = { ...year, bonuses, bonusSpread: spread };
+    if (!lumps.length) {
       const regular = payslip(Object.fromEntries(PAYSLIP_KEYS.map((k) => [k, year[k] / 12])));
-      return { ...year, bonusMonth: null, regularMonth: regular, bonusMonthPay: null, bonusExtra: 0 };
+      return { ...shared, regularMonth: regular, bonusPayments: [] };
     }
 
-    // A regular month is 1/12 of the year without the bonus. NI and student loan
-    // thresholds are pro rata per month, so this matches per-period payroll.
-    const base = yearly({ ...input, bonus: 0 }, cfg);
+    // A regular month is 1/12 of the year with only the spread bonuses. NI and
+    // student loan thresholds are pro rata per month, so this matches payroll.
+    const base = yearly({ ...input, bonus: spread }, cfg);
     const reg = Object.fromEntries(PAYSLIP_KEYS.map((k) => [k, base[k] / 12]));
+    const lumpTotal = total - spread;
+    const extraTax = year.incomeTax - base.incomeTax;
 
-    const monthPay = base.niablePay / 12 + year.bonus;
-    const ni = nationalInsurance(monthPay * 12, cfg.nationalInsurance) / 12;
-    const sl = studentLoan(monthPay * 12, input.studentLoanPlan, cfg) / 12;
-    const tax = reg.incomeTax + (year.incomeTax - base.incomeTax);
-    const gross = reg.gross + year.bonus;
-    const bonusMonthPay = {
-      gross,
-      pensionFromPay: reg.pensionFromPay,
-      incomeTax: tax,
-      nationalInsurance: ni,
-      studentLoan: sl,
-      takeHome: gross - reg.pensionFromPay - tax - ni - sl,
-    };
+    const bonusPayments = lumps.map((l) => {
+      const monthPay = base.niablePay / 12 + l.amount;
+      const ni = nationalInsurance(monthPay * 12, cfg.nationalInsurance) / 12;
+      const sl = studentLoan(monthPay * 12, input.studentLoanPlan, cfg) / 12;
+      const tax = reg.incomeTax + extraTax * (l.amount / lumpTotal);
+      const gross = reg.gross + l.amount;
+      const net = gross - reg.pensionFromPay - tax - ni - sl;
+      return {
+        month: l.month,
+        amount: l.amount,
+        pay: payslip({ gross, pensionFromPay: reg.pensionFromPay, incomeTax: tax, nationalInsurance: ni, studentLoan: sl, takeHome: net }),
+        // Extra take-home that month compared with a regular month.
+        extra: round2(net - reg.takeHome),
+      };
+    });
 
-    const yearNi = reg.nationalInsurance * 11 + ni;
-    const yearSl = reg.studentLoan * 11 + sl;
-    const yearNet = reg.takeHome * 11 + bonusMonthPay.takeHome;
+    const regularCount = 12 - lumps.length;
+    const sum = (k) => reg[k] * regularCount + bonusPayments.reduce((s, b) => s + b.pay[k], 0);
     return {
-      ...year,
-      nationalInsurance: round2(yearNi),
-      studentLoan: round2(yearSl),
-      takeHome: round2(yearNet),
+      ...shared,
+      nationalInsurance: round2(sum('nationalInsurance')),
+      studentLoan: round2(sum('studentLoan')),
+      takeHome: round2(sum('takeHome')),
       takeHomeMonthly: round2(reg.takeHome),
-      bonusMonth: inMonth,
       regularMonth: payslip(reg),
-      bonusMonthPay: payslip(bonusMonthPay),
-      // Extra take-home in the bonus month compared with a regular month.
-      bonusExtra: round2(bonusMonthPay.takeHome - reg.takeHome),
+      bonusPayments,
     };
   }
 
@@ -197,8 +218,7 @@
   function inputFromProfile(profile) {
     return {
       salary: profile.income.grossSalary,
-      bonus: profile.income.bonus,
-      bonusMonth: profile.income.bonusMonth,
+      bonuses: profile.income.bonuses,
       employeePensionPct: profile.assumptions.employeePensionPct,
       employerPensionPct: profile.assumptions.employerPensionPct,
       pensionMethod: profile.income.pensionMethod,
@@ -213,6 +233,6 @@
 
   FP.tax = {
     personalAllowance, incomeTax, nationalInsurance, studentLoan,
-    takeHome, keepOfNext, inputFromProfile, forProfile,
+    MONTHS, bonusList, takeHome, keepOfNext, inputFromProfile, forProfile,
   };
 })(globalThis.FP = globalThis.FP || {});

@@ -15,7 +15,16 @@
         { id: 'sample-car', name: 'Car finance (sample)', balance: 7800, rate: 6.9, monthlyPayment: 245 },
         { id: 'sample-card', name: 'Credit card (sample)', balance: 1200, rate: null, monthlyPayment: 100 },
       ],
-      income: { grossSalary: 56000, bonus: 2000, studentLoanPlan: 'plan2', region: 'rUK', pensionMethod: 'netPay', bonusMonth: 'mar' },
+      income: {
+        grossSalary: 56000,
+        bonuses: [
+          { id: 'sample-b1', amount: 2000, month: 'mar' },
+          { id: 'sample-b2', amount: 500, month: 'dec' },
+        ],
+        studentLoanPlan: 'plan2',
+        region: 'rUK',
+        pensionMethod: 'netPay',
+      },
       spending: [
         { id: 'sample-s1', category: 'Bills & utilities', monthly: 260 },
         { id: 'sample-s2', category: 'Council tax', monthly: 175 },

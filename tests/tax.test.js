@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const FP = require('./load');
 
 const close = (a, b, tol = 0.01) => assert.ok(Math.abs(a - b) <= tol, `${a} not within ${tol} of ${b}`);
-const base = { salary: 0, bonus: 0, employeePensionPct: 0, employerPensionPct: 0, pensionMethod: 'netPay', studentLoanPlan: 'none', region: 'rUK' };
+const base = { salary: 0, bonuses: [], employeePensionPct: 0, employerPensionPct: 0, pensionMethod: 'netPay', studentLoanPlan: 'none', region: 'rUK' };
 const th = (o) => FP.tax.takeHome({ ...base, ...o });
 
 test('config is labelled with a tax year and sources', () => {
@@ -101,7 +101,7 @@ test('relief at source: pay 80% from net pay; higher-rate band extended', () => 
 });
 
 test('bonus is taxed with salary; pension is a % of salary only', () => {
-  const r = th({ salary: 40000, bonus: 5000, employeePensionPct: 5 });
+  const r = th({ salary: 40000, bonuses: [{ amount: 5000, month: 'spread' }], employeePensionPct: 5 });
   close(r.employeePension, 2000);
   close(r.incomeTax, (45000 - 2000 - 12570) * 0.2);
 });
@@ -116,23 +116,27 @@ test('forProfile reads the shared profile', () => {
   const p = FP.sample();
   const r = FP.tax.forProfile(p);
   assert.equal(r.salary, 56000);
-  assert.equal(r.bonus, 2000);
+  assert.equal(r.bonus, 2500);
+  assert.deepEqual(r.bonusPayments.map((b) => b.month), ['mar', 'dec']);
   assert.ok(r.takeHomeMonthly > 2500 && r.takeHomeMonthly < 4000);
 });
 
 test('bonus spread evenly: a regular month is 1/12 of the year', () => {
-  const r = th({ salary: 30000, bonus: 6000, bonusMonth: 'spread' });
-  assert.equal(r.bonusMonth, null);
+  const r = th({ salary: 30000, bonuses: [{ amount: 6000, month: 'spread' }] });
+  assert.deepEqual(r.bonusPayments, []);
+  assert.equal(r.bonusSpread, 6000);
   close(r.regularMonth.takeHome, r.takeHome / 12);
   close(r.takeHomeMonthly, r.takeHome / 12);
 });
 
 test('bonus paid in one month: NI and student loan are per pay period', () => {
-  const input = { salary: 30000, bonus: 6000, bonusMonth: 'mar', studentLoanPlan: 'plan2' };
+  const input = { salary: 30000, bonuses: [{ amount: 6000, month: 'mar' }], studentLoanPlan: 'plan2' };
   const r = th(input);
-  const spread = th({ ...input, bonusMonth: 'spread' });
-  const noBonus = th({ ...input, bonus: 0 });
-  assert.equal(r.bonusMonth, 'mar');
+  const spread = th({ ...input, bonuses: [{ amount: 6000, month: 'spread' }] });
+  const noBonus = th({ ...input, bonuses: [] });
+  assert.equal(r.bonusPayments.length, 1);
+  const march = r.bonusPayments[0];
+  assert.equal(march.month, 'mar');
 
   // Regular month = a month with no bonus
   close(r.regularMonth.takeHome, noBonus.takeHome / 12);
@@ -141,22 +145,50 @@ test('bonus paid in one month: NI and student loan are per pay period', () => {
   // Bonus month: £8,500 pay. NI 8% up to the monthly upper limit, 2% above it.
   const pt = 12570 / 12;
   const uel = 50270 / 12;
-  close(r.bonusMonthPay.nationalInsurance, (uel - pt) * 0.08 + (8500 - uel) * 0.02);
-  close(r.bonusMonthPay.studentLoan, (8500 - 29385 / 12) * 0.09);
+  close(march.pay.nationalInsurance, (uel - pt) * 0.08 + (8500 - uel) * 0.02);
+  close(march.pay.studentLoan, (8500 - 29385 / 12) * 0.09);
   // Income tax is cumulative, so the year's tax is unchanged and the bonus month carries the extra
   close(r.incomeTax, spread.incomeTax);
-  close(r.bonusMonthPay.incomeTax, noBonus.incomeTax / 12 + 6000 * 0.2);
+  close(march.pay.incomeTax, noBonus.incomeTax / 12 + 6000 * 0.2);
 
   // The year adds up: 11 regular months + the bonus month
-  close(r.takeHome, r.regularMonth.takeHome * 11 + r.bonusMonthPay.takeHome, 0.05);
-  close(r.nationalInsurance, r.regularMonth.nationalInsurance * 11 + r.bonusMonthPay.nationalInsurance, 0.05);
+  close(r.takeHome, r.regularMonth.takeHome * 11 + march.pay.takeHome, 0.05);
+  close(r.nationalInsurance, r.regularMonth.nationalInsurance * 11 + march.pay.nationalInsurance, 0.05);
   // Part of the bonus falls above the monthly upper limit, so less NI than if spread
   assert.ok(r.nationalInsurance < spread.nationalInsurance);
-  close(r.bonusExtra, r.bonusMonthPay.takeHome - r.regularMonth.takeHome);
+  close(march.extra, march.pay.takeHome - r.regularMonth.takeHome);
 });
 
-test('a bonus month with no bonus amount is ignored', () => {
-  const r = th({ salary: 30000, bonus: 0, bonusMonth: 'dec' });
-  assert.equal(r.bonusMonth, null);
-  assert.equal(r.bonusMonthPay, null);
+test('several bonuses: each month gets its own payslip and the year adds up', () => {
+  const r = th({
+    salary: 40000,
+    bonuses: [
+      { amount: 3000, month: 'mar' },
+      { amount: 1200, month: 'spread' },
+      { amount: 1000, month: 'dec' },
+      { amount: 500, month: 'mar' }, // same month as another: combined
+    ],
+  });
+  assert.equal(r.bonus, 5700);
+  assert.equal(r.bonusSpread, 1200);
+  assert.deepEqual(r.bonusPayments.map((b) => [b.month, b.amount]), [['mar', 3500], ['dec', 1000]]);
+  // A regular month includes the spread bonus (£100 a month) but not the lump sums
+  const spreadOnly = th({ salary: 40000, bonuses: [{ amount: 1200, month: 'spread' }] });
+  close(r.takeHomeMonthly, spreadOnly.takeHome / 12);
+  // The year's income tax matches taxing all pay together
+  close(r.incomeTax, th({ salary: 45700 }).incomeTax);
+  // 10 regular months + March + December
+  const sum = (k) => r.regularMonth[k] * 10 + r.bonusPayments.reduce((s, b) => s + b.pay[k], 0);
+  close(r.takeHome, sum('takeHome'), 0.05);
+  close(r.incomeTax, sum('incomeTax'), 0.05);
+  // Extra tax is shared in proportion to each lump sum
+  const extraMar = r.bonusPayments[0].pay.incomeTax - r.regularMonth.incomeTax;
+  const extraDec = r.bonusPayments[1].pay.incomeTax - r.regularMonth.incomeTax;
+  close(extraMar / extraDec, 3.5, 0.001);
+});
+
+test('zero or blank bonuses are ignored', () => {
+  const r = th({ salary: 30000, bonuses: [{ amount: 0, month: 'dec' }, { month: 'jan' }, null] });
+  assert.equal(r.bonus, 0);
+  assert.deepEqual(r.bonusPayments, []);
 });

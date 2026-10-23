@@ -28,7 +28,7 @@
     { value: 'reliefAtSource', label: 'Taken after tax (relief at source)' },
   ];
 
-  const BONUS_MONTHS = [{ value: 'spread', label: 'Spread evenly across the year' }].concat(
+  const BONUS_MONTHS = [{ value: 'spread', label: 'Spread evenly' }].concat(
     ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
       .map((m) => ({ value: m.slice(0, 3).toLowerCase(), label: m })));
 
@@ -89,10 +89,6 @@
           help: 'Which plan you repay, if any. Check your Student Loans Company account if unsure.' },
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
-        { path: 'income.bonus', label: 'Yearly bonus', type: 'money', suffix: 'a year',
-          help: 'Typical yearly bonus before tax. Leave blank if none.' },
-        { path: 'income.bonusMonth', label: 'Bonus paid in', type: 'select', options: BONUS_MONTHS,
-          help: 'Pick the month it\u2019s paid to see that month\u2019s payslip. Monthly cash flow then shows a regular month, without the bonus.' },
         { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
           help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
       ],
@@ -105,6 +101,12 @@
     { key: 'rate', label: 'Interest rate', type: 'pct', min: 0, max: 100, nullable: true, suffix: '%',
       help: 'Leave blank to use the default rate in Assumptions.' },
     { key: 'monthlyPayment', label: 'Monthly payment', type: 'money' },
+  ];
+
+  const MAX_BONUSES = 12;
+  const BONUS_FIELDS = [
+    { key: 'amount', label: 'Bonus amount', type: 'money' },
+    { key: 'month', label: 'Paid in', type: 'select', options: BONUS_MONTHS },
   ];
 
   const SPENDING_FIELDS = [
@@ -131,7 +133,7 @@
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
-      income: { grossSalary: 0, bonus: 0, studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay', bonusMonth: 'spread' },
+      income: { grossSalary: 0, bonuses: [], studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay' },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -231,6 +233,15 @@
     if (Array.isArray(src.debts)) {
       p.debts = src.debts.filter((d) => d && typeof d === 'object').slice(0, 20).map((d) => normaliseRow(d, DEBT_FIELDS, 'd'));
     }
+    const srcIncome = src.income && typeof src.income === 'object' ? src.income : {};
+    if (Array.isArray(srcIncome.bonuses)) {
+      p.income.bonuses = srcIncome.bonuses.filter((b) => b && typeof b === 'object').slice(0, MAX_BONUSES)
+        .map((b) => normaliseRow(b, BONUS_FIELDS, 'b'));
+    } else if (srcIncome.bonus !== undefined) {
+      // Older saves had a single bonus (and later a month for it).
+      const amount = coerce(BONUS_FIELDS[0], srcIncome.bonus, 0);
+      if (amount > 0) p.income.bonuses = [normaliseRow({ amount, month: srcIncome.bonusMonth }, BONUS_FIELDS, 'b')];
+    }
     if (Array.isArray(src.spending)) {
       p.spending = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40).map((s) => normaliseRow(s, SPENDING_FIELDS, 's'));
     }
@@ -240,7 +251,7 @@
   function normaliseRow(src, fields, prefix) {
     const row = { id: typeof src.id === 'string' && src.id ? src.id.slice(0, 40) : newId(prefix) };
     fields.forEach((f) => {
-      const fallback = f.type === 'text' ? '' : (f.nullable ? null : 0);
+      const fallback = f.type === 'text' ? '' : f.type === 'select' ? f.options[0].value : (f.nullable ? null : 0);
       row[f.key] = src[f.key] === undefined ? fallback : coerce(f, src[f.key], fallback);
     });
     return row;
@@ -250,12 +261,16 @@
     return { id: newId('d'), name: '', balance: 0, rate: null, monthlyPayment: 0 };
   }
 
+  function newBonus() {
+    return { id: newId('b'), amount: 0, month: 'spread' };
+  }
+
   function newSpending() {
     return { id: newId('s'), category: '', monthly: 0 };
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newSpending,
+    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES,
+    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

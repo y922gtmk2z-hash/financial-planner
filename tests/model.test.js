@@ -79,8 +79,21 @@ test('summary copes with an empty profile', () => {
   assert.equal(s.cashFlow.outgoings, 0);
 });
 
-test('bonus month is stored and validated', () => {
-  assert.equal(FP.profile.blank().income.bonusMonth, 'spread');
-  assert.equal(FP.profile.normalise({ income: { bonusMonth: 'mar' } }).income.bonusMonth, 'mar');
-  assert.equal(FP.profile.normalise({ income: { bonusMonth: 'smarch' } }).income.bonusMonth, 'spread');
+test('bonuses are stored as a list and validated', () => {
+  assert.deepEqual(FP.profile.blank().income.bonuses, []);
+  const p = FP.profile.normalise({ income: { bonuses: [{ amount: '1,500', month: 'mar' }, { amount: 200, month: 'smarch' }, 'junk'] } });
+  assert.equal(p.income.bonuses.length, 2);
+  assert.equal(p.income.bonuses[0].amount, 1500);
+  assert.equal(p.income.bonuses[0].month, 'mar');
+  assert.equal(p.income.bonuses[1].month, 'spread');
+  assert.ok(p.income.bonuses[0].id);
+});
+
+test('older saves with a single bonus are converted to the list', () => {
+  const p = FP.profile.normalise({ income: { bonus: 2000, bonusMonth: 'jun' } });
+  assert.equal(p.income.bonuses.length, 1);
+  assert.equal(p.income.bonuses[0].amount, 2000);
+  assert.equal(p.income.bonuses[0].month, 'jun');
+  assert.equal(p.income.bonus, undefined);
+  assert.deepEqual(FP.profile.normalise({ income: { bonus: 0 } }).income.bonuses, []);
 });
