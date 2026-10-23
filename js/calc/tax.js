@@ -53,7 +53,9 @@
   }
 
   // Whole-year figures, treating pay as spread evenly over 12 months.
-  // input.bonus here is the year's total bonus.
+  // input.bonus here is the year's total bonus; input.otherSacrifice is the
+  // year's non-pension salary sacrifice (car, cycle...) and
+  // input.benefitInKind the taxable benefit from it (e.g. a car).
   function yearly(input, cfg) {
     const salary = Math.max(0, input.salary || 0);
     const bonus = Math.max(0, input.bonus || 0);
@@ -86,14 +88,24 @@
       adjustedNetIncome = payForTax;
     }
 
+    // Other salary sacrifice (car, cycle to work...) comes off pay before tax,
+    // NI and student loan. A car's benefit in kind is taxed but has no employee NI.
+    // Pension contributions stay based on full salary.
+    const sacrificedPension = method === 'salarySacrifice' ? pensionGross : 0;
+    const otherSacrifice = Math.min(Math.max(0, input.otherSacrifice || 0), Math.max(0, gross - sacrificedPension));
+    const benefitInKind = Math.max(0, input.benefitInKind || 0);
+    payForTax += benefitInKind - otherSacrifice;
+    payForNi -= otherSacrifice;
+    adjustedNetIncome += benefitInKind - otherSacrifice;
+
     const allowance = personalAllowance(adjustedNetIncome, cfg);
     const taxable = Math.max(0, payForTax - allowance);
     const tax = incomeTax(taxable, bands, bandExtension, cfg.reliefAtSourceRate);
     const ni = nationalInsurance(payForNi, cfg.nationalInsurance);
     // Student loan is based on pay after salary sacrifice, but before other pension.
     const sl = studentLoan(payForNi, input.studentLoanPlan, cfg);
-    const sacrificed = method === 'salarySacrifice' ? pensionGross : 0;
-    const net = gross - sacrificed - pensionFromPay - tax.total - ni - sl;
+    const sacrificed = sacrificedPension;
+    const net = gross - sacrificed - otherSacrifice - pensionFromPay - tax.total - ni - sl;
 
     return {
       taxYear: cfg.taxYear,
@@ -115,13 +127,15 @@
       pensionIntoPot: round2(pensionGross + employerPension),
       employeePension: round2(pensionGross),
       employerPension: round2(employerPension),
+      salarySacrifice: round2(otherSacrifice),
+      benefitInKind: round2(benefitInKind),
       takeHome: round2(net),
       takeHomeMonthly: round2(net / 12),
       niablePay: payForNi,
     };
   }
 
-  const PAYSLIP_KEYS = ['gross', 'pensionFromPay', 'incomeTax', 'nationalInsurance', 'studentLoan', 'takeHome'];
+  const PAYSLIP_KEYS = ['gross', 'salarySacrifice', 'pensionFromPay', 'incomeTax', 'nationalInsurance', 'studentLoan', 'takeHome'];
 
   function payslip(values) {
     const out = {};
@@ -184,11 +198,11 @@
       const sl = studentLoan(monthPay * 12, input.studentLoanPlan, cfg) / 12;
       const tax = reg.incomeTax + extraTax * (l.amount / lumpTotal);
       const gross = reg.gross + l.amount;
-      const net = gross - reg.pensionFromPay - tax - ni - sl;
+      const net = gross - reg.salarySacrifice - reg.pensionFromPay - tax - ni - sl;
       return {
         month: l.month,
         amount: l.amount,
-        pay: payslip({ gross, pensionFromPay: reg.pensionFromPay, incomeTax: tax, nationalInsurance: ni, studentLoan: sl, takeHome: net }),
+        pay: payslip({ gross, salarySacrifice: reg.salarySacrifice, pensionFromPay: reg.pensionFromPay, incomeTax: tax, nationalInsurance: ni, studentLoan: sl, takeHome: net }),
         // Extra take-home that month compared with a regular month.
         extra: round2(net - reg.takeHome),
       };
@@ -215,10 +229,32 @@
     return b.takeHome - a.takeHome;
   }
 
+  /*
+   * Salary sacrifice arrangements (car, cycle to work, other) for one year of
+   * a projection: yearIndex 0 is the next 12 months. Each arrangement has a
+   * monthly amount and optionally the months left; a car also has its list
+   * price (P11D value) and benefit-in-kind percentage.
+   * Returns { sacrifice, benefitInKind } as yearly amounts.
+   */
+  function sacrificeForYear(list, yearIndex) {
+    let sacrifice = 0;
+    let benefitInKind = 0;
+    (list || []).forEach((a) => {
+      const months = a.monthsLeft == null ? 12 : Math.min(12, Math.max(0, a.monthsLeft - 12 * (yearIndex || 0)));
+      sacrifice += Math.max(0, a.monthly || 0) * months;
+      if (a.type === 'car') benefitInKind += Math.max(0, a.carValue || 0) * Math.max(0, a.bikRate || 0) / 100 * months / 12;
+    });
+    return { sacrifice, benefitInKind };
+  }
+
   function inputFromProfile(profile) {
     return {
       salary: profile.income.grossSalary,
       bonuses: profile.income.bonuses,
+      ...(() => {
+        const ss = sacrificeForYear(profile.income.sacrifices, 0);
+        return { otherSacrifice: ss.sacrifice, benefitInKind: ss.benefitInKind };
+      })(),
       employeePensionPct: profile.assumptions.employeePensionPct,
       employerPensionPct: profile.assumptions.employerPensionPct,
       pensionMethod: profile.income.pensionMethod,
@@ -233,7 +269,7 @@
 
   FP.tax = {
     personalAllowance, incomeTax, nationalInsurance, studentLoan,
-    MONTHS, bonusList, takeHome, keepOfNext, inputFromProfile, forProfile,
+    MONTHS, bonusList, sacrificeForYear, takeHome, keepOfNext, inputFromProfile, forProfile,
   };
 })(globalThis.FP = globalThis.FP || {});
 

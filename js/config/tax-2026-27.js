@@ -26,6 +26,8 @@
       { label: 'gov.uk: Repaying your student loan', url: 'https://www.gov.uk/repaying-your-student-loan/what-you-pay' },
       { label: 'gov.uk: Student loan interest rates', url: 'https://www.gov.uk/government/news/student-loans-interest-rates-and-repayment-threshold-announcement--7' },
       { label: 'gov.uk: When your student loan gets written off', url: 'https://www.gov.uk/repaying-your-student-loan/when-your-student-loan-gets-written-off-or-cancelled' },
+      { label: 'gov.uk: Tax on company cars', url: 'https://www.gov.uk/tax-company-benefits/tax-on-company-cars' },
+      { label: 'gov.uk: Salary sacrifice for employees', url: 'https://www.gov.uk/guidance/salary-sacrifice-and-the-effects-on-paye' },
     ],
 
     personalAllowance: 12570,
@@ -88,6 +90,11 @@
       rpi: 4.1,
       cap: 6.0, // temporary cap for this interest year only
     },
+
+    // Company car benefit in kind: % of the car's list price (P11D value) that's
+    // taxed as income. Fully electric cars: 4% in 2026/27 (5% in 2027/28, then
+    // 7% and 9%). Used as the default for a new car salary sacrifice.
+    electricCarBikPct: 4,
 
     // Relief-at-source pensions: the provider claims this rate back on your behalf.
     reliefAtSourceRate: 20,

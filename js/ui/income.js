@@ -26,7 +26,7 @@
       h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
         h('h2', { id: 'inc-in' }, 'Your pay'),
         h('p', { class: 'muted' }, 'These are the same figures as in Setup — changing them here changes them everywhere.'),
-        FP.field.sectionBody(sec, make, FP.bonusEditor.render(ctx, draw))),
+        FP.field.sectionBody(sec, make, [FP.bonusEditor.render(ctx, draw), FP.sacrificeEditor.render(ctx, draw)])),
       results);
     draw();
   }
@@ -64,6 +64,7 @@
       { label: 'National Insurance', value: r.nationalInsurance, color: '--series-3' },
       { label: 'Student loan', value: r.studentLoan, color: '--series-4' },
       { label: 'Your pension', value: r.pensionFromPay, color: '--series-5' },
+      { label: 'Salary sacrifice', value: r.salarySacrifice, color: '--series-6' },
     ];
 
     const methodNote = {
@@ -100,6 +101,9 @@
         h('ul', { class: 'notes' },
           h('li', null, methodNote),
           h('li', null, 'Pension contributions are a percentage of salary, not bonus.'),
+          r.salarySacrifice > 0
+            ? h('li', null, `Salary sacrifice of ${money(r.salarySacrifice)} a year comes off your pay before income tax, NI and student loan; pension contributions stay based on your full salary.${r.benefitInKind > 0 ? ` A car\u2019s benefit in kind (${money(r.benefitInKind)} a year) is added to your taxable pay, with no employee NI.` : ''} Salary sacrifice can\u2019t take your pay below the National Minimum Wage.`)
+            : null,
           r.bonusPayments.length
             ? h('li', null, 'Bonuses paid in a month: NI and student loan are worked out on that month\u2019s pay, as payroll does. Income tax uses your yearly position, so bonus months carry the extra tax; real payslips can spread it slightly differently depending on the month.')
             : null,
@@ -132,11 +136,13 @@
         h('tbody', null,
           row('Salary', [r.salary, ...months.map(() => r.salary / 12)]),
           r.bonus > 0 ? row('Bonus', [r.bonus, r.bonusSpread / 12, ...bps.map((b) => b.amount + r.bonusSpread / 12)]) : null,
+          r.salarySacrifice > 0 ? row('\u2212 Salary sacrifice (car, cycle\u2026)', [r.salarySacrifice, ...each('salarySacrifice')], 'minus') : null,
           r.pensionFromPay > 0 ? row(`\u2212 Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, [r.pensionFromPay, ...each('pensionFromPay')], 'minus') : null,
           row('\u2212 Income tax', [r.incomeTax, ...each('incomeTax')], 'minus'),
           row('\u2212 National Insurance', [r.nationalInsurance, ...each('nationalInsurance')], 'minus'),
           r.studentLoan > 0 ? row('\u2212 Student loan', [r.studentLoan, ...each('studentLoan')], 'minus') : null,
           row('Take-home pay', [r.takeHome, ...each('takeHome')], 'result'),
+          r.benefitInKind > 0 ? row('Car benefit in kind (taxed, not paid)', [r.benefitInKind, ...months.map(() => r.benefitInKind / 12)], 'aside') : null,
           r.employerPension > 0 ? row('Employer adds to your pension', [r.employerPension, ...months.map(() => r.employerPension / 12)], 'aside') : null,
           r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
       lumpy ? h('p', { class: 'muted small' },

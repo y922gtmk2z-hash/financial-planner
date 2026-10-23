@@ -14,14 +14,17 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="app-header">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">£</span>
-      <span>Finance planner</span>
-    </div>
-    <div class="header-right">
+  <header class="app-header" id="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="#overview" aria-label="Finance planner: overview">
+        <span class="brand-mark" aria-hidden="true">£</span>
+        <span class="brand-name">Finance planner</span>
+      </a>
       <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
-      <a href="#data" data-route="data" class="header-link">Your data</a>
+      <nav class="header-nav" aria-label="Your details">
+        <a href="#setup" data-route="setup" class="header-setup"><span aria-hidden="true">✎</span> Setup</a>
+        <a href="#data" data-route="data" class="header-link">Your data</a>
+      </nav>
     </div>
   </header>
 
@@ -45,9 +48,9 @@
     <p>Your data is stored only in this browser. Nothing is sent anywhere.</p>
   </footer>
 
-  <nav class="tabbar" aria-label="Screens">
+  <nav class="tabbar" aria-label="Views">
+    <a href="#overview" data-route="overview"><span class="tab-icon" aria-hidden="true">◉</span>Overview</a>
     <a href="#today" data-route="today"><span class="tab-icon" aria-hidden="true">◎</span>Today</a>
-    <a href="#setup" data-route="setup"><span class="tab-icon" aria-hidden="true">✎</span>Setup</a>
     <a href="#income" data-route="income"><span class="tab-icon" aria-hidden="true">₤</span>Income</a>
     <a href="#future" data-route="future"><span class="tab-icon" aria-hidden="true">↗</span>Future</a>
     <a href="#scenarios" data-route="scenarios"><span class="tab-icon" aria-hidden="true">⇄</span><span class="tab-full">Scenarios</span><span class="tab-short" aria-hidden="true">Compare</span></a>
@@ -73,6 +76,8 @@
   <script src="js/ui/field.js"></script>
   <script src="js/ui/chart.js"></script>
   <script src="js/ui/bonuses.js"></script>
+  <script src="js/ui/sacrifices.js"></script>
+  <script src="js/ui/overview.js"></script>
   <script src="js/ui/today.js"></script>
   <script src="js/ui/setup.js"></script>
   <script src="js/ui/income.js"></script>

@@ -37,10 +37,17 @@ form, or **Keep these figures as mine** to edit the sample.
 
 ## Screens
 
+**How it's laid out:** the header at the top (with **Setup** and **Your data**) stays
+pinned, slides away as you scroll down and comes back as soon as you scroll up, so
+you can get back to Setup at any time. When you've entered your figures, **Calculate
+my plan** at the bottom of Setup takes you to the **Overview**. The tabs at the bottom
+drill into each part of your plan.
+
 | Screen | What it does |
 | --- | --- |
+| **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, monthly surplus, net worth and pension at retirement, when the mortgage and student loan end, any warnings, and a net-worth chart. Every figure links to the tab with the detail. |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid), and monthly spending by category. |
+| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), and monthly spending by category. Ends with **Calculate my plan**. |
 | **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, the surplus split and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
@@ -108,6 +115,23 @@ tax year in the file. To update:
 2. Point the `<script>` tag in `index.html` and the entry in `tests/load.js` at the new
    file.
 3. Update the expected values in `tests/tax.test.js` and run `npm test`.
+
+## Salary sacrifice
+
+Add car schemes, cycle to work and other schemes (e.g. tech or extra holiday) under
+**Salary sacrifice** in Setup or on Income. Give each a monthly amount and, optionally,
+the months left. The sacrificed pay comes off before income tax, National Insurance
+and student loan, so each scheme shows what it **really costs you a month** after
+those savings. A car scheme also takes the car's list price (P11D value) and
+benefit-in-kind rate (default 4%, the 2026/27 rate for fully electric cars; 5% in
+2027/28). The benefit is added to taxable pay, with no employee NI. Lower taxable
+pay also helps with the personal allowance taper over £100,000.
+
+Pension contributions stay based on your full salary, as most employers do.
+Projections stop each scheme when its months run out. If a scheme replaces something
+you pay for now (such as a car lease), take that out of your spending. Salary
+sacrifice can't take your pay below the National Minimum Wage. Pension salary
+sacrifice is set separately, under "How your pension is paid".
 
 ## Student loans
 
@@ -195,11 +219,14 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-92 tests cover:
+103 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Salary sacrifice:** tax and NI savings at basic and higher rate, car benefit in
+  kind, the £100k taper, student loans, pension on full salary, schemes ending,
+  bonus months and import checks.
 - **Student loans:** current (default) and inflation-based interest by plan (Plan 2 by
   income, the temporary cap ending), write-off years and timing, repayment until
   cleared (then take-home rises), write-off of what's left, balances that grow, custom
@@ -216,7 +243,8 @@ npm test   # Node 18+, no dependencies to install
 - **Data handling:** parsing and validation, cleaning up imported data,
   export/import round trips.
 - **Checks on the source:** no code can make network requests, every script is
-  loaded, and every path stays relative (for GitHub Pages).
+  loaded, every path stays relative (for GitHub Pages), and every route has a screen,
+  with Setup in the header and the views as tabs.
 
 ## Accessibility
 

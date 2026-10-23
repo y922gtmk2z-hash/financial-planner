@@ -3,7 +3,7 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['today', 'setup', 'income', 'future', 'scenarios', 'assumptions', 'data'];
+  const ROUTES = ['overview', 'today', 'setup', 'income', 'future', 'scenarios', 'assumptions', 'data'];
 
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
@@ -14,6 +14,7 @@
   const scenarioBar = document.getElementById('scenario-bar');
   const status = document.getElementById('save-status');
   const toastEl = document.getElementById('toast');
+  const header = document.getElementById('app-header');
 
   const ctx = {
     storageError: loaded.error || null,
@@ -41,6 +42,11 @@
       }
     },
     rerender: () => route(),
+    // Save now and go to a screen (used by Setup's Calculate button).
+    go(id) {
+      save();
+      if (location.hash === `#${id}`) route(); else location.hash = `#${id}`;
+    },
     toast,
   };
 
@@ -101,8 +107,8 @@
   }
 
   function route() {
-    const name = (location.hash || '#today').slice(1);
-    const id = ROUTES.includes(name) ? name : 'today';
+    const name = (location.hash || '#overview').slice(1);
+    const id = ROUTES.includes(name) ? name : 'overview';
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -118,8 +124,20 @@
     save();
     route();
     window.scrollTo(0, 0);
+    header.classList.remove('is-hidden');
     main.focus({ preventScroll: true });
   });
+
+  // The header (with Setup) stays pinned to the top, slides away while you
+  // scroll down and comes back as soon as you scroll up.
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const y = Math.max(0, window.scrollY);
+    if (Math.abs(y - lastY) < 6) return;
+    header.classList.toggle('is-hidden', y > lastY && y > header.offsetHeight);
+    lastY = y;
+  }, { passive: true });
+  header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
   window.addEventListener('pagehide', save);
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : 'Sample data';

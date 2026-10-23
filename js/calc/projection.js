@@ -134,6 +134,7 @@
       let bonus = 0;
       let takeHome = 0;
       let pensionFromPay = 0;
+      let salarySacrifice = 0;
       let slDue = 0;
       let slPay = 0;
       if (working) {
@@ -141,8 +142,13 @@
         const input = FP.tax.inputFromProfile(profile);
         input.salary = (input.salary || 0) * sf;
         input.bonuses = (input.bonuses || []).map((b) => ({ ...b, amount: (b.amount || 0) * sf }));
+        // Salary sacrifice (car, cycle...) only while each arrangement lasts.
+        const ss = FP.tax.sacrificeForYear(profile.income.sacrifices, g);
+        input.otherSacrifice = ss.sacrifice;
+        input.benefitInKind = ss.benefitInKind;
         const th = FP.tax.takeHome(input, cfgY);
         salary = th.salary;
+        salarySacrifice = th.salarySacrifice;
         bonus = th.bonus;
         takeHome = th.takeHome;
         pensionFromPay = th.pensionIntoPot;
@@ -296,7 +302,7 @@
       }
 
       rows.push(snapshot(y, {
-        working, salary, bonus, takeHome, pensionFromPay, statePension, statePensionTax,
+        working, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
         studentLoanRepaid: slRepaid, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
         netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
       }));
@@ -360,7 +366,7 @@
     'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'studentLoan', 'shortfall', 'assets',
     'studentLoanRepaid', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
-    'netIncome', 'spending', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
+    'netIncome', 'spending', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
   function toReal(row) {
