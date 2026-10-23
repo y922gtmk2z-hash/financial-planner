@@ -136,6 +136,7 @@
     push('Bonuses (a year)', total(a.income.bonuses, 'amount'), total(b.income.bonuses, 'amount'), 'money');
     const savingsOf = (p, type) => (p.savings || []).filter((x) => x.type === type).reduce((t, x) => t + (x.monthly || 0), 0);
     FP.profile.SAVING_TYPES.forEach((t) => push(`Regular saving: ${t.label} (a month)`, savingsOf(a, t.value), savingsOf(b, t.value), 'money'));
+    FP.profile.LEFTOVER_FIELDS.forEach((f) => push(`Leftover money: ${f.label}`, (a.leftover || {})[f.key], (b.leftover || {})[f.key], 'pct'));
     push('Salary sacrifice (a month)', total(a.income.sacrifices, 'monthly'), total(b.income.sacrifices, 'monthly'), 'money');
     const timing = (p) => p.income.bonuses.filter((x) => x.amount > 0).map((x) => x.month).sort().join(',');
     if (timing(a) !== timing(b) && total(a.income.bonuses, 'amount') === total(b.income.bonuses, 'amount')) {

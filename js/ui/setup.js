@@ -16,6 +16,18 @@
     });
     root.appendChild(spendingCard(ctx, p));
     root.appendChild(FP.savingsEditor.render(ctx));
+    // Leftover money updates as you change anything above it.
+    const leftover = FP.leftoverCard.render(ctx);
+    root.appendChild(leftover);
+    let timer = null;
+    const refresh = (e) => {
+      if (leftover.contains(e.target)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => leftover.refresh(), 200);
+    };
+    root.addEventListener('input', refresh);
+    root.addEventListener('change', refresh);
+    root.addEventListener('click', refresh);
     root.appendChild(calculateCard(ctx, root));
   }
 

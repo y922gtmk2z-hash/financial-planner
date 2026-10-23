@@ -25,15 +25,10 @@
 
     A.GROUPS.forEach((g) => {
       const defs = A.DEFS.filter((d) => d.group === g.id);
-      // The surplus split shows a running total.
-      const status = g.id === 'split' ? h('p', { class: 'split-status', role: 'status' }) : null;
-      const update = status ? () => FP.screens.future.drawSplitStatus(status, p.assumptions) : null;
-      if (update) update();
-      const make = (d) => row(d, ctx, update);
+      const make = (d) => row(d, ctx);
       root.appendChild(h('section', { class: 'card', 'aria-labelledby': `grp-${g.id}` },
         h('h2', { id: `grp-${g.id}` }, g.label),
         defs.filter((d) => !d.advanced).map(make),
-        status,
         defs.some((d) => d.advanced)
           ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), defs.filter((d) => d.advanced).map(make))
           : null));

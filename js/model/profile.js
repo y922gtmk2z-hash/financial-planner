@@ -135,6 +135,18 @@
       help: 'Fully electric cars: 4% in 2026/27 (5% in 2027/28). Check your scheme quote.' },
   ];
 
+  /*
+   * What to do with money left over each month (after spending, debts and
+   * regular savings): percentages that the projection shares it out by.
+   */
+  const LEFTOVER_FIELDS = [
+    { key: 'cash', label: 'Cash savings', help: 'Easy-access cash, earning the savings rate.' },
+    { key: 'invest', label: 'Investments', help: 'Into your stocks & shares ISA first, then a general investment account.' },
+    { key: 'mortgage', label: 'Mortgage overpayments', help: 'Paid off the mortgage as a yearly lump sum. Goes to cash once the mortgage is cleared.' },
+    { key: 'pension', label: 'Extra pension contributions', help: 'With 20% basic-rate tax relief added. Goes to cash once you retire.' },
+  ].map((f) => ({ ...f, type: 'pct', min: 0, max: 100, suffix: '% of what\u2019s left' }));
+  const LEFTOVER_DEFAULT = { cash: 30, invest: 50, mortgage: 10, pension: 10 };
+
   const SAVING_TYPES = [
     { value: 'cash', label: 'Cash savings' },
     { value: 'cashIsa', label: 'Cash ISA' },
@@ -185,6 +197,7 @@
         studentLoanRate: null, region: 'rUK', pensionMethod: 'netPay',
       },
       savings: [],
+      leftover: { ...LEFTOVER_DEFAULT },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -297,6 +310,14 @@
       p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
         .map((x) => normaliseRow(x, SACRIFICE_FIELDS, 'ss'));
     }
+    // The leftover split used to be four assumptions (splitCash, ...).
+    const oldA = src.assumptions && typeof src.assumptions === 'object' ? src.assumptions : {};
+    const leftoverSrc = src.leftover && typeof src.leftover === 'object'
+      ? src.leftover
+      : { cash: oldA.splitCash, invest: oldA.splitInvest, mortgage: oldA.splitMortgage, pension: oldA.splitPension };
+    LEFTOVER_FIELDS.forEach((f) => {
+      if (leftoverSrc[f.key] !== undefined) p.leftover[f.key] = coerce(f, leftoverSrc[f.key], LEFTOVER_DEFAULT[f.key]);
+    });
     if (Array.isArray(src.savings)) {
       p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
         .map((x) => normaliseRow(x, SAVING_FIELDS, 'sv'));
@@ -341,7 +362,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

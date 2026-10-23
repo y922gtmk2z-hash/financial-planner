@@ -57,7 +57,7 @@
           add('cashIsa', '+ Cash ISA'),
           add('ssIsa', '+ Stocks & shares ISA')),
         totals,
-        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). Anything left over after these is shared out by your surplus split.'));
+        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). Anything left over after these is shared out as you choose under \u201cYour leftover money\u201d below.'));
       drawTotals();
     };
     draw();

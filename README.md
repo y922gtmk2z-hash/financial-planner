@@ -47,9 +47,9 @@ drill into each part of your plan.
 | --- | --- |
 | **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, monthly surplus, net worth and pension at retirement, when the mortgage and student loan end, any warnings, and a net-worth chart. Every figure links to the tab with the detail. |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, and **regular savings**. Ends with **Calculate my plan**. |
+| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, **regular savings**, and **your leftover money** (what's left each month, what to do with it, and suggestions). Ends with **Calculate my plan**. |
 | **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
-| **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, the surplus split and a full year-by-year table. |
+| **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, your leftover money and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
 | **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. |
 | **Your data** (header link) | Privacy notes, JSON export/import, load sample data, and **Clear all data**. |
@@ -96,7 +96,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
-| Surplus split | 30% cash, 50% investments, 10% mortgage overpayment, 10% pension |
+| Leftover money (your choice, in Setup) | 30% cash, 50% investments, 10% mortgage overpayment, 10% pension |
 
 ## Tax rules — check every tax year
 
@@ -117,6 +117,30 @@ tax year in the file. To update:
    file.
 3. Update the expected values in `tests/tax.test.js` and run `npm test`.
 
+## Your leftover money
+
+At the end of Setup (and on Future), **Your leftover money** shows how much is left
+each month after spending, mortgage and debts, and regular savings. Bonus months add
+more. You then choose what to do with it: **cash savings**, **investments** (ISA
+first), **mortgage overpayments** or **extra pension contributions**. Each choice shows
+what it comes to in £ a month, and the projection shares out each year's leftover
+money the same way. Anything you don't allocate goes to cash.
+
+Below that are **ideas based on your figures**, general rules of thumb rather than
+advice:
+
+- clear debts that cost more than savings earn;
+- build an emergency fund of 3–6 months of essential outgoings;
+- higher-rate pension tax relief, and avoiding the 60% band between £100k and £125k;
+- checking for employer pension matching;
+- overpaying a mortgage that costs more than cash earns;
+- using the ISA allowance;
+- not rushing to repay a student loan that will be written off.
+
+A **suggested split** follows from these, for example mostly cash until the emergency
+fund reaches 3 months. **Use this split** applies it. This used to be the "surplus
+split" in Assumptions; existing saved splits carry over.
+
 ## Regular savings
 
 Under **Regular savings** in Setup, add monthly amounts into **cash savings**, a
@@ -128,13 +152,13 @@ pay. They:
 - go into your balances each year until you retire. Cash and cash ISAs go to cash
   savings at the savings rate; stocks & shares ISAs go to ISA investments at the
   investment return after fees;
-- use the **ISA allowance** (£20,000) before the surplus split does. Anything over it
+- use the **ISA allowance** (£20,000) before your leftover money is shared out. Anything over it
   is still saved, outside an ISA;
 - respect the **cash ISA limit** of £12,000 a year for under-65s from 6 April 2027 (an
   editable assumption). Cash above it stays as ordinary cash savings.
 
-Anything left over after regular savings is shared out by your surplus split as
-before.
+Anything left over after regular savings is shared out as you choose under **Your
+leftover money**.
 
 ## Salary sacrifice
 
@@ -239,11 +263,15 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-114 tests cover:
+126 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Leftover money and suggestions:** what's left, each suggestion's trigger
+  (shortfall, emergency fund, expensive debts, higher rate, the 60% band, mortgage, ISA
+  room, student loan write-off), the suggested splits always adding up to 100%, and
+  older saved splits carrying over.
 - **Regular savings:** totals by type, contributions to the right balances, the ISA
   allowance and cash ISA limit (from April 2027, not for over-65s), amounts rising
   with pay, savings reducing the surplus, stopping at retirement, and import checks.
@@ -258,7 +286,7 @@ npm test   # Node 18+, no dependencies to install
 - **Mortgage amortisation:** payment formula, overpayments, rate changes, the
   overpayment limit, and no term left.
 - **Projection engine:** each asset's growth, the mortgage matching the standalone
-  calculator, the surplus split and ISA allowance, salary and bonus growth, retirement,
+  calculator, how leftover money is shared out and the ISA allowance, salary and bonus growth, retirement,
   shortfalls, State Pension, taxed pension drawdown, the pension access age, negative
   equity, and debts being paid off.
 - **Scenarios:** copying, the limit, rename and delete, differences, comparison,

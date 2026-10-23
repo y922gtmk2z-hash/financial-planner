@@ -182,7 +182,7 @@
     const ageText = (v, none) => (v === undefined ? 'No mortgage' : v == null ? none : `Age ${v}`);
     const rows = [
       { label: 'Take-home pay (a month, now)', cell: (s) => [money(s.takeHomeMonthly), delta(s.takeHomeMonthly, base.takeHomeMonthly)] },
-      { label: 'Monthly surplus (now)', cell: (s) => [money(s.surplusMonthly), delta(s.surplusMonthly, base.surplusMonthly)] },
+      { label: 'Left over each month (now)', cell: (s) => [money(s.surplusMonthly), delta(s.surplusMonthly, base.surplusMonthly)] },
       { label: 'Retirement age', cell: (s) => String(s.retirementAge) },
       { label: 'Net worth at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.netWorth), delta(s.atRetirement.netWorth, base.atRetirement && base.atRetirement.netWorth)] : '—') },
       { label: 'Pension pot at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.pension), delta(s.atRetirement.pension, base.atRetirement && base.atRetirement.pension)] : '—') },

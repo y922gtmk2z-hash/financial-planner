@@ -44,7 +44,7 @@
         onChange: (v) => { view = v; setView(v); draw(); },
       })),
       results,
-      splitCard(ctx, draw));
+      FP.leftoverCard.render(ctx, { onChange: draw }));
     draw();
   }
 
@@ -190,43 +190,24 @@
       h('ul', { class: 'notes' },
         h('li', null, 'Each year: your salary and bonuses rise with salary growth and are taxed with this year’s rules; spending rises with spending growth; balances grow at their own rates; the mortgage and other debts are paid down month by month.'),
         h('li', null, `Tax ${a.taxThresholds === 'inflation' ? 'thresholds rise with inflation each year' : 'thresholds stay frozen at today’s levels'}; tax rates stay as they are today. Change this in Assumptions.`),
-        h('li', null, 'Any surplus first repays an earlier shortfall, then is split as set below. Extra pension contributions get 20% basic-rate relief; higher-rate relief isn’t added.'),
+        h('li', null, 'Any money left over first repays an earlier shortfall, then is shared out as you choose below. Extra pension contributions get 20% basic-rate relief; higher-rate relief isn’t added.'),
         h('li', null, `Salary and workplace pension contributions stop at ${a.retirementAge}. State Pension starts at ${a.statePensionAge} and rises with inflation. Spending carries on at the same level in retirement.`),
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
-        h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before the surplus split, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
+        h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before your leftover money is shared out, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
         h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
   }
 
-  // Shows whether the surplus split adds up to 100% (also used by Assumptions).
-  function drawSplitStatus(el, assumptions) {
-    const sh = FP.projection.splitShares(assumptions);
+  // Shows whether the leftover split adds up to 100% (used by the leftover card).
+  function drawSplitStatus(el, split) {
+    const sh = FP.projection.splitShares(split);
     el.className = `split-status ${sh.status === 'ok' ? 'ok' : 'off'}`;
     el.textContent = sh.status === 'ok'
       ? 'Adds up to 100%.'
       : sh.status === 'under'
         ? `Adds up to ${sh.total}% \u2014 the other ${100 - sh.total}% goes to cash savings.`
         : `Adds up to ${sh.total}% \u2014 each share is scaled down to make 100%.`;
-  }
-
-  function splitCard(ctx, onChange) {
-    const p = ctx.profile();
-    const status = h('p', { class: 'split-status', role: 'status' });
-    const drawStatus = () => drawSplitStatus(status, ctx.profile().assumptions);
-    const fields = A.SPLIT_KEYS.map((key) => {
-      const d = A.def(key);
-      return FP.field.render({ ...FP.profile.assumptionField(key), help: d.help, suffix: A.UNIT_SUFFIX[d.unit], shared: true }, {
-        value: p.assumptions[key],
-        onChange: (v) => { ctx.update(`assumptions.${key}`, v); drawStatus(); onChange(); },
-      });
-    });
-    drawStatus();
-    return h('section', { class: 'card', 'aria-labelledby': 'split-h' },
-      h('h2', { id: 'split-h' }, 'Where your surplus goes'),
-      h('p', { class: 'muted' }, 'Each year, money left over after spending and debt payments is split like this. Also in Assumptions.'),
-      fields,
-      status);
   }
 
   FP.screens = FP.screens || {};
