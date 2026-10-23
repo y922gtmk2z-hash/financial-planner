@@ -97,7 +97,7 @@
     const a = profile.assumptions;
     const age0 = profile.about.age;
     if (age0 == null) return { ok: false, reason: 'age', message: 'Enter your age in Setup to see a projection.' };
-    const years = Math.min(MAX_YEARS, (a.endAge || 0) - age0);
+    const years = Math.min(opts.maxYears || MAX_YEARS, (a.endAge || 0) - age0);
     if (years < 1) return { ok: false, reason: 'endAge', message: 'Your projection end age must be after your current age.' };
 
     const now = new Date();
@@ -268,7 +268,8 @@
       });
 
       // 4. Spending, regular savings (while working) and surplus
-      const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g);
+      // opts.retirementSpending scales spending once you've retired (used to find what you could afford).
+      const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g) * (working ? 1 : (opts.retirementSpending == null ? 1 : opts.retirementSpending));
       const yearStartsAfterCashLimit = startMonthIndex + 12 * g >= cashLimitFromIndex;
       const saved = working
         ? FP.savings.forYear(profile.savings, {
@@ -448,11 +449,47 @@
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
+  /*
+   * How much you could spend in retirement without running short before the
+   * end age: the highest monthly spending (in today's money, at the start of
+   * retirement) that keeps every year funded. Mortgage and debt payments are on
+   * top, and your home isn't sold. This runs all the way to your end age, past
+   * the 40-year limit on the shown projection. Returns null when there are no
+   * retirement years or no spending entered; else { monthly, now, factor, endAge }.
+   */
+  function retirementSpend(profile, opts) {
+    opts = { ...opts, maxYears: 100 };
+    const base = project(profile, opts);
+    if (!base.ok || !base.events.retirement || base.events.retirement.y >= base.rows.length - 1) return null;
+    const now = sum(profile.spending, (r) => r.monthly || 0);
+    if (!(now > 0)) return null;
+    const lasts = (factor) => {
+      const r = project(profile, { ...opts, retirementSpending: factor });
+      return r.rows[r.rows.length - 1].shortfall <= 0.5;
+    };
+    let lo = 0;
+    let hi = 1;
+    if (lasts(hi)) {
+      while (hi < 16 && lasts(hi * 2)) hi *= 2;
+      lo = hi;
+      hi *= 2;
+    }
+    for (let i = 0; i < 24; i += 1) {
+      const mid = (lo + hi) / 2;
+      if (lasts(mid)) lo = mid; else hi = mid;
+    }
+    const a = profile.assumptions;
+    const ret = base.events.retirement;
+    // Spending grows from now; in today's money at the start of retirement.
+    const atRetirement = now * FP.growth.compound(1, a.spendingGrowth, ret.y) / ret.inflationFactor;
+    return { factor: lo, monthly: atRetirement * lo, now, endAge: base.events.end.age, capped: lo >= 16 };
+  }
+
   function toReal(row) {
     const out = { ...row };
     MONEY_KEYS.forEach((k) => { if (typeof row[k] === 'number') out[k] = row[k] / row.inflationFactor; });
     return out;
   }
 
-  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, splitShares, allocate, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, splitShares, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});

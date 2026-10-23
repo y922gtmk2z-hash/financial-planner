@@ -295,3 +295,25 @@ test('the sample household projects without gaps and clears its mortgage', () =>
   assert.ok(r.events.mortgageFree);
   assert.ok(r.rows[r.years].netWorth > r.rows[0].netWorth);
 });
+
+test('retirement spending: the most you could spend so the money lasts to the end age', () => {
+  const p = profile();
+  p.about.age = 50;
+  p.income.grossSalary = 50000;
+  p.assets.pension = 200000;
+  p.spending = [{ id: 's', category: 'All', monthly: 1500 }];
+  const rs = FP.projection.retirementSpend(p);
+  assert.equal(rs.endAge, 95);
+  assert.equal(rs.now, 1500);
+  // Runs past the 40-year limit, and spending a little more runs short.
+  const run = (f) => FP.projection.project(p, { maxYears: 100, retirementSpending: f });
+  assert.equal(run(rs.factor).rows.length - 1, 45);
+  assert.ok(run(rs.factor).rows.at(-1).shortfall <= 0.5);
+  assert.ok(run(rs.factor * 1.02).rows.at(-1).shortfall > 0.5);
+  // In today's money at the start of retirement.
+  const ret = run(1).events.retirement;
+  close(rs.monthly, 1500 * FP.growth.compound(1, p.assumptions.spendingGrowth, ret.y) / ret.inflationFactor * rs.factor);
+  // No retirement in view, or no spending: nothing to say.
+  p.about.age = 96;
+  assert.equal(FP.projection.retirementSpend(p), null);
+});

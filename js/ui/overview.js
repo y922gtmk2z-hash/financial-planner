@@ -33,6 +33,15 @@
     if (proj.ok) {
       const retire = ev.retirement ? rows[ev.retirement.y] : null;
       const end = rows[ev.end.y];
+      const rs = FP.projection.retirementSpend(p);
+      if (rs) {
+        const short = rs.factor < 1;
+        tiles.push(tile('#future', short ? 'Retirement spending' : 'You could spend in retirement',
+          `${money(rs.monthly)} a month`,
+          short
+            ? `lasts to ${rs.endAge}: less than the ${money(rs.now)} you spend now`
+            : `to age ${rs.endAge}, today\u2019s money (you spend ${money(rs.now)} now)`, short));
+      }
       if (retire) {
         tiles.push(tile('#future', `Net worth at ${retire.age}`, money(retire.netWorth), `at retirement, ${moneyNote}`));
         tiles.push(tile('#future', `Pension pot at ${retire.age}`, money(retire.pension), moneyNote));
@@ -50,7 +59,7 @@
       }
       tiles.push(ev.runsOut
         ? tile('#future', 'Money runs short', `Age ${ev.runsOut.age}`, String(ev.runsOut.year), true)
-        : tile('#future', `Net worth at ${end.age}`, money(end.netWorth), moneyNote));
+        : tile('#future', `Net worth at ${end.age}`, money(end.netWorth), end.age < a.endAge ? `end of the 40-year projection, ${moneyNote}` : moneyNote));
     }
 
     FP.dom.add(root,
