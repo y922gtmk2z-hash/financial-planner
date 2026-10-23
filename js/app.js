@@ -8,6 +8,7 @@
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
   let saveTimer = null;
+  let changedSinceLoad = false;
 
   const main = document.getElementById('main');
   const banner = document.getElementById('sample-banner');
@@ -26,6 +27,7 @@
       ctx.changed();
     },
     changed() {
+      changedSinceLoad = true;
       clearTimeout(saveTimer);
       status.textContent = 'Saving…';
       saveTimer = setTimeout(save, 300);
@@ -53,6 +55,11 @@
   function save() {
     clearTimeout(saveTimer);
     const ok = FP.store.save(workspace);
+    // When you last changed something (for the backup reminder).
+    if (ok && changedSinceLoad) {
+      FP.store.pref('lastChange', new Date().toISOString());
+      changedSinceLoad = false;
+    }
     status.textContent = ok ? 'Saved on this device' : 'Not saved — browser storage unavailable';
     status.classList.toggle('bad', !ok);
   }

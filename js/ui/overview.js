@@ -66,6 +66,7 @@
       h('h1', null, 'Overview'),
       h('p', { class: 'lead' }, 'Your plan at a glance. Tap any figure for the detail, or use the tabs below.'),
       noticeList(notices),
+      FP.backup.nudge(ctx),
       h('a', { class: 'card hero hero-link', href: '#today' },
         h('span', { class: 'eyebrow' }, 'Net worth today'),
         h('span', { class: `hero-number${today.netWorth < 0 ? ' negative' : ''}` }, money(today.netWorth)),
