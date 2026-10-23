@@ -1,0 +1,35 @@
+/*
+ * Clearly fictional sample household, so every screen has something to show.
+ * Not based on any real person. Replace it from Setup or the Data screen.
+ */
+(function (FP) {
+  'use strict';
+
+  function sample() {
+    return FP.profile.normalise({
+      isSample: true,
+      about: { age: 38 },
+      assets: { homeValue: 325000, cashSavings: 14000, isa: 22000, gia: 3500, pension: 61000, other: 6000 },
+      mortgage: { balance: 198000, remainingTermYears: 23, monthlyOverpayment: 150 },
+      debts: [
+        { id: 'sample-car', name: 'Car finance (sample)', balance: 7800, rate: 6.9, monthlyPayment: 245 },
+        { id: 'sample-card', name: 'Credit card (sample)', balance: 1200, rate: null, monthlyPayment: 100 },
+      ],
+      income: { grossSalary: 52000, bonus: 2000, studentLoanPlan: 'plan2' },
+      spending: [
+        { id: 'sample-s1', category: 'Bills & utilities', monthly: 260 },
+        { id: 'sample-s2', category: 'Council tax', monthly: 175 },
+        { id: 'sample-s3', category: 'Groceries', monthly: 420 },
+        { id: 'sample-s4', category: 'Transport', monthly: 140 },
+        { id: 'sample-s5', category: 'Childcare', monthly: 0 },
+        { id: 'sample-s6', category: 'Insurance', monthly: 65 },
+        { id: 'sample-s7', category: 'Eating out & leisure', monthly: 220 },
+        { id: 'sample-s8', category: 'Holidays', monthly: 150 },
+        { id: 'sample-s9', category: 'Other', monthly: 120 },
+      ],
+      assumptions: FP.assumptions.defaults(),
+    });
+  }
+
+  FP.sample = sample;
+})(globalThis.FP = globalThis.FP || {});

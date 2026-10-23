@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A private UK personal finance planner. Your data stays in your browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'">
+  <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)">
+  <title>Finance planner</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">£</span>
+      <span>Finance planner</span>
+    </div>
+    <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
+  </header>
+
+  <p class="disclaimer" role="note">
+    <strong>Planning illustration only &mdash; not financial advice.</strong>
+    Results depend on the assumptions you set, and projections are not guaranteed.
+  </p>
+
+  <div id="sample-banner" class="sample-banner" hidden></div>
+
+  <main id="main" tabindex="-1"></main>
+
+  <footer class="app-footer">
+    <p>This tool is a planning illustration and not financial advice. Figures are estimates based on your inputs and the assumptions you can see and change. Investments can fall as well as rise and projections are not guaranteed. Consider speaking to a regulated financial adviser before making decisions.</p>
+    <p>Your data is stored only in this browser. Nothing is sent anywhere.</p>
+  </footer>
+
+  <nav class="tabbar" aria-label="Screens">
+    <a href="#today" data-route="today"><span class="tab-icon" aria-hidden="true">◎</span>Today</a>
+    <a href="#setup" data-route="setup"><span class="tab-icon" aria-hidden="true">✎</span>Setup</a>
+    <a href="#assumptions" data-route="assumptions"><span class="tab-icon" aria-hidden="true">%</span>Assumptions</a>
+    <a href="#data" data-route="data"><span class="tab-icon" aria-hidden="true">⇅</span>Data</a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/config/assumptions.js"></script>
+  <script src="js/model/profile.js"></script>
+  <script src="js/model/sample.js"></script>
+  <script src="js/model/store.js"></script>
+  <script src="js/calc/mortgage.js"></script>
+  <script src="js/calc/summary.js"></script>
+  <script src="js/ui/dom.js"></script>
+  <script src="js/ui/field.js"></script>
+  <script src="js/ui/chart.js"></script>
+  <script src="js/ui/today.js"></script>
+  <script src="js/ui/setup.js"></script>
+  <script src="js/ui/assumptions.js"></script>
+  <script src="js/ui/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
