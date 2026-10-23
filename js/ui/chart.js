@@ -65,5 +65,228 @@
       h('span', { class: 'legend-value' }, FP.dom.money(it.value)))));
   }
 
-  FP.chart = { stackedBars, legend };
+  const SVG = 'http://www.w3.org/2000/svg';
+  function s(tag, attrs) {
+    const el = document.createElementNS(SVG, tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => { if (v != null) el.setAttribute(k, v); });
+    return el;
+  }
+
+  // £1.2m, £250k, £900
+  function compactMoney(n) {
+    const a = Math.abs(n);
+    const sign = n < 0 ? '\u2212' : '';
+    if (a >= 1e6) return `${sign}\u00a3${Number((a / 1e6).toFixed(a >= 1e7 ? 0 : 1))}m`;
+    if (a >= 1e3) return `${sign}\u00a3${Math.round(a / 1e3)}k`;
+    return `${sign}\u00a3${Math.round(a)}`;
+  }
+
+  function niceTicks(min, max, count) {
+    const span = max - min || 1;
+    const raw = span / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((st) => st >= raw) || raw;
+    const lo = Math.floor(min / step) * step;
+    const hi = Math.ceil(max / step) * step;
+    const ticks = [];
+    for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.abs(v) < step / 1e6 ? 0 : v);
+    return ticks;
+  }
+
+  /*
+   * Line or stacked-area chart over time, sized to its container.
+   * opts: {
+   *   type: 'line' | 'area',
+   *   xLabels: ['38', '39', ...]        (one per point; shown as "Age 38")
+   *   xTitle: (i) => 'Age 38 (2026)'    (tooltip heading)
+   *   series: [{ label, color, values: [] }]   (area: stacked in order; negatives stack downward)
+   *   markers: [{ index, label }]        (dashed vertical lines)
+   *   ariaLabel
+   * }
+   */
+  function timeChart(opts) {
+    const wrap = h('div', { class: 'tchart' });
+    const holder = h('div', { class: 'tchart-svg' });
+    const tip = h('div', { class: 'chart-tip tchart-tip', role: 'status', hidden: true });
+    wrap.append(holder, tip);
+    const n = opts.xLabels.length;
+    let active = null;
+    let lastWidth = 0;
+
+    // Precompute stacks / extents
+    const stacks = opts.series.map(() => []);
+    const downward = opts.series.map((ser) => ser.values.some((v) => v < 0));
+    let min = 0;
+    let max = 0;
+    for (let i = 0; i < n; i += 1) {
+      let pos = 0;
+      let neg = 0;
+      opts.series.forEach((ser, si) => {
+        const v = ser.values[i] || 0;
+        if (opts.type === 'area') {
+          // A series with any negative value (e.g. debts) always stacks below zero,
+          // so its band stays put when it reaches zero.
+          const down = downward[si];
+          const base = down ? neg : pos;
+          const top = base + (down ? Math.min(v, 0) : Math.max(v, 0));
+          stacks[si][i] = [base, top];
+          if (down) neg = top; else pos = top;
+        } else {
+          stacks[si][i] = [v, v];
+        }
+        min = Math.min(min, stacks[si][i][1]);
+        max = Math.max(max, stacks[si][i][1]);
+      });
+    }
+    let ticks = niceTicks(min, max, 4);
+    let yMin = ticks[0];
+    // A small dip below zero (e.g. a little debt) gets just enough room, not a whole tick.
+    const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
+    if (min < 0 && -min < step * 0.25) {
+      ticks = ticks.filter((t) => t >= 0);
+      yMin = min * 1.6;
+    }
+    const yMax = ticks[ticks.length - 1];
+
+    function draw() {
+      const W = Math.max(280, holder.clientWidth || wrap.clientWidth || 340);
+      lastWidth = W;
+      const H = Math.round(Math.min(320, Math.max(220, W * 0.55)));
+      const m = { l: 52, r: 12, t: 18, b: 28 };
+      const pw = W - m.l - m.r;
+      const ph = H - m.t - m.b;
+      const x = (i) => m.l + (n <= 1 ? 0 : (i / (n - 1)) * pw);
+      const y = (v) => m.t + (1 - (v - yMin) / (yMax - yMin || 1)) * ph;
+
+      const svg = s('svg', {
+        width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'tchart-plot', role: 'img', tabindex: '0',
+        'aria-label': `${opts.ariaLabel}. Use the left and right arrow keys to read values year by year.`,
+      });
+
+      // Grid + y labels
+      ticks.forEach((t) => {
+        svg.appendChild(s('line', { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? 'axis-zero' : 'grid' }));
+        const lbl = s('text', { x: m.l - 6, y: y(t) + 4, class: 'tick', 'text-anchor': 'end' });
+        lbl.textContent = compactMoney(t);
+        svg.appendChild(lbl);
+      });
+      // x labels: about every 5 or 10 points
+      const every = n > 30 ? 10 : 5;
+      for (let i = 0; i < n; i += 1) {
+        if (i % every !== 0 && i !== n - 1) continue;
+        if (i !== n - 1 && n - 1 - i < every / 2) continue;
+        const lbl = s('text', { x: x(i), y: H - 8, class: 'tick', 'text-anchor': i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle' });
+        lbl.textContent = opts.xLabels[i];
+        svg.appendChild(lbl);
+      }
+
+      // Markers
+      (opts.markers || []).forEach((mk) => {
+        if (mk.index == null || mk.index < 0 || mk.index >= n) return;
+        svg.appendChild(s('line', { x1: x(mk.index), x2: x(mk.index), y1: m.t, y2: m.t + ph, class: 'marker' }));
+        const lbl = s('text', { x: x(mk.index) + 4, y: m.t - 5, class: 'marker-label', 'text-anchor': mk.index > n * 0.8 ? 'end' : 'start' });
+        if (mk.index > n * 0.8) lbl.setAttribute('x', x(mk.index) - 4);
+        lbl.textContent = mk.label;
+        svg.appendChild(lbl);
+      });
+
+      // Series
+      opts.series.forEach((ser, si) => {
+        const pts = stacks[si];
+        if (opts.type === 'area') {
+          if (!ser.values.some((v) => Math.abs(v || 0) > 0.5)) return;
+          let d = '';
+          for (let i = 0; i < n; i += 1) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i][1]).toFixed(1)}`;
+          for (let i = n - 1; i >= 0; i -= 1) d += `L${x(i).toFixed(1)},${y(pts[i][0]).toFixed(1)}`;
+          svg.appendChild(s('path', { d: `${d}Z`, fill: `var(${ser.color})`, class: 'area' }));
+        } else {
+          let d = '';
+          for (let i = 0; i < n; i += 1) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i][1]).toFixed(1)}`;
+          svg.appendChild(s('path', { d, stroke: `var(${ser.color})`, class: `line${ser.dashed ? ' dashed' : ''}` }));
+        }
+      });
+
+      // Hover layer
+      const cross = s('line', { y1: m.t, y2: m.t + ph, class: 'crosshair', visibility: 'hidden' });
+      svg.appendChild(cross);
+      const dots = opts.type === 'line'
+        ? opts.series.map((ser) => { const c = s('circle', { r: 4.5, fill: `var(${ser.color})`, class: 'dot', visibility: 'hidden' }); svg.appendChild(c); return c; })
+        : [];
+      const hit = s('rect', { x: m.l, y: m.t, width: pw, height: ph, fill: 'transparent' });
+      svg.appendChild(hit);
+
+      function show(i) {
+        active = Math.max(0, Math.min(n - 1, i));
+        cross.setAttribute('x1', x(active));
+        cross.setAttribute('x2', x(active));
+        cross.setAttribute('visibility', 'visible');
+        dots.forEach((c, si) => {
+          c.setAttribute('cx', x(active));
+          c.setAttribute('cy', y(stacks[si][active][1]));
+          c.setAttribute('visibility', 'visible');
+        });
+        const items = opts.series.map((ser) => ({ ser, v: ser.values[active] || 0 }))
+          .filter((it) => opts.type !== 'area' || Math.abs(it.v) > 0.5);
+        const ordered = opts.type === 'area' ? items.slice().reverse() : items;
+        FP.dom.fill(tip,
+          h('strong', null, opts.xTitle(active)),
+          h('ul', null, ordered.map((it) => h('li', null,
+            h('span', { class: 'swatch', style: `background:var(${it.ser.color})` }),
+            h('span', { class: 'tip-label' }, it.ser.label),
+            h('span', { class: 'tip-value' }, FP.dom.money(it.v))))),
+          opts.type === 'area' && opts.totalLabel
+            ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, FP.dom.money(items.reduce((t, it) => t + it.v, 0))))
+            : null);
+        tip.hidden = false;
+        const tw = tip.offsetWidth;
+        const px = x(active);
+        const left = px + 14 + tw > W ? px - 14 - tw : px + 14;
+        tip.style.left = `${Math.max(0, left)}px`;
+        tip.style.top = `${m.t}px`;
+      }
+      function hide() {
+        active = null;
+        tip.hidden = true;
+        cross.setAttribute('visibility', 'hidden');
+        dots.forEach((c) => c.setAttribute('visibility', 'hidden'));
+      }
+      const fromEvent = (e) => {
+        const r = svg.getBoundingClientRect();
+        return Math.round(((e.clientX - r.left - m.l) / pw) * (n - 1));
+      };
+      svg.addEventListener('pointermove', (e) => show(fromEvent(e)));
+      svg.addEventListener('pointerdown', (e) => show(fromEvent(e)));
+      svg.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hide(); });
+      svg.addEventListener('blur', hide);
+      svg.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const step = e.key === 'ArrowRight' ? 1 : -1;
+          show(active == null ? (step > 0 ? 0 : n - 1) : active + step);
+        } else if (e.key === 'Escape') hide();
+      });
+
+      holder.replaceChildren(svg);
+      if (active != null) show(active);
+    }
+
+    // Draw once attached, and again when the width changes.
+    requestAnimationFrame(draw);
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => {
+        const w = holder.clientWidth;
+        if (w && Math.abs(w - lastWidth) > 2) draw();
+      }).observe(holder);
+    }
+    return wrap;
+  }
+
+  // Legend without values (for charts over time).
+  function keys(items) {
+    return h('ul', { class: 'legend legend-inline' }, items.map((it) => h('li', null,
+      h('span', { class: `swatch${it.line ? ' swatch-line' : ''}`, style: `background:var(${it.color})`, 'aria-hidden': 'true' }),
+      h('span', { class: 'legend-label' }, it.label))));
+  }
+
+  FP.chart = { stackedBars, legend, timeChart, keys, compactMoney };
 })(globalThis.FP = globalThis.FP || {});

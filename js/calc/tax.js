@@ -236,3 +236,50 @@
     MONTHS, bonusList, takeHome, keepOfNext, inputFromProfile, forProfile,
   };
 })(globalThis.FP = globalThis.FP || {});
+
+/*
+ * Tax rules for a future year: thresholds either frozen at today's levels or
+ * raised by `factor` (e.g. cumulative inflation). Rates never change.
+ */
+(function (FP) {
+  'use strict';
+
+  function indexConfig(cfg, factor) {
+    if (!(factor > 0) || factor === 1) return cfg;
+    const up = (n) => (n == null ? n : n * factor);
+    const bands = {};
+    Object.entries(cfg.bands).forEach(([region, list]) => {
+      bands[region] = list.map((b) => ({ ...b, upTo: up(b.upTo) }));
+    });
+    const studentLoans = {};
+    Object.entries(cfg.studentLoans).forEach(([plan, rule]) => {
+      studentLoans[plan] = { ...rule, threshold: up(rule.threshold) };
+    });
+    return {
+      ...cfg,
+      personalAllowance: up(cfg.personalAllowance),
+      taperThreshold: up(cfg.taperThreshold),
+      bands,
+      nationalInsurance: {
+        ...cfg.nationalInsurance,
+        primaryThreshold: up(cfg.nationalInsurance.primaryThreshold),
+        upperEarningsLimit: up(cfg.nationalInsurance.upperEarningsLimit),
+      },
+      studentLoans,
+    };
+  }
+
+  /*
+   * Income tax on non-employment income (State Pension, pension drawdown),
+   * which has no NI. `taxable` is the yearly taxable amount before allowance.
+   */
+  function incomeTaxOnly(taxable, region, cfg) {
+    cfg = cfg || FP.taxConfig;
+    const allowance = FP.tax.personalAllowance(taxable, cfg);
+    const bands = cfg.bands[region === 'scotland' ? 'scotland' : 'rUK'];
+    return FP.tax.incomeTax(Math.max(0, taxable - allowance), bands, 0, 0).total;
+  }
+
+  FP.tax.indexConfig = indexConfig;
+  FP.tax.incomeTaxOnly = incomeTaxOnly;
+})(globalThis.FP = globalThis.FP || {});

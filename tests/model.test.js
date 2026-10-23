@@ -50,7 +50,8 @@ test('export then import round-trips the profile', () => {
 test('every assumption has a default inside its range and a set-on date', () => {
   FP.assumptions.DEFS.forEach((d) => {
     assert.match(d.setOn, /^\d{4}-\d{2}-\d{2}$/, d.key);
-    if (d.default != null) assert.ok(d.default >= d.min && d.default <= d.max, d.key);
+    if (d.unit === 'choice') assert.ok(d.options.some((o) => o.value === d.default), d.key);
+    else if (d.default != null) assert.ok(d.default >= d.min && d.default <= d.max, d.key);
   });
 });
 

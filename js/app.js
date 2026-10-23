@@ -3,7 +3,7 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['today', 'setup', 'income', 'assumptions', 'data'];
+  const ROUTES = ['today', 'setup', 'income', 'future', 'assumptions', 'data'];
 
   const loaded = FP.store.load();
   let profile = loaded.profile;

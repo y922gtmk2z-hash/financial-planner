@@ -165,10 +165,10 @@
   function assumptionField(key) {
     const d = FP.assumptions.def(key);
     if (!d) return null;
-    return {
-      path: `assumptions.${key}`, label: d.label, min: d.min, max: d.max,
-      type: d.unit === 'age' || d.unit === 'year' ? 'int' : 'pct', nullable: !!d.nullable,
-    };
+    const base = { path: `assumptions.${key}`, label: d.label, nullable: !!d.nullable };
+    if (d.unit === 'choice') return { ...base, type: 'select', options: d.options };
+    const type = d.unit === 'money' ? 'money' : d.unit === 'age' || d.unit === 'year' ? 'int' : 'pct';
+    return { ...base, type, min: d.min, max: d.max };
   }
 
   /*

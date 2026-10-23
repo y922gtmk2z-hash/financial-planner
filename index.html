@@ -18,7 +18,10 @@
       <span class="brand-mark" aria-hidden="true">£</span>
       <span>Finance planner</span>
     </div>
-    <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
+    <div class="header-right">
+      <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
+      <a href="#data" data-route="data" class="header-link">Your data</a>
+    </div>
   </header>
 
   <p class="disclaimer" role="note">
@@ -39,8 +42,8 @@
     <a href="#today" data-route="today"><span class="tab-icon" aria-hidden="true">◎</span>Today</a>
     <a href="#setup" data-route="setup"><span class="tab-icon" aria-hidden="true">✎</span>Setup</a>
     <a href="#income" data-route="income"><span class="tab-icon" aria-hidden="true">₤</span>Income</a>
+    <a href="#future" data-route="future"><span class="tab-icon" aria-hidden="true">↗</span>Future</a>
     <a href="#assumptions" data-route="assumptions"><span class="tab-icon" aria-hidden="true">%</span>Assumptions</a>
-    <a href="#data" data-route="data"><span class="tab-icon" aria-hidden="true">⇅</span>Data</a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -53,6 +56,8 @@
   <script src="js/calc/mortgage.js"></script>
   <script src="js/calc/summary.js"></script>
   <script src="js/calc/tax.js"></script>
+  <script src="js/calc/growth.js"></script>
+  <script src="js/calc/projection.js"></script>
   <script src="js/ui/dom.js"></script>
   <script src="js/ui/field.js"></script>
   <script src="js/ui/chart.js"></script>
@@ -60,6 +65,7 @@
   <script src="js/ui/today.js"></script>
   <script src="js/ui/setup.js"></script>
   <script src="js/ui/income.js"></script>
+  <script src="js/ui/future.js"></script>
   <script src="js/ui/assumptions.js"></script>
   <script src="js/ui/data.js"></script>
   <script src="js/app.js"></script>
