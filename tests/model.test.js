@@ -79,7 +79,9 @@ test('summary: net worth, equity and outgoings for the sample household', () => 
   // credit card with a blank rate uses the default other-debt rate
   assert.equal(s.debts[1].rate, 7);
   const withPay = FP.summary.compute(p, 3000);
-  assert.equal(withPay.cashFlow.surplus, 3000 - withPay.cashFlow.outgoings);
+  assert.equal(withPay.cashFlow.available, 3000 - withPay.cashFlow.outgoings);
+  assert.equal(withPay.cashFlow.savingsMonthly, 75); // the sample's stocks & shares ISA
+  assert.equal(withPay.cashFlow.surplus, withPay.cashFlow.available - 75);
 });
 
 test('summary copes with an empty profile', () => {

@@ -73,6 +73,8 @@
     // Month the projection starts (1-12). Each projection year runs from here.
     const startMonth = opts.startMonth || now.getMonth() + 1;
     const startMonthIndex = startYear * 12 + (startMonth - 1);
+    const [clY, clM] = cfg.isa.cashLimitFrom.split('-').map(Number);
+    const cashLimitFromIndex = clY * 12 + (clM - 1);
     const region = profile.income.region;
     const shares = splitShares(a);
     const warnings = [];
@@ -233,15 +235,34 @@
         if (d.bal <= 0.005) d.bal = 0;
       });
 
-      // 4. Spending and surplus
+      // 4. Spending, regular savings (while working) and surplus
       const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g);
-      const surplus = netIncome - spending - mortgagePaid - debtPaid;
+      const yearStartsAfterCashLimit = startMonthIndex + 12 * g >= cashLimitFromIndex;
+      const saved = working
+        ? FP.savings.forYear(profile.savings, {
+          salaryFactor: FP.growth.compound(1, a.salaryGrowth, g),
+          isaAllowance: a.isaAllowance,
+          cashIsaLimit: yearStartsAfterCashLimit && startAge < cfg.isa.cashLimitExemptAge ? a.cashIsaLimit : null,
+        })
+        : FP.savings.forYear([], {});
+      if (saved.overAllowance) {
+        warnOnce('isaAllowance', `From ${startYear + y} (age ${age0 + y}) your regular ISA savings are more than the ${fmt(a.isaAllowance)} ISA allowance. The extra is saved outside an ISA.`);
+      } else if (saved.overCashLimit) {
+        warnOnce('cashIsaLimit', `From ${startYear + y} (age ${age0 + y}) your cash ISA savings are more than the ${fmt(a.cashIsaLimit)} cash ISA limit for under-65s. The extra is saved as ordinary cash.`);
+      }
+      const surplus = netIncome - spending - mortgagePaid - debtPaid - saved.total;
+
+      // Regular savings go in first (so they take ISA allowance before the surplus split).
+      cash += saved.cash;
+      isa += saved.isa;
+      gia += saved.gia;
+      const isaRoomLeft = Math.max(0, (a.isaAllowance || 0) - saved.isaUsed);
 
       // 5. Pension contributions from pay
       if (working) pension += pensionFromPay;
 
       // 6. Allocate a surplus or fund a deficit
-      const flow = { toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
       if (surplus >= 0) {
         let s = surplus;
         const repay = Math.min(s, shortfall);
@@ -257,7 +278,7 @@
 
         mBal -= toMortgage;
         if (mBal <= 0.005) mBal = 0;
-        const intoIsa = Math.min(toInvest, Math.max(0, a.isaAllowance || 0));
+        const intoIsa = Math.min(toInvest, isaRoomLeft);
         isa += intoIsa;
         gia += toInvest - intoIsa;
         const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
@@ -366,7 +387,7 @@
     'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'studentLoan', 'shortfall', 'assets',
     'studentLoanRepaid', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
-    'netIncome', 'spending', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
+    'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
   function toReal(row) {

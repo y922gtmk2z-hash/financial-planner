@@ -47,7 +47,7 @@ drill into each part of your plan.
 | --- | --- |
 | **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, monthly surplus, net worth and pension at retirement, when the mortgage and student loan end, any warnings, and a net-worth chart. Every figure links to the tab with the detail. |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), and monthly spending by category. Ends with **Calculate my plan**. |
+| **Setup** (header) | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, and **regular savings**. Ends with **Calculate my plan**. |
 | **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, the surplus split and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
@@ -95,6 +95,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | State Pension | £12,547.60 a year (£241.30 a week, 2026/27) from age 67, rising with inflation |
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
+| Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
 | Surplus split | 30% cash, 50% investments, 10% mortgage overpayment, 10% pension |
 
 ## Tax rules — check every tax year
@@ -115,6 +116,25 @@ tax year in the file. To update:
 2. Point the `<script>` tag in `index.html` and the entry in `tests/load.js` at the new
    file.
 3. Update the expected values in `tests/tax.test.js` and run `npm test`.
+
+## Regular savings
+
+Under **Regular savings** in Setup, add monthly amounts into **cash savings**, a
+**cash ISA** or a **stocks & shares ISA**. Each can stay the same or rise with your
+pay. They:
+
+- come out of what's left after spending and debts. Today shows "left after spending
+  and debts", then your savings, then the surplus, and warns if they don't fit;
+- go into your balances each year until you retire. Cash and cash ISAs go to cash
+  savings at the savings rate; stocks & shares ISAs go to ISA investments at the
+  investment return after fees;
+- use the **ISA allowance** (£20,000) before the surplus split does. Anything over it
+  is still saved, outside an ISA;
+- respect the **cash ISA limit** of £12,000 a year for under-65s from 6 April 2027 (an
+  editable assumption). Cash above it stays as ordinary cash savings.
+
+Anything left over after regular savings is shared out by your surplus split as
+before.
 
 ## Salary sacrifice
 
@@ -219,11 +239,14 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-103 tests cover:
+114 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Regular savings:** totals by type, contributions to the right balances, the ISA
+  allowance and cash ISA limit (from April 2027, not for over-65s), amounts rising
+  with pay, savings reducing the surplus, stopping at retirement, and import checks.
 - **Salary sacrifice:** tax and NI savings at basic and higher rate, car benefit in
   kind, the £100k taper, student loans, pension on full salary, schemes ending,
   bonus months and import checks.

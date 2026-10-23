@@ -159,6 +159,7 @@
       ['Income after tax', (x) => x.netIncome, true],
       ['Spending', (x) => x.spending, true],
       ['Mortgage & debts', (x) => x.mortgagePaid + x.debtPaid, true],
+      ['Regular savings', (x) => x.regularSaving, true],
       ['Surplus', (x) => x.surplus, true],
       ['Cash', (x) => x.cash],
       ['Investments', (x) => x.isa + x.gia],
@@ -193,6 +194,7 @@
         h('li', null, `Salary and workplace pension contributions stop at ${a.retirementAge}. State Pension starts at ${a.statePensionAge} and rises with inflation. Spending carries on at the same level in retirement.`),
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
+        h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before the surplus split, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
         h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
   }

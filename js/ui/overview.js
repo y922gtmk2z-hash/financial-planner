@@ -25,8 +25,10 @@
     const cf = today.cashFlow;
     const tiles = [
       tile('#income', 'Take-home pay', `${money(pay.takeHomeMonthly)}`, 'a month'),
-      tile('#today', cf.surplus < 0 ? 'Monthly shortfall' : 'Monthly surplus', money(Math.abs(cf.surplus)), 'after spending and debts', cf.surplus < 0),
-    ];
+      cf.savingsMonthly > 0 ? tile('#today', 'Regular savings', money(cf.savingsMonthly), 'a month') : null,
+      tile('#today', cf.surplus < 0 ? 'Monthly shortfall' : 'Monthly surplus', money(Math.abs(cf.surplus)),
+        cf.savingsMonthly > 0 ? 'after spending, debts and saving' : 'after spending and debts', cf.surplus < 0),
+    ].filter(Boolean);
     if (proj.ok) {
       const retire = ev.retirement ? rows[ev.retirement.y] : null;
       const end = rows[ev.end.y];

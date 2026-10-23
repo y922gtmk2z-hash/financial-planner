@@ -538,3 +538,17 @@ fieldset.row-card { min-width: 0; }
   .app-header-inner { gap: 8px; }
   .header-link { padding: 6px 9px; }
 }
+
+/* ---------- Regular savings ---------- */
+.saving-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.saving-row {
+  /* Into (full width) and remove on the first row; amount and "each year" below. */
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px; gap: 6px 8px; align-items: end;
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+}
+.saving-row .field { margin: 0; min-width: 0; }
+.saving-row .field:nth-child(1) { grid-column: 1 / 3; grid-row: 1; }
+.saving-row .field:nth-child(2) { grid-column: 1; grid-row: 2; }
+.saving-row .field:nth-child(3) { grid-column: 2 / 4; grid-row: 2; }
+.saving-row .icon-btn { grid-column: 3; grid-row: 1; }
+.savings-totals .total-row { margin-top: 4px; }

@@ -96,6 +96,10 @@
     // 7% and 9%). Used as the default for a new car salary sacrifice.
     electricCarBikPct: 4,
 
+    // ISAs: the cash ISA limit (an assumption, £12,000 by default) applies from
+    // this month to people under this age. The overall allowance is an assumption too.
+    isa: { cashLimitFrom: '2027-04', cashLimitExemptAge: 65 },
+
     // Relief-at-source pensions: the provider claims this rate back on your behalf.
     reliefAtSourceRate: 20,
   };
