@@ -158,6 +158,7 @@
     const override = inc.studentLoanRate;
     const rate = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override });
     const later = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override, rpi: p.assumptions.inflation });
+    const followInflation = p.assumptions.studentLoanInterest === 'inflation';
     const interest = inc.studentLoanBalance * rate / 100;
     const until = FP.taxConfig.studentLoanInterest.until.split('-').map(Number);
     const laterFrom = FP.dom.date(`${until[1] === 12 ? until[0] + 1 : until[0]}-${String(until[1] === 12 ? 1 : until[1] + 1).padStart(2, '0')}-01`).replace(/^1 /, '');
@@ -176,16 +177,19 @@
       h('dl', { class: 'rows' }, [
         ['Balance today', money(inc.studentLoanBalance)],
         ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && override == null ? ' (depends on income)' : ''}`],
-        [`From ${laterFrom}`, override == null ? `${pct(later, 2)} (inflation ${pct(p.assumptions.inflation, 1)} + ${pct(later - p.assumptions.inflation, 2)})` : pct(later, 2)],
+        followInflation
+          ? [`From ${laterFrom}`, override == null ? `${pct(later, 2)} (inflation ${pct(p.assumptions.inflation, 1)} + ${pct(later - p.assumptions.inflation, 2)})` : pct(later, 2)]
+          : null,
         ['Interest this year (about)', money(interest)],
         ['Repaying this year', money(r.studentLoan)],
         ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
-      ].map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
+      ].filter(Boolean).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
       r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
       outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Setup to project when it ends.'),
       chips([
-        'Published rates until August 2027',
-        `Then RPI = your ${pct(p.assumptions.inflation, 1)} inflation assumption, plus the plan\u2019s margin`,
+        followInflation
+          ? `Current rates until August 2027, then your ${pct(p.assumptions.inflation, 1)} inflation as RPI + plan margin`
+          : 'Current rates held in projections (change in Assumptions)',
         plan === 'plan1' || plan === 'plan4' ? 'Plan 1 and 4: base-rate limit not modelled' : null,
         'Check your balance and dates with the Student Loans Company',
       ]));

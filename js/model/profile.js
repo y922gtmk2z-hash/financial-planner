@@ -92,7 +92,7 @@
         { path: 'income.studentLoanStartYear', label: 'Year you were first due to repay', type: 'int', min: 1990, max: 2040, nullable: true, placeholder: 'e.g. 2016', group: 'studentLoan',
           help: 'The April after you left your course. Used to work out when any balance left is written off.' },
         { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan',
-          help: 'Leave blank to use your plan\u2019s rate: published rates until August 2027, then your inflation assumption (as RPI) plus the plan\u2019s margin.' },
+          help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
         { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,

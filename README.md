@@ -63,6 +63,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Default rate for other debts | 7.0% |
 | Overpayment warning | above 10% of the balance a year |
 | Tax thresholds in future years | frozen (or rise with inflation) |
+| Student loan interest in future years | current rates (or follow inflation) |
 | State Pension | £12,547.60 a year (£241.30 a week, 2026/27) from age 67, rising with inflation |
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
@@ -108,13 +109,13 @@ which plan you're likely to be on). Interest is RPI plus a margin:
 | Plan 5 | RPI |
 | Postgraduate | RPI + 3% |
 
-For the current interest year (to 31 August 2027) the published rates are used: RPI
-4.1%, with a temporary 6% cap on Plan 2 and postgraduate loans. After that, the
-projection uses **your inflation assumption as RPI**, plus the plan's margin, and the
-cap no longer applies. So if you raise inflation in Assumptions, student loan interest
-rises with it. RPI has usually run above CPI. To allow for that, or to use a rate you
-know, enter your own rate. Without a balance, repayments simply carry on until you
-retire.
+The current published rates (1 September 2026 to 31 August 2027) are RPI 4.1%, with a
+temporary 6% cap on Plan 2 and postgraduate loans. **By default the projection keeps
+these current rates** (Plan 2 still moves with your income). In Assumptions you can
+instead choose **Student loan interest in future years → Follow inflation**. That
+uses your inflation assumption as RPI from September 2027, plus the plan's margin,
+with no cap. Entering your own rate in Setup overrides both. Without a balance,
+repayments simply carry on until you retire.
 
 ## How the projection works
 
@@ -173,12 +174,12 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-88 tests cover:
+90 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
-- **Student loans:** published and inflation-based interest by plan (Plan 2 by
+- **Student loans:** current (default) and inflation-based interest by plan (Plan 2 by
   income, the temporary cap ending), write-off years and timing, repayment until
   cleared (then take-home rises), write-off of what's left, balances that grow, custom
   rates, and higher inflation delaying payoff.

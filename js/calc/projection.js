@@ -152,8 +152,8 @@
 
       // Student loan balance, month by month: written off in April of the
       // write-off year; otherwise interest is added (published rates for the
-      // current interest year, then your inflation assumption as RPI plus the
-      // plan's margin) and repayments taken. Once it's cleared, repayments
+      // current interest year, then either the same rates or your inflation
+      // assumption as RPI plus the plan's margin) and repayments taken. Once it's cleared, repayments
       // stop and take-home rises.
       let slRepaid = slDue;
       let slInterest = 0;
@@ -162,7 +162,10 @@
         slRepaid = 0;
         const override = profile.income.studentLoanRate;
         const ratePublished = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override });
-        const rateFuture = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override, rpi: a.inflation });
+        // After the current interest year: today's rates, or inflation as RPI (see Assumptions).
+        const rateFuture = a.studentLoanInterest === 'inflation'
+          ? FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override, rpi: a.inflation })
+          : ratePublished;
         for (let m = 0; m < 12; m += 1) {
           const abs = startMonthIndex + 12 * g + m; // months since year 0
           const year = Math.floor(abs / 12);

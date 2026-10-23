@@ -129,10 +129,9 @@ test('a balance grows when repayments don\'t cover the interest', () => {
   const p = profile({ grossSalary: 25000, studentLoanBalance: 30000 }); // under the threshold: no repayments
   const r = project(p);
   assert.equal(r.rows[1].studentLoanRepaid, 0);
-  // Oct 2026 - Aug 2027 at the published 4.1%, then Sep 2027 at 2.5% (inflation)
-  close(r.rows[1].studentLoan, 30000 * (1 + 0.041 / 12) ** 11 * (1 + 0.025 / 12), 0.01);
-  // A later year: inflation only
-  close(r.rows[3].studentLoan, r.rows[2].studentLoan * (1 + 0.025 / 12) ** 12, 0.01);
+  // By default the current rate (RPI 4.1%, as income is below the Plan 2 threshold) carries on
+  close(r.rows[1].studentLoan, 30000 * (1 + 0.041 / 12) ** 12, 0.01);
+  close(r.rows[3].studentLoan, r.rows[2].studentLoan * (1 + 0.041 / 12) ** 12, 0.01);
   assert.equal(r.events.studentLoan.writtenOffRow, null); // no start year: write-off unknown
   assert.ok(r.events.studentLoan.owingAtEnd > 30000);
 });
@@ -157,9 +156,29 @@ test('the sample household clears its loan before it would be written off', () =
   assert.ok(ev.clearedRow && ev.clearedRow.year <= 2047);
 });
 
-test('higher inflation means more interest and a later payoff', () => {
+test('following inflation: from September 2027 interest is inflation (as RPI) + margin', () => {
+  const p = profile({ grossSalary: 25000, studentLoanBalance: 30000 });
+  p.assumptions.studentLoanInterest = 'inflation';
+  const r = project(p);
+  // Oct 2026 - Aug 2027 at the published 4.1%, then Sep 2027 at 2.5% (inflation)
+  close(r.rows[1].studentLoan, 30000 * (1 + 0.041 / 12) ** 11 * (1 + 0.025 / 12), 0.01);
+  close(r.rows[3].studentLoan, r.rows[2].studentLoan * (1 + 0.025 / 12) ** 12, 0.01);
+});
+
+test('by default, inflation doesn\'t change student loan interest', () => {
   const run = (inflation) => {
     const p = profile({ grossSalary: 45000, studentLoanBalance: 30000, studentLoanStartYear: 2020 });
+    p.assumptions.inflation = inflation;
+    p.assumptions.salaryGrowth = 3;
+    return project(p);
+  };
+  assert.equal(run(1).rows[5].studentLoan, run(5).rows[5].studentLoan);
+});
+
+test('following inflation: higher inflation means more interest and a later payoff', () => {
+  const run = (inflation) => {
+    const p = profile({ grossSalary: 45000, studentLoanBalance: 30000, studentLoanStartYear: 2020 });
+    p.assumptions.studentLoanInterest = 'inflation';
     p.assumptions.inflation = inflation;
     return project(p);
   };
