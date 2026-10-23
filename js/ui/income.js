@@ -4,6 +4,8 @@
 
   const { h, money, pct, chips } = FP.dom;
 
+  const monthName = (v) => (FP.profile.BONUS_MONTHS.find((m) => m.value === v) || { label: v }).label;
+
   const PLAN_LABELS = { plan1: 'Plan 1', plan2: 'Plan 2', plan4: 'Plan 4', plan5: 'Plan 5', postgrad: 'Postgraduate' };
 
   function render(root, ctx) {
@@ -52,7 +54,7 @@
       return h('section', { class: 'card' }, h('p', { class: 'muted' }, 'Enter your gross salary above to see your take-home pay.'));
     }
 
-    const regular = r.bonus > 0 ? FP.tax.takeHome({ ...input, bonus: 0 }) : null;
+    const regular = r.bonus > 0 && !r.bonusMonth ? FP.tax.takeHome({ ...input, bonus: 0 }) : null;
     const keep = FP.tax.keepOfNext(input);
     const deductions = r.incomeTax + r.nationalInsurance + r.studentLoan;
 
@@ -75,7 +77,10 @@
         h('h2', { id: 'th-h', class: 'eyebrow' }, 'Take-home pay'),
         h('p', { class: 'hero-number' }, `${money(r.takeHomeMonthly)}`, h('span', { class: 'per' }, ' a month')),
         h('p', { class: 'muted' }, `${money(r.takeHome)} a year from ${money(r.gross)} gross`,
-          regular ? ` · ${money(regular.takeHomeMonthly)} in a month without bonus` : ''),
+          regular ? ` \u00b7 bonus spread evenly; ${money(regular.takeHomeMonthly)} a month without it` : ''),
+        r.bonusMonth ? h('p', { class: 'bonus-callout' },
+          h('strong', null, `+ ${money(r.bonusExtra)} extra in ${monthName(r.bonusMonth)}`),
+          ` from your ${money(r.bonus)} bonus after tax, NI${r.studentLoan > 0 ? ' and student loan' : ''}. That month you take home ${money(r.bonusMonthPay.takeHome)}.`) : null,
         FP.chart.stackedBars([{ label: 'Where your pay goes', total: r.gross, segments: segs }], { ariaLabel: 'Bar showing how gross pay splits into take-home, tax, NI, student loan and pension' }),
         FP.chart.legend(segs.filter((x) => x.value > 0)),
         h('div', { class: 'stat-grid' },
@@ -94,31 +99,44 @@
         h('ul', { class: 'notes' },
           h('li', null, methodNote),
           h('li', null, 'Pension contributions are a percentage of salary, not bonus.'),
-          h('li', null, 'Worked out on yearly pay. Payroll calculates NI and student loan each pay period, so a bonus paid in one month can make the real figures differ slightly.'),
+          r.bonusMonth
+            ? h('li', null, `Bonus paid in ${monthName(r.bonusMonth)}: NI and student loan are worked out on that month\u2019s pay, as payroll does. Income tax uses your yearly position, so the bonus month carries the extra tax; real payslips can spread it slightly differently depending on the month.`)
+            : h('li', null, 'Worked out on yearly pay, with any bonus spread evenly. Payroll calculates NI and student loan each pay period, so a bonus paid in one month changes the figures \u2014 choose its month above to see that.'),
           h('li', null, 'Employment income only, with a standard tax code. Savings, dividends, rental income, benefits in kind, Marriage Allowance and the High Income Child Benefit Charge are not included.'),
           h('li', null, 'Rates and thresholds come from the tax config file and are not adjusted by the Assumptions panel.'))),
       rulesCard(r)];
   }
 
   function breakdownCard(r) {
-    const row = (label, year, cls) => h('tr', { class: cls || null },
+    const reg = r.regularMonth;
+    const bm = r.bonusMonthPay;
+    const months = bm ? [reg, bm] : [reg];
+    // values: [year, ...one per month column]
+    const row = (label, values, cls) => h('tr', { class: cls || null },
       h('th', { scope: 'row' }, label),
-      h('td', { class: 'num' }, money(year)),
-      h('td', { class: 'num' }, money(year / 12)));
+      values.map((v) => h('td', { class: 'num' }, money(v))));
+    const each = (key) => months.map((m) => m[key]);
+    const salaryMonth = bm ? r.salary / 12 : reg.gross - r.bonus / 12;
     return h('section', { class: 'card', 'aria-labelledby': 'bd-h' },
       h('h2', { id: 'bd-h' }, 'Breakdown'),
-      h('table', { class: 'data-table breakdown' },
-        h('thead', null, h('tr', null, h('th', { scope: 'col' }, ''), h('th', { scope: 'col', class: 'num' }, 'Year'), h('th', { scope: 'col', class: 'num' }, 'Month'))),
+      h('div', { class: 'table-scroll' }, h('table', { class: 'data-table breakdown' },
+        h('thead', null, h('tr', null,
+          h('th', { scope: 'col' }, ''),
+          h('th', { scope: 'col', class: 'num' }, 'Year'),
+          bm
+            ? [h('th', { scope: 'col', class: 'num' }, 'Regular month'), h('th', { scope: 'col', class: 'num' }, monthName(r.bonusMonth))]
+            : h('th', { scope: 'col', class: 'num' }, 'Month'))),
         h('tbody', null,
-          row('Salary', r.salary),
-          r.bonus > 0 ? row('Bonus', r.bonus) : null,
-          r.pensionFromPay > 0 ? row(`− Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, r.pensionFromPay, 'minus') : null,
-          row('− Income tax', r.incomeTax, 'minus'),
-          row('− National Insurance', r.nationalInsurance, 'minus'),
-          r.studentLoan > 0 ? row('− Student loan', r.studentLoan, 'minus') : null,
-          row('Take-home pay', r.takeHome, 'result'),
-          r.employerPension > 0 ? row('Employer adds to your pension', r.employerPension, 'aside') : null,
-          r.pensionIntoPot > 0 ? row('Total paid into your pension', r.pensionIntoPot, 'aside') : null)));
+          row('Salary', [r.salary, ...months.map(() => salaryMonth)]),
+          r.bonus > 0 ? row('Bonus', [r.bonus, ...(bm ? [0, r.bonus] : [r.bonus / 12])]) : null,
+          r.pensionFromPay > 0 ? row(`\u2212 Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, [r.pensionFromPay, ...each('pensionFromPay')], 'minus') : null,
+          row('\u2212 Income tax', [r.incomeTax, ...each('incomeTax')], 'minus'),
+          row('\u2212 National Insurance', [r.nationalInsurance, ...each('nationalInsurance')], 'minus'),
+          r.studentLoan > 0 ? row('\u2212 Student loan', [r.studentLoan, ...each('studentLoan')], 'minus') : null,
+          row('Take-home pay', [r.takeHome, ...each('takeHome')], 'result'),
+          r.employerPension > 0 ? row('Employer adds to your pension', [r.employerPension, ...months.map(() => r.employerPension / 12)], 'aside') : null,
+          r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
+      bm ? h('p', { class: 'muted small' }, `The year is 11 regular months plus ${monthName(r.bonusMonth)}.`) : null);
   }
 
   function bandsCard(r) {

@@ -78,3 +78,9 @@ test('summary copes with an empty profile', () => {
   assert.equal(s.home.ltvPct, null);
   assert.equal(s.cashFlow.outgoings, 0);
 });
+
+test('bonus month is stored and validated', () => {
+  assert.equal(FP.profile.blank().income.bonusMonth, 'spread');
+  assert.equal(FP.profile.normalise({ income: { bonusMonth: 'mar' } }).income.bonusMonth, 'mar');
+  assert.equal(FP.profile.normalise({ income: { bonusMonth: 'smarch' } }).income.bonusMonth, 'spread');
+});

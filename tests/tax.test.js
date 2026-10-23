@@ -119,3 +119,44 @@ test('forProfile reads the shared profile', () => {
   assert.equal(r.bonus, 2000);
   assert.ok(r.takeHomeMonthly > 2500 && r.takeHomeMonthly < 4000);
 });
+
+test('bonus spread evenly: a regular month is 1/12 of the year', () => {
+  const r = th({ salary: 30000, bonus: 6000, bonusMonth: 'spread' });
+  assert.equal(r.bonusMonth, null);
+  close(r.regularMonth.takeHome, r.takeHome / 12);
+  close(r.takeHomeMonthly, r.takeHome / 12);
+});
+
+test('bonus paid in one month: NI and student loan are per pay period', () => {
+  const input = { salary: 30000, bonus: 6000, bonusMonth: 'mar', studentLoanPlan: 'plan2' };
+  const r = th(input);
+  const spread = th({ ...input, bonusMonth: 'spread' });
+  const noBonus = th({ ...input, bonus: 0 });
+  assert.equal(r.bonusMonth, 'mar');
+
+  // Regular month = a month with no bonus
+  close(r.regularMonth.takeHome, noBonus.takeHome / 12);
+  close(r.takeHomeMonthly, noBonus.takeHome / 12);
+
+  // Bonus month: £8,500 pay. NI 8% up to the monthly upper limit, 2% above it.
+  const pt = 12570 / 12;
+  const uel = 50270 / 12;
+  close(r.bonusMonthPay.nationalInsurance, (uel - pt) * 0.08 + (8500 - uel) * 0.02);
+  close(r.bonusMonthPay.studentLoan, (8500 - 29385 / 12) * 0.09);
+  // Income tax is cumulative, so the year's tax is unchanged and the bonus month carries the extra
+  close(r.incomeTax, spread.incomeTax);
+  close(r.bonusMonthPay.incomeTax, noBonus.incomeTax / 12 + 6000 * 0.2);
+
+  // The year adds up: 11 regular months + the bonus month
+  close(r.takeHome, r.regularMonth.takeHome * 11 + r.bonusMonthPay.takeHome, 0.05);
+  close(r.nationalInsurance, r.regularMonth.nationalInsurance * 11 + r.bonusMonthPay.nationalInsurance, 0.05);
+  // Part of the bonus falls above the monthly upper limit, so less NI than if spread
+  assert.ok(r.nationalInsurance < spread.nationalInsurance);
+  close(r.bonusExtra, r.bonusMonthPay.takeHome - r.regularMonth.takeHome);
+});
+
+test('a bonus month with no bonus amount is ignored', () => {
+  const r = th({ salary: 30000, bonus: 0, bonusMonth: 'dec' });
+  assert.equal(r.bonusMonth, null);
+  assert.equal(r.bonusMonthPay, null);
+});

@@ -367,3 +367,8 @@ details.card > summary { cursor: pointer; }
 .rules table { margin-top: 14px; }
 .rules caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
 .card > .notice { margin-top: 10px; }
+.bonus-callout {
+  background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; color: var(--text-2);
+}
+.bonus-callout strong { color: var(--text); }
+.table-scroll { overflow-x: auto; }

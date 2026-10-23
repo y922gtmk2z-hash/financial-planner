@@ -28,6 +28,10 @@
     { value: 'reliefAtSource', label: 'Taken after tax (relief at source)' },
   ];
 
+  const BONUS_MONTHS = [{ value: 'spread', label: 'Spread evenly across the year' }].concat(
+    ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      .map((m) => ({ value: m.slice(0, 3).toLowerCase(), label: m })));
+
   // Setup screen fields. `path` is where the value lives in the profile.
   // Fields under `assumptions.` are the same values shown in the Assumptions panel.
   const SECTIONS = [
@@ -85,8 +89,10 @@
           help: 'Which plan you repay, if any. Check your Student Loans Company account if unsure.' },
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
-        { path: 'income.bonus', label: 'Yearly bonus', type: 'money', suffix: 'a year', advanced: true,
-          help: 'Typical yearly bonus before tax. Leave blank if none. Spread evenly across the year in cash flow.' },
+        { path: 'income.bonus', label: 'Yearly bonus', type: 'money', suffix: 'a year',
+          help: 'Typical yearly bonus before tax. Leave blank if none.' },
+        { path: 'income.bonusMonth', label: 'Bonus paid in', type: 'select', options: BONUS_MONTHS,
+          help: 'Pick the month it\u2019s paid to see that month\u2019s payslip. Monthly cash flow then shows a regular month, without the bonus.' },
         { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
           help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
       ],
@@ -125,7 +131,7 @@
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
-      income: { grossSalary: 0, bonus: 0, studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay' },
+      income: { grossSalary: 0, bonus: 0, studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay', bonusMonth: 'spread' },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -249,7 +255,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS,
+    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

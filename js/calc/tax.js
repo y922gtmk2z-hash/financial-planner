@@ -52,13 +52,8 @@
     return Math.max(0, pay - rule.threshold) * rule.rate / 100;
   }
 
-  /*
-   * input: { salary, bonus, employeePensionPct, employerPensionPct,
-   *          pensionMethod, studentLoanPlan, region: 'rUK' | 'scotland' }
-   * Pension contributions are a % of salary (not bonus).
-   */
-  function takeHome(input, cfg) {
-    cfg = cfg || FP.taxConfig;
+  // Whole-year figures, treating pay (and any bonus) as spread evenly over 12 months.
+  function yearly(input, cfg) {
     const salary = Math.max(0, input.salary || 0);
     const bonus = Math.max(0, input.bonus || 0);
     const gross = salary + bonus;
@@ -121,6 +116,73 @@
       employerPension: round2(employerPension),
       takeHome: round2(net),
       takeHomeMonthly: round2(net / 12),
+      niablePay: payForNi,
+    };
+  }
+
+  const PAYSLIP_KEYS = ['gross', 'pensionFromPay', 'incomeTax', 'nationalInsurance', 'studentLoan', 'takeHome'];
+
+  function payslip(values) {
+    const out = {};
+    PAYSLIP_KEYS.forEach((k) => { out[k] = round2(values[k]); });
+    return out;
+  }
+
+  /*
+   * input: { salary, bonus, bonusMonth, employeePensionPct, employerPensionPct,
+   *          pensionMethod, studentLoanPlan, region: 'rUK' | 'scotland' }
+   * Pension contributions are a % of salary (not bonus).
+   *
+   * bonusMonth 'spread' (or blank) spreads the bonus evenly over the year.
+   * A month ('jan'...'dec') pays it in that month: NI and student loan are then
+   * worked out on that month's pay, as payroll does, and income tax uses the
+   * yearly (cumulative PAYE) position, so the bonus month carries the extra tax.
+   *
+   * takeHomeMonthly is a regular month's pay (excluding a bonus paid in one month).
+   */
+  function takeHome(input, cfg) {
+    cfg = cfg || FP.taxConfig;
+    const year = yearly(input, cfg);
+    const inMonth = year.bonus > 0 && input.bonusMonth && input.bonusMonth !== 'spread' ? input.bonusMonth : null;
+
+    if (!inMonth) {
+      const regular = payslip(Object.fromEntries(PAYSLIP_KEYS.map((k) => [k, year[k] / 12])));
+      return { ...year, bonusMonth: null, regularMonth: regular, bonusMonthPay: null, bonusExtra: 0 };
+    }
+
+    // A regular month is 1/12 of the year without the bonus. NI and student loan
+    // thresholds are pro rata per month, so this matches per-period payroll.
+    const base = yearly({ ...input, bonus: 0 }, cfg);
+    const reg = Object.fromEntries(PAYSLIP_KEYS.map((k) => [k, base[k] / 12]));
+
+    const monthPay = base.niablePay / 12 + year.bonus;
+    const ni = nationalInsurance(monthPay * 12, cfg.nationalInsurance) / 12;
+    const sl = studentLoan(monthPay * 12, input.studentLoanPlan, cfg) / 12;
+    const tax = reg.incomeTax + (year.incomeTax - base.incomeTax);
+    const gross = reg.gross + year.bonus;
+    const bonusMonthPay = {
+      gross,
+      pensionFromPay: reg.pensionFromPay,
+      incomeTax: tax,
+      nationalInsurance: ni,
+      studentLoan: sl,
+      takeHome: gross - reg.pensionFromPay - tax - ni - sl,
+    };
+
+    const yearNi = reg.nationalInsurance * 11 + ni;
+    const yearSl = reg.studentLoan * 11 + sl;
+    const yearNet = reg.takeHome * 11 + bonusMonthPay.takeHome;
+    return {
+      ...year,
+      nationalInsurance: round2(yearNi),
+      studentLoan: round2(yearSl),
+      takeHome: round2(yearNet),
+      takeHomeMonthly: round2(reg.takeHome),
+      bonusMonth: inMonth,
+      regularMonth: payslip(reg),
+      bonusMonthPay: payslip(bonusMonthPay),
+      // Extra take-home in the bonus month compared with a regular month.
+      bonusExtra: round2(bonusMonthPay.takeHome - reg.takeHome),
     };
   }
 
@@ -136,6 +198,7 @@
     return {
       salary: profile.income.grossSalary,
       bonus: profile.income.bonus,
+      bonusMonth: profile.income.bonusMonth,
       employeePensionPct: profile.assumptions.employeePensionPct,
       employerPensionPct: profile.assumptions.employerPensionPct,
       pensionMethod: profile.income.pensionMethod,

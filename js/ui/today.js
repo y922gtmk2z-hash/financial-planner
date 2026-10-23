@@ -115,6 +115,8 @@
       dl([
         ['Take-home pay', h('a', { href: '#income' }, money(cf.takeHomeMonthly))],
       ]),
+      pay.bonusMonth ? h('p', { class: 'muted small' },
+        `A regular month, without your bonus. In ${monthName(pay.bonusMonth)} your bonus adds ${money(pay.bonusExtra)} after deductions.`) : null,
       h('h3', null, 'Going out'),
       dl([
         ['Spending', money(cf.spendingMonthly)],
@@ -130,11 +132,15 @@
         `Tax year ${pay.taxYear}`,
         region,
         `Pension ${pct(a.employeePensionPct, 1)} of salary`,
-        pay.bonus > 0 ? 'Bonus spread over 12 months' : null,
+        pay.bonus > 0 ? (pay.bonusMonth ? `Bonus paid in ${monthName(pay.bonusMonth)}` : 'Bonus spread over 12 months') : null,
         `${p.spending.filter((r) => r.monthly > 0).length} spending categories`,
         defaultRateUsed ? `Other debts default rate ${pct(a.otherDebtRate, 1)}` : null,
         `Mortgage rate ${pct(a.mortgageRate, 2)}`,
       ]));
+  }
+
+  function monthName(v) {
+    return (FP.profile.BONUS_MONTHS.find((m) => m.value === v) || { label: v }).label;
   }
 
   function dl(rows) {
