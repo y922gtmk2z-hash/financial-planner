@@ -13,7 +13,7 @@ static server, e.g. `python3 -m http.server`.
 ## Your data
 
 Everything is saved in your browser's local storage on this device only. Use the
-**Data** screen to export a JSON backup, import one, load the fictional sample data,
+**Your data** screen (link in the header) to export a JSON backup, import one, load the fictional sample data,
 or clear everything. Exported files are git-ignored so they are never committed.
 
 ## Tax rules
@@ -35,6 +35,6 @@ Built in stages — see [docs/PLAN.md](docs/PLAN.md).
 
 - [x] Stage 1: Setup, Today dashboard, Assumptions panel, data export/import
 - [x] Stage 2: UK take-home pay calculator wired into cash flow
-- [ ] Stage 3: Future projection
+- [x] Stage 3: Future projection
 - [ ] Stage 4: Scenarios
 - [ ] Stage 5: Tests, README and polish
