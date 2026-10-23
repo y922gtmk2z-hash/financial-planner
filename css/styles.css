@@ -581,3 +581,30 @@ fieldset.row-card { min-width: 0; }
 .more-notices { margin: -4px 0 12px; font-size: 0.9rem; }
 .more-notices summary { cursor: pointer; color: var(--accent); }
 .more-notices .notices { margin-top: 8px; }
+
+/* ---------- Facts list with change links (Income) ---------- */
+.facts { margin: 0; display: grid; gap: 0; }
+.facts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.facts > div:last-child { border-bottom: 0; }
+.facts dt { color: var(--text-2); font-size: 0.9rem; }
+.facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.edit-link { font-size: 0.85rem; margin-left: 6px; white-space: nowrap; }
+
+/* ---------- Live strip (Setup) ---------- */
+.live-strip {
+  position: sticky; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 12px; padding: 8px 8px 8px 14px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.live-figures { display: flex; gap: 16px; margin: 0; min-width: 0; }
+.live-figures span { display: flex; flex-direction: column; line-height: 1.2; }
+.live-figures small { font-size: 0.72rem; color: var(--text-2); }
+.live-figures strong { font-variant-numeric: tabular-nums; }
+.live-strip button { flex: none; }
+.leftover-fold { margin: 0 0 12px; }
+.leftover-fold > summary {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer;
+}
+.leftover-fold[open] > summary { margin-bottom: 8px; border-color: var(--accent); }

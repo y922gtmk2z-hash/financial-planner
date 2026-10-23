@@ -9,7 +9,7 @@
 
   // onChange: called after any edit, add or remove (e.g. to redraw results).
   function render(ctx, onChange) {
-    const wrap = h('div', { class: 'bonus-editor', role: 'group', 'aria-labelledby': 'bonus-h' });
+    const wrap = h('div', { class: 'bonus-editor', id: 'bonuses', role: 'group', 'aria-labelledby': 'bonus-h' });
     const changed = () => { if (onChange) onChange(); };
 
     const draw = () => {

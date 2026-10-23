@@ -21,7 +21,7 @@
 
     if (field.type === 'toggle') {
       // Segmented radio buttons for a short list of choices.
-      return h('fieldset', { class: 'field', 'aria-describedby': helpId },
+      return h('fieldset', { class: 'field', 'aria-describedby': helpId, 'data-path': field.path || null },
         h('legend', { class: 'field-legend' }, field.label),
         h('div', { class: 'toggle' }, field.options.map((o, i) => [
           h('input', {

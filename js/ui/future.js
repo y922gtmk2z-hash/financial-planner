@@ -43,9 +43,21 @@
         value: view,
         onChange: (v) => { view = v; setView(v); draw(); },
       })),
-      results,
-      FP.leftoverCard.render(ctx, { onChange: draw }));
+      leftoverFold(ctx, draw),
+      results);
     draw();
+  }
+
+  // The leftover money card, folded away above the results: open it to change
+  // what you do with the money and watch the projection update.
+  function leftoverFold(ctx, draw) {
+    const p = ctx.profile();
+    if (!FP.summary.checklist(p).ready) return null;
+    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
+    if (!(left > 0)) return null;
+    return h('details', { class: 'leftover-fold' },
+      h('summary', null, h('span', null, 'Your leftover money: ', h('strong', null, `${FP.dom.money(left)} a month`)), h('span', { class: 'muted small' }, 'Change what you do with it')),
+      FP.leftoverCard.render(ctx, { onChange: draw }));
   }
 
   function resultsView(p, view) {

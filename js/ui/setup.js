@@ -19,34 +19,54 @@
     // Leftover money updates as you change anything above it.
     const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
     root.appendChild(leftover);
+    const strip = liveStrip(ctx, root);
     let timer = null;
     const refresh = (e) => {
-      if (leftover.contains(e.target)) return;
       clearTimeout(timer);
-      timer = setTimeout(() => leftover.refresh(), 200);
+      timer = setTimeout(() => {
+        if (!leftover.contains(e.target)) leftover.refresh();
+        strip.refresh();
+      }, 200);
     };
     root.addEventListener('input', refresh);
     root.addEventListener('change', refresh);
     root.addEventListener('click', refresh);
     root.appendChild(calculateCard(ctx, root));
+    root.appendChild(strip);
+  }
+
+  // Shows the result of what you've entered so far, pinned above the tabs.
+  function liveStrip(ctx, root) {
+    const figures = h('p', { class: 'live-figures', role: 'status', 'aria-live': 'polite' });
+    const strip = h('div', { class: 'live-strip' }, figures,
+      h('button', { type: 'button', class: 'small', onclick: () => calculate(ctx, root) }, 'See my plan'));
+    strip.refresh = () => {
+      const p = ctx.profile();
+      const pay = FP.tax.forProfile(p);
+      const left = FP.summary.compute(p, pay.takeHomeMonthly).cashFlow.surplus;
+      FP.dom.fill(figures,
+        h('span', null, h('small', null, 'Take-home a month'), h('strong', null, money(pay.takeHomeMonthly))),
+        h('span', null, h('small', null, left < 0 ? 'Short each month' : 'Left over a month'), h('strong', { class: left < 0 ? 'negative' : null }, money(Math.abs(left || 0)))));
+    };
+    strip.refresh();
+    return strip;
+  }
+
+  function calculate(ctx, root) {
+    const bad = root.querySelector('[aria-invalid="true"]');
+    if (bad) {
+      bad.focus();
+      bad.scrollIntoView({ block: 'center' });
+      ctx.toast('Fix the highlighted box first.');
+      return;
+    }
+    ctx.go('overview');
   }
 
   // Changes save as you type; Calculate takes you to the results.
   function calculateCard(ctx, root) {
     return h('section', { class: 'card calculate', 'aria-label': 'Calculate' },
-      h('button', {
-        type: 'button', class: 'calculate-btn',
-        onclick: () => {
-          const bad = root.querySelector('[aria-invalid="true"]');
-          if (bad) {
-            bad.focus();
-            bad.scrollIntoView({ block: 'center' });
-            ctx.toast('Fix the highlighted box first.');
-            return;
-          }
-          ctx.go('overview');
-        },
-      }, 'Calculate my plan'),
+      h('button', { type: 'button', class: 'calculate-btn', onclick: () => calculate(ctx, root) }, 'Calculate my plan'),
       h('p', { class: 'help' }, 'Your figures save as you type. Calculate shows your overview — you can come back to Setup at any time from the top of the screen.'));
   }
 

@@ -10,25 +10,38 @@
 
   function render(root, ctx) {
     const p = ctx.profile();
-    const results = h('div', { 'aria-live': 'polite' });
-    const draw = () => FP.dom.fill(results, resultsView(ctx.profile()));
-
-    const sec = FP.profile.SECTIONS.find((x) => x.id === 'income');
-    const make = (f) => FP.field.render(f, {
-      value: FP.profile.get(p, f.path),
-      onChange: (v) => { ctx.update(f.path, v); draw(); },
-    });
-
     FP.dom.add(root,
       h('h1', null, 'Income'),
       h('p', { class: 'lead' }, 'Your take-home pay after income tax, National Insurance, pension and student loan. It feeds your cash flow on Today automatically.'),
       taxYearNotice(),
-      h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
-        h('h2', { id: 'inc-in' }, 'Your pay'),
-        h('p', { class: 'muted' }, 'These are the same figures as in Setup — changing them here changes them everywhere.'),
-        FP.field.sectionBody(sec, make, [FP.bonusEditor.render(ctx, draw), FP.sacrificeEditor.render(ctx, draw)])),
-      results);
-    draw();
+      resultsView(p),
+      yourPayCard(p));
+  }
+
+  // What the figures above are based on, each with a link to change it in Setup.
+  function yourPayCard(p) {
+    const inc = p.income;
+    const a = p.assumptions;
+    const total = (list, key) => list.reduce((t, x) => t + (x[key] || 0), 0);
+    const method = (FP.profile.PENSION_METHODS.find((m) => m.value === inc.pensionMethod) || {}).label;
+    const bonuses = inc.bonuses.filter((b) => b.amount > 0);
+    const rows = [
+      ['Where you pay income tax', inc.region === 'scotland' ? 'Scotland' : 'England, Wales or NI', 'income.region'],
+      ['Gross salary', inc.grossSalary > 0 ? `${money(inc.grossSalary)} a year` : 'Not entered', 'income.grossSalary'],
+      ['Your pension', `${pct(a.employeePensionPct, 1)} of salary${method ? ` \u00b7 ${method}` : ''}`, 'assumptions.employeePensionPct'],
+      ['Employer pension', `${pct(a.employerPensionPct, 1)} of salary`, 'assumptions.employerPensionPct'],
+      ['Bonuses', bonuses.length ? `${money(total(bonuses, 'amount'))} a year (${bonuses.map((b) => monthName(b.month)).join(', ')})` : 'None', 'bonuses'],
+      ['Salary sacrifice', inc.sacrifices.length ? `${money(total(inc.sacrifices, 'monthly'))} a month` : 'None', 'sacrifices'],
+      ['Student loan', inc.studentLoanPlan !== 'none'
+        ? `${PLAN_LABELS[inc.studentLoanPlan]}${inc.studentLoanBalance > 0 ? ` \u00b7 ${money(inc.studentLoanBalance)} owed` : ''}`
+        : 'None', 'income.studentLoanPlan'],
+    ];
+    return h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
+      h('h2', { id: 'inc-in' }, 'Based on'),
+      h('dl', { class: 'facts' }, rows.map(([label, value, target]) => h('div', null,
+        h('dt', null, label),
+        h('dd', null, value, ' ', h('a', { href: `#setup/${target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Setup` }, 'Change'))))),
+      h('p', { class: 'muted small' }, 'Your figures are all entered in Setup, so there\u2019s one place to change them.'));
   }
 
   function taxYearNotice() {
@@ -50,7 +63,7 @@
     const cfg = FP.taxConfig;
 
     if (r.gross <= 0) {
-      return h('section', { class: 'card' }, h('p', { class: 'muted' }, 'Enter your gross salary above to see your take-home pay.'));
+      return h('section', { class: 'card' }, h('p', { class: 'muted' }, 'Enter your gross salary in Setup to see your take-home pay.'), h('a', { href: '#setup/income.grossSalary' }, 'Add your salary'));
     }
 
     // Take-home in a month with no bonus at all, when bonuses are spread evenly.

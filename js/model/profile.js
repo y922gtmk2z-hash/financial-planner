@@ -77,7 +77,7 @@
     },
     {
       id: 'income', title: 'Income',
-      intro: 'Used to work out your take-home pay. You can also edit these on the Income screen.',
+      intro: 'Used to work out your take-home pay. The Income screen shows the full breakdown.',
       fields: [
         { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS,
           help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },

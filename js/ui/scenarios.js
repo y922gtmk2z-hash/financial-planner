@@ -134,7 +134,7 @@
           h('div', { class: 'field' }, h('label', { for: 'new-sc-name' }, 'Name'), h('div', { class: 'input-wrap' }, nameInput)),
           h('div', { class: 'field' }, h('label', { for: 'new-sc-from' }, 'Start from a copy of'), h('div', { class: 'input-wrap' }, from)),
           h('button', { type: 'button', onclick: create }, 'Create and edit'),
-          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it here, or on Setup, Income, Future and Assumptions.'),
+          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it here, or in Setup and Assumptions.'),
         ]);
   }
 
