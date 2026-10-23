@@ -140,12 +140,18 @@
    * regular savings): percentages that the projection shares it out by.
    */
   const LEFTOVER_FIELDS = [
-    { key: 'cash', label: 'Cash savings', help: 'Easy-access cash, earning the savings rate.' },
+    { key: 'emergency', label: 'Emergency fund', help: 'Easy-access cash until your cash savings cover your target number of months of essential outgoings. Once the fund is full, this share goes to your other choices instead.' },
+    { key: 'cash', label: 'Cash savings', help: 'Easy-access cash for other goals, earning the savings rate.' },
     { key: 'invest', label: 'Investments', help: 'Into your stocks & shares ISA first, then a general investment account.' },
     { key: 'mortgage', label: 'Mortgage overpayments', help: 'Paid off the mortgage as a yearly lump sum. Goes to cash once the mortgage is cleared.' },
     { key: 'pension', label: 'Extra pension contributions', help: 'With 20% basic-rate tax relief added. Goes to cash once you retire.' },
   ].map((f) => ({ ...f, type: 'pct', min: 0, max: 100, suffix: '% of what\u2019s left' }));
-  const LEFTOVER_DEFAULT = { cash: 30, invest: 50, mortgage: 10, pension: 10 };
+  const LEFTOVER_DEFAULT = { emergency: 10, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 };
+  // How many months of essential outgoings (spending, mortgage and debts) the emergency fund aims to cover.
+  const EMERGENCY_MONTHS_FIELD = {
+    key: 'emergencyMonths', label: 'Emergency fund target', type: 'int', min: 1, max: 24, suffix: 'months of outgoings',
+    help: 'A common aim is 3 to 6 months. More if your income is irregular or you support others.',
+  };
 
   const SAVING_TYPES = [
     { value: 'cash', label: 'Cash savings' },
@@ -315,9 +321,15 @@
     const leftoverSrc = src.leftover && typeof src.leftover === 'object'
       ? src.leftover
       : { cash: oldA.splitCash, invest: oldA.splitInvest, mortgage: oldA.splitMortgage, pension: oldA.splitPension };
+    const hasSplit = LEFTOVER_FIELDS.some((f) => leftoverSrc[f.key] !== undefined);
     LEFTOVER_FIELDS.forEach((f) => {
       if (leftoverSrc[f.key] !== undefined) p.leftover[f.key] = coerce(f, leftoverSrc[f.key], LEFTOVER_DEFAULT[f.key]);
     });
+    // Splits saved before the emergency fund share existed keep adding up as they did.
+    if (hasSplit && leftoverSrc.emergency === undefined) p.leftover.emergency = 0;
+    if (leftoverSrc.emergencyMonths !== undefined) {
+      p.leftover.emergencyMonths = coerce(EMERGENCY_MONTHS_FIELD, leftoverSrc.emergencyMonths, LEFTOVER_DEFAULT.emergencyMonths);
+    }
     if (Array.isArray(src.savings)) {
       p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
         .map((x) => normaliseRow(x, SAVING_FIELDS, 'sv'));
@@ -362,7 +374,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

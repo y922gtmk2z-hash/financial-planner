@@ -16,7 +16,7 @@ function profile(o) {
   return p;
 }
 const ids = (r) => r.suggestions.map((s) => s.id);
-const sum = (split) => split.cash + split.invest + split.mortgage + split.pension;
+const sum = (split) => split.emergency + split.cash + split.invest + split.mortgage + split.pension;
 
 test('left over is take-home minus spending, debts and regular savings', () => {
   const p = profile({ savings: [{ id: 'x', type: 'cash', monthly: 100, grows: 'fixed' }] });
@@ -36,7 +36,13 @@ test('a small emergency fund comes first', () => {
   const r = FP.suggest.analyse(profile({ cash: 1000 }));
   assert.ok(ids(r).includes('emergency'));
   assert.equal(r.emergency.short, true);
-  assert.deepEqual(r.split, { cash: 80, invest: 10, mortgage: 0, pension: 10 });
+  assert.deepEqual(r.split, { emergency: 80, cash: 0, invest: 10, mortgage: 0, pension: 10 });
+  const e = r.suggestions.find((s) => s.id === 'emergency');
+  assert.match(e.text, /target is 3/);
+  assert.match(e.text, /Putting 80% of what’s left/);
+  assert.equal(FP.suggest.duration(1), '1 month');
+  assert.equal(FP.suggest.duration(30), 'about 3 years');
+  assert.equal(FP.suggest.duration(500), 'over 10 years');
   const ok = FP.suggest.analyse(profile({ cash: 50000 }));
   assert.ok(ids(ok).includes('emergencyOk'));
 });
@@ -51,14 +57,15 @@ test('expensive debts are flagged, most expensive first', () => {
   assert.match(d.title, /Clear Card first/);
   assert.match(d.text, /Loan \(8%\) is next/);
   assert.doesNotMatch(d.text, /Cheap/);
-  assert.equal(r.split.cash, 80);
+  // Emergency fund already full: mostly cash to clear the debts, plus a top-up.
+  assert.deepEqual(r.split, { emergency: 10, cash: 70, invest: 10, mortgage: 0, pension: 10 });
 });
 
 test('basic-rate taxpayer with a mortgage dearer than cash', () => {
   const r = FP.suggest.analyse(profile({ mortgage: true, spend: 500 }));
   assert.ok(ids(r).includes('mortgage'));
   assert.ok(!ids(r).includes('relief'));
-  assert.deepEqual(r.split, { cash: 10, invest: 50, mortgage: 20, pension: 20 });
+  assert.deepEqual(r.split, { emergency: 10, cash: 0, invest: 50, mortgage: 20, pension: 20 });
 });
 
 test('no mortgage: nothing goes to overpayments', () => {
@@ -76,7 +83,29 @@ test('higher-rate taxpayers get a bigger pension share', () => {
 test('between £100k and £125k: mostly pension', () => {
   const r = FP.suggest.analyse(profile({ salary: 110000 }));
   assert.ok(ids(r).includes('taper'));
-  assert.deepEqual(r.split, { cash: 10, invest: 20, mortgage: 0, pension: 70 });
+  assert.deepEqual(r.split, { emergency: 10, cash: 0, invest: 20, mortgage: 0, pension: 70 });
+});
+
+test('the emergency fund target is your choice', () => {
+  const p = profile({ cash: 10000, spend: 2000 }); // 5 months of outgoings
+  assert.equal(FP.suggest.analyse(p).emergency.short, false);
+  p.leftover.emergencyMonths = 6;
+  const r = FP.suggest.analyse(p);
+  assert.ok(r.left > 0);
+  assert.equal(r.emergency.short, true);
+  assert.equal(r.emergency.target, 12000);
+  assert.equal(r.split.emergency, 80);
+  // Months to fill: the £2,000 gap at 80% of what's left each month.
+  assert.equal(r.emergency.monthsToFill(0.8), Math.ceil(2000 / (r.left * 0.8)));
+});
+
+test('every suggested split includes the emergency fund', () => {
+  [
+    { emergency: { short: false }, inTaper: false, topRate: 20 },
+    { emergency: { short: true, targetMonths: 3 } },
+    { emergency: { short: false }, inTaper: true },
+    { emergency: { short: false }, expensive: true },
+  ].forEach((s) => assert.ok(FP.suggest.suggestSplit(s).split.emergency > 0));
 });
 
 test('ISA room accounts for regular ISA savings', () => {
@@ -95,7 +124,8 @@ test('every suggested split adds up to 100%', () => {
     { emergency: { short: false }, inTaper: false, topRate: 20, hasMortgage: true, mortgageBeatsCash: true },
     { emergency: { short: false }, inTaper: false, topRate: 40, hasMortgage: true, mortgageBeatsCash: true },
     { emergency: { short: false }, inTaper: false, topRate: 45, hasMortgage: false },
-    { emergency: { short: true } },
+    { emergency: { short: true, targetMonths: 3 } },
+    { emergency: { short: true, targetMonths: 6 }, expensive: true },
     { emergency: { short: false }, inTaper: true },
     { emergency: { short: false }, expensive: true },
   ].forEach((s) => assert.equal(sum(FP.suggest.suggestSplit(s).split), 100));

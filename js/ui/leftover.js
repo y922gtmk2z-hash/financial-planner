@@ -22,20 +22,46 @@
     const suggested = h('div', { class: 'suggested-split' });
     const ideas = h('ul', { class: 'ideas' });
     const amounts = {};
+    const fundStatus = h('p', { class: 'help fund-status', role: 'status' });
 
     const changed = () => { if (opts.onChange) opts.onChange(); };
 
     function drawFields() {
       const p = ctx.profile();
+      const target = FP.profile.EMERGENCY_MONTHS_FIELD;
       FP.dom.fill(rows, FP.profile.LEFTOVER_FIELDS.map((f) => {
         amounts[f.key] = h('span', { class: 'leftover-money' });
-        return h('div', { class: 'leftover-row' },
+        return h('div', { class: `leftover-row${f.key === 'emergency' ? ' emergency' : ''}` },
           FP.field.render(f, {
             value: p.leftover[f.key], compact: false,
             onChange: (v) => { ctx.update(`leftover.${f.key}`, v); refresh(); changed(); },
             extra: amounts[f.key],
-          }));
+          }),
+          f.key === 'emergency' ? [
+            FP.field.render(target, {
+              value: p.leftover[target.key], compact: false,
+              onChange: (v) => { ctx.update(`leftover.${target.key}`, v); refresh(); changed(); },
+            }),
+            fundStatus,
+          ] : null);
       }));
+    }
+
+    // How full the emergency fund is, and what happens to its share.
+    function drawFund(r, shares, left) {
+      const e = r.emergency;
+      if (!(r.essentials > 0)) { FP.dom.fill(fundStatus, 'Add your spending above to see how far your cash goes.'); return; }
+      const have = `Your cash covers ${e.months >= 24 ? 'over 24' : e.months.toFixed(1)} of ${e.targetMonths} months (${money(e.target)}).`;
+      if (!e.short) {
+        FP.dom.fill(fundStatus, h('span', { class: 'positive' }, '✓ '), have,
+          shares.emergency > 0 ? ' It’s full, so in your projection this share goes to your other choices until rising costs need a top-up.' : '');
+        return;
+      }
+      const n = e.monthsToFill(shares.emergency);
+      FP.dom.fill(fundStatus, have, ' ',
+        n > 0 && left > 0
+          ? `At ${money(left * shares.emergency)} a month it’s full in ${FP.suggest.duration(n)}, then this share goes to your other choices.`
+          : 'Put a share of your leftover money here to build it up.');
     }
 
     function refresh() {
@@ -57,6 +83,7 @@
         const share = f.key === 'cash' ? shares.cash : shares[f.key];
         if (amounts[f.key]) amounts[f.key].textContent = `= ${money(left * share)} a month${f.key === 'cash' && shares.status === 'under' ? ' (including the unallocated part)' : ''}`;
       });
+      drawFund(r, shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover);
 
       if (r.split) {
