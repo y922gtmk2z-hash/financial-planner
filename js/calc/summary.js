@@ -107,11 +107,18 @@
     const mortgageMonthly = mortgage ? mortgage.payment + mortgage.overpayment : 0;
     const debtMonthly = debts.reduce((s, d) => s + (d.balance > 0 ? d.payment : 0), 0);
     const outgoings = spendingMonthly + mortgageMonthly + debtMonthly;
+    // Regular savings come out of what's left after spending and debts.
+    const saving = FP.savings.monthlyTotals(profile.savings);
     const hasTakeHome = Number.isFinite(takeHomeMonthly);
     if (hasTakeHome && takeHomeMonthly - outgoings < 0) {
       warnings.push({
         level: 'warn',
         text: `You\u2019re spending about ${fmt(outgoings - takeHomeMonthly)} a month more than you take home.`,
+      });
+    } else if (hasTakeHome && takeHomeMonthly - outgoings - saving.total < 0) {
+      warnings.push({
+        level: 'warn',
+        text: `Your regular savings (${fmt(saving.total)} a month) are about ${fmt(saving.total - (takeHomeMonthly - outgoings))} more than you have left after spending and debts.`,
       });
     }
 
@@ -128,7 +135,12 @@
         mortgageMonthly,
         debtMonthly,
         outgoings,
-        surplus: hasTakeHome ? takeHomeMonthly - outgoings : null,
+        // Left after spending and debts, before regular savings.
+        available: hasTakeHome ? takeHomeMonthly - outgoings : null,
+        savingsMonthly: saving.total,
+        savings: saving,
+        // Left after regular savings too.
+        surplus: hasTakeHome ? takeHomeMonthly - outgoings - saving.total : null,
       },
       warnings,
     };

@@ -135,6 +135,21 @@
       help: 'Fully electric cars: 4% in 2026/27 (5% in 2027/28). Check your scheme quote.' },
   ];
 
+  const SAVING_TYPES = [
+    { value: 'cash', label: 'Cash savings' },
+    { value: 'cashIsa', label: 'Cash ISA' },
+    { value: 'ssIsa', label: 'Stocks & shares ISA' },
+  ];
+  const MAX_SAVINGS = 12;
+  const SAVING_FIELDS = [
+    { key: 'type', label: 'Into', type: 'select', options: SAVING_TYPES },
+    { key: 'monthly', label: 'Per month', type: 'money' },
+    { key: 'grows', label: 'Each year', type: 'select', options: [
+      { value: 'fixed', label: 'Stays the same' },
+      { value: 'salary', label: 'Rises with pay' },
+    ] },
+  ];
+
   const MAX_BONUSES = 12;
   const BONUS_FIELDS = [
     { key: 'amount', label: 'Bonus amount', type: 'money' },
@@ -169,6 +184,7 @@
         grossSalary: 0, bonuses: [], sacrifices: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
         studentLoanRate: null, region: 'rUK', pensionMethod: 'netPay',
       },
+      savings: [],
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -281,6 +297,10 @@
       p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
         .map((x) => normaliseRow(x, SACRIFICE_FIELDS, 'ss'));
     }
+    if (Array.isArray(src.savings)) {
+      p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
+        .map((x) => normaliseRow(x, SAVING_FIELDS, 'sv'));
+    }
     if (Array.isArray(src.spending)) {
       p.spending = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40).map((s) => normaliseRow(s, SPENDING_FIELDS, 's'));
     }
@@ -308,6 +328,10 @@
     };
   }
 
+  function newSaving(type) {
+    return { id: newId('sv'), type: type || 'cash', monthly: 0, grows: 'fixed' };
+  }
+
   function newBonus() {
     return { id: newId('b'), amount: 0, month: 'spread' };
   }
@@ -317,7 +341,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSpending,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS,
+    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

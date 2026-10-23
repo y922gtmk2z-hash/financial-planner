@@ -146,7 +146,12 @@
     {
       key: 'isaAllowance', group: 'tax', label: 'ISA allowance', unit: 'money',
       default: 20000, min: 0, max: 100000, setOn: SET_ON, advanced: true,
-      help: 'Surplus put into investments goes into your ISA up to this amount a year, then into a general investment account.',
+      help: 'Regular ISA savings use this first. Surplus put into investments then goes into your ISA up to what\u2019s left, then into a general investment account.',
+    },
+    {
+      key: 'cashIsaLimit', group: 'tax', label: 'Cash ISA limit (from April 2027)', unit: 'money',
+      default: 12000, min: 0, max: 100000, setOn: SET_ON, advanced: true,
+      help: 'From 6 April 2027, under-65s can put at most this much a year into cash ISAs, within the overall ISA allowance. Over-65s are exempt. Cash saved above it stays as ordinary cash savings.',
     },
     {
       key: 'splitCash', group: 'split', label: 'Cash savings', unit: 'pctOfSurplus',

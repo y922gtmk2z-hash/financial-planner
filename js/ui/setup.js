@@ -15,6 +15,7 @@
       if (sec.id === 'mortgage') root.appendChild(debtsCard(ctx));
     });
     root.appendChild(spendingCard(ctx, p));
+    root.appendChild(FP.savingsEditor.render(ctx));
     root.appendChild(calculateCard(ctx, root));
   }
 

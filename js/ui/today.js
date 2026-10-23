@@ -125,10 +125,21 @@
         ['Other debt payments', money(cf.debtMonthly)],
       ]),
       h('div', { class: 'total-row' }, h('span', null, 'Total going out'), h('strong', null, money(cf.outgoings))),
+      cf.savingsMonthly > 0 ? [
+        h('div', { class: 'total-row' }, h('span', null, 'Left after spending and debts'), h('strong', null, money(cf.available))),
+        h('h3', null, 'Regular savings'),
+        dl([
+          cf.savings.cash > 0 ? ['Cash savings', money(cf.savings.cash)] : null,
+          cf.savings.cashIsa > 0 ? ['Cash ISA', money(cf.savings.cashIsa)] : null,
+          cf.savings.ssIsa > 0 ? ['Stocks & shares ISA', money(cf.savings.ssIsa)] : null,
+        ]),
+      ] : null,
       h('div', { class: 'total-row surplus' },
         h('span', null, cf.surplus < 0 ? 'Shortfall each month' : 'Surplus each month'),
         h('strong', { class: cf.surplus < 0 ? 'negative' : 'positive' }, money(Math.abs(cf.surplus)))),
-      h('p', { class: 'muted small' }, 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.'),
+      h('p', { class: 'muted small' }, cf.savingsMonthly > 0
+        ? 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings. In projections it\u2019s shared out by your surplus split.'
+        : 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments. Add regular savings in Setup.'),
       chips([
         `Tax year ${pay.taxYear}`,
         region,

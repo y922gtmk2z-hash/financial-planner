@@ -27,6 +27,9 @@
         region: 'rUK',
         pensionMethod: 'netPay',
       },
+      savings: [
+        { id: 'sample-sv1', type: 'ssIsa', monthly: 75, grows: 'salary' },
+      ],
       spending: [
         { id: 'sample-s1', category: 'Bills & utilities', monthly: 260 },
         { id: 'sample-s2', category: 'Council tax', monthly: 175 },
