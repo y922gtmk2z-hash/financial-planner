@@ -96,7 +96,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
-| Leftover money (your choice, in Setup) | 30% cash, 50% investments, 10% mortgage overpayment, 10% pension |
+| Leftover money (your choice, in Setup) | 10% emergency fund (target: 3 months of outgoings), 20% cash, 50% investments, 10% mortgage overpayment, 10% pension |
 
 ## Tax rules — check every tax year
 
@@ -121,10 +121,17 @@ tax year in the file. To update:
 
 At the end of Setup (and on Future), **Your leftover money** shows how much is left
 each month after spending, mortgage and debts, and regular savings. Bonus months add
-more. You then choose what to do with it: **cash savings**, **investments** (ISA
-first), **mortgage overpayments** or **extra pension contributions**. Each choice shows
-what it comes to in £ a month, and the projection shares out each year's leftover
-money the same way. Anything you don't allocate goes to cash.
+more. You then choose what to do with it: your **emergency fund**, **cash savings**,
+**investments** (ISA first), **mortgage overpayments** or **extra pension
+contributions**. Each choice shows what it comes to in £ a month, and the projection
+shares out each year's leftover money the same way. Anything you don't allocate goes
+to cash.
+
+The **emergency fund** has a target you set, in months of essential outgoings
+(spending, mortgage and debt payments; 3 by default). The card shows how many months
+your cash covers and how long your share takes to fill the gap. In the projection,
+that share goes to cash until your cash savings reach the target for that year; then
+it goes to your other choices in proportion, so it only tops up as costs rise.
 
 Below that are **ideas based on your figures**, general rules of thumb rather than
 advice:
@@ -137,8 +144,8 @@ advice:
 - using the ISA allowance;
 - not rushing to repay a student loan that will be written off.
 
-A **suggested split** follows from these, for example mostly cash until the emergency
-fund reaches 3 months. **Use this split** applies it. This used to be the "surplus
+A **suggested split** follows from these, and always includes the emergency fund:
+80% while it's below your target, then 10% to keep it topped up. **Use this split** applies it. This used to be the "surplus
 split" in Assumptions; existing saved splits carry over.
 
 ## Regular savings
@@ -263,14 +270,15 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-126 tests cover:
+129 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
 - **Leftover money and suggestions:** what's left, each suggestion's trigger
   (shortfall, emergency fund, expensive debts, higher rate, the 60% band, mortgage, ISA
-  room, student loan write-off), the suggested splits always adding up to 100%, and
+  room, student loan write-off), the suggested splits always adding up to 100% and
+  including the emergency fund, the fund filling to your target then passing its share on, and
   older saved splits carrying over.
 - **Regular savings:** totals by type, contributions to the right balances, the ISA
   allowance and cash ISA limit (from April 2027, not for over-65s), amounts rising

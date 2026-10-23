@@ -29,19 +29,19 @@
   }
 
   /*
-   * The leftover split ({ cash, invest, mortgage, pension } in %) as fractions.
-   * Under 100% in total: the rest goes to cash. Over 100%: scaled down
-   * proportionally.
+   * The leftover split ({ emergency, cash, invest, mortgage, pension } in %) as
+   * fractions. Under 100% in total: the rest goes to cash. Over 100%: scaled
+   * down proportionally.
    */
   function splitShares(split) {
     const src = split || {};
-    const raw = ['cash', 'invest', 'mortgage', 'pension'].map((k) => Math.max(0, src[k] || 0));
+    const raw = ['emergency', 'cash', 'invest', 'mortgage', 'pension'].map((k) => Math.max(0, src[k] || 0));
     const total = sum(raw);
     const scale = total > 100 ? 1 / total : 1 / 100;
-    const [cash, invest, mortgage, pension] = raw.map((v) => v * scale);
+    const [emergency, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
     const remainder = total < 100 ? (100 - total) / 100 : 0;
     return {
-      cash: cash + remainder, invest, mortgage, pension, total,
+      emergency, cash: cash + remainder, invest, mortgage, pension, total,
       status: total === 100 ? 'ok' : total < 100 ? 'under' : 'over',
     };
   }
@@ -264,18 +264,26 @@
       if (working) pension += pensionFromPay;
 
       // 6. Allocate a surplus or fund a deficit
-      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      // The emergency fund aims to cover this much of the year's essential outgoings.
+      const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
+      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
       if (surplus >= 0) {
         let s = surplus;
         const repay = Math.min(s, shortfall);
         shortfall -= repay;
         s -= repay;
 
-        let toCash = s * shares.cash;
-        let toPension = s * shares.pension;
-        const toInvest = s * shares.invest;
-        const toMortgage = Math.min(s * shares.mortgage, mBal);
-        toCash += s * shares.mortgage - toMortgage;
+        // The emergency fund share tops cash up to the target; once it's full,
+        // the rest of that share goes to the other choices in proportion.
+        const toEmergency = Math.min(s * shares.emergency, Math.max(0, emergencyTarget - cash));
+        const rest = s - toEmergency;
+        const others = shares.cash + shares.invest + shares.mortgage + shares.pension;
+        const w = others > 0 ? rest / others : 0;
+        let toCash = others > 0 ? w * shares.cash : rest;
+        let toPension = w * shares.pension;
+        const toInvest = w * shares.invest;
+        const toMortgage = Math.min(w * shares.mortgage, mBal);
+        toCash += w * shares.mortgage - toMortgage;
         if (!working) { toCash += toPension; toPension = 0; }
 
         mBal -= toMortgage;
@@ -285,8 +293,8 @@
         gia += toInvest - intoIsa;
         const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
         pension += grossPension;
-        cash += toCash;
-        Object.assign(flow, { toCash, toInvest, toMortgage, toPension: grossPension });
+        cash += toEmergency + toCash;
+        Object.assign(flow, { toEmergency, toCash, toInvest, toMortgage, toPension: grossPension });
 
         const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
         if (mStart > 0 && overpaid + toMortgage > allowance + 0.5) {

@@ -65,6 +65,7 @@ function profile() {
   p.spending = [];
   p.income.grossSalary = 50000;
   Object.assign(p.assumptions, { salaryGrowth: 0, savingsRate: 0, investmentReturn: 0, investmentFees: 0 });
+  Object.assign(p.leftover, { emergency: 0, cash: 30 });
   return p;
 }
 const project = (p) => FP.projection.project(p, { startYear: 2026, startMonth: 10 });
