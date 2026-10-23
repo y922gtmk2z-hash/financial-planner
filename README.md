@@ -23,8 +23,8 @@ form, or **Keep these figures as mine** to edit the sample.
 | Screen | What it does |
 | --- | --- |
 | **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, any number of bonuses with the month each is paid), and monthly spending by category. |
-| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, and how much of your next £100 pay rise you'd keep. Feeds Today's cash flow automatically. |
+| **Setup** | Enter everything once: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid), and monthly spending by category. |
+| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. Feeds Today's cash flow automatically. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines, a stacked chart by component, headline figures, the surplus split and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Copy it, change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
 | **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. |
@@ -63,6 +63,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Default rate for other debts | 7.0% |
 | Overpayment warning | above 10% of the balance a year |
 | Tax thresholds in future years | frozen (or rise with inflation) |
+| Student loan interest in future years | current rates (or follow inflation) |
 | State Pension | £12,547.60 a year (£241.30 a week, 2026/27) from age 67, rising with inflation |
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
@@ -73,8 +74,9 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 All income tax, National Insurance and student loan rates and thresholds live in one
 file per tax year: **`js/config/tax-2026-27.js`** (6 April 2026 – 5 April 2027). It
 includes rest-of-UK and Scottish bands, the personal allowance taper over £100,000,
-employee NI, student loan plans 1, 2, 4, 5 and postgraduate, and links to the
-official sources.
+employee NI, student loan plans 1, 2, 4, 5 and postgraduate (thresholds, interest
+margins, the current interest year's published rates and write-off terms), and links
+to the official sources.
 
 **These figures must be checked against HMRC, gov.scot and gov.uk at the start of
 each tax year.** The Income screen shows a warning once today's date is outside the
@@ -86,12 +88,42 @@ tax year in the file. To update:
    file.
 3. Update the expected values in `tests/tax.test.js` and run `npm test`.
 
+## Student loans
+
+Enter your plan, your **balance** (from your Student Loans Company account) and the
+**year you were first due to repay** (the April after you left your course). The
+projection then adds interest and takes repayments from your pay each month. Once
+the loan is repaid, repayments stop and your take-home pay rises. Any balance left is
+**written off** in April, 25 years after your first repayment year (Plan 1), 30 years
+(Plans 2 and 4, postgraduate) or 40 years (Plan 5). The Income and Future screens and
+the scenario comparison show when it ends. The loan counts as a debt in your net
+worth until then.
+
+Choose your plan under **Student loan** in Setup or on Income (the help text says
+which plan you're likely to be on). Interest is RPI plus a margin:
+
+| Plan | Interest |
+| --- | --- |
+| Plan 1, Plan 4 | RPI (strictly the lower of RPI and base rate + 1%; base rate isn't modelled) |
+| Plan 2 | RPI, rising to RPI + 3% as income goes from £29,385 to £52,885 |
+| Plan 5 | RPI |
+| Postgraduate | RPI + 3% |
+
+The current published rates (1 September 2026 to 31 August 2027) are RPI 4.1%, with a
+temporary 6% cap on Plan 2 and postgraduate loans. **By default the projection keeps
+these current rates** (Plan 2 still moves with your income). In Assumptions you can
+instead choose **Student loan interest in future years → Follow inflation**. That
+uses your inflation assumption as RPI from September 2027, plus the plan's margin,
+with no cap. Entering your own rate in Setup overrides both. Without a balance,
+repayments simply carry on until you retire.
+
 ## How the projection works
 
 Each year, in order:
 
 1. **Income** — salary and bonuses grow with salary growth and are taxed with that
-   year's rules (thresholds frozen or raised with inflation). Salary and workplace
+   year's rules (thresholds frozen or raised with inflation). Student loan repayments
+   stop once the loan is repaid or written off. Salary and workplace
    pension contributions stop at retirement age; State Pension starts at State Pension
    age.
 2. **Growth** — home, cash, investments (after fees) and pension (after fees) grow at
@@ -108,8 +140,8 @@ Each year, in order:
    investments. Anything left is shown as an unfunded shortfall, with a warning.
 
 **Not modelled:** tax on savings and investments, higher-rate relief on extra pension
-contributions, student loan balances and write-off (repayments continue until
-retirement), the pension lump-sum allowance, inheritance, and changes to your mortgage
+contributions, student loan repayments on pension income, holding both an
+undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance, and changes to your mortgage
 after its term. Money moves at the end of each year, so contributions start growing
 the following year.
 
@@ -125,7 +157,7 @@ js/model/scenarios.js      workspace of scenarios: copy, rename, delete, differe
 js/model/sample.js         fictional sample household and example scenarios
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
-                           growth, projection, compare
+                           student loan, growth, projection, compare
 js/ui/*.js                 one file per screen, plus field, chart and DOM helpers
 js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
@@ -142,11 +174,15 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-73 tests cover:
+90 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Student loans:** current (default) and inflation-based interest by plan (Plan 2 by
+  income, the temporary cap ending), write-off years and timing, repayment until
+  cleared (then take-home rises), write-off of what's left, balances that grow, custom
+  rates, and higher inflation delaying payoff.
 - **Compound growth and inflation** conversion.
 - **Mortgage amortisation:** payment formula, overpayments, rate changes, the
   overpayment limit, and no term left.

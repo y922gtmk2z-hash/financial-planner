@@ -21,6 +21,7 @@
     { key: 'gia', label: 'Other investments', color: '--series-4' },
     { key: 'pension', label: 'Pensions', color: '--series-5' },
     { key: 'other', label: 'Other assets', color: '--series-6' },
+    { key: 'studentLoan', label: 'Student loan', color: '--series-neutral', negative: true },
     { key: 'owed', label: 'Debts & shortfall', color: '--series-8' },
   ];
 
@@ -57,6 +58,7 @@
     const rows = real ? r.rows.map(FP.projection.toReal) : r.rows;
     const at = (row) => (row ? rows[row.y] : null);
     const ev = r.events;
+    const sl = ev.studentLoan;
     const idx = (row) => (row ? row.y : null);
     const xTitle = (i) => `Age ${rows[i].age} · ${rows[i].year}${i === 0 ? ' (today)' : ''}`;
     const moneyNote = real ? 'in today’s money' : 'in future pounds';
@@ -64,6 +66,8 @@
     const markers = [
       ev.retirement ? { index: ev.retirement.y, label: `Retire ${a.retirementAge}` } : null,
       ev.mortgageFree ? { index: ev.mortgageFree.y, label: 'Mortgage-free' } : null,
+      sl.clearedRow ? { index: sl.clearedRow.y, label: 'Loan repaid' } : null,
+      sl.writtenOffRow ? { index: sl.writtenOffRow.y - 1, label: 'Loan written off' } : null,
     ].filter(Boolean);
 
     const keyAssumptions = chips([
@@ -87,6 +91,7 @@
       ev.hasMortgage
         ? tile('Mortgage-free', ev.mortgageFree ? `Age ${ev.mortgageFree.age}` : 'Not yet', ev.mortgageFree ? String(ev.mortgageFree.year) : `still owing at ${end.age}`)
         : null,
+      studentLoanTile(sl, rows, end),
       ev.runsOut
         ? tile('Money runs short', `Age ${ev.runsOut.age}`, String(ev.runsOut.year), true)
         : tile(`Net worth at ${end.age}`, money(end.netWorth), String(end.year)),
@@ -98,7 +103,7 @@
     ];
     const compSeries = COMPONENTS.map((c) => ({
       label: c.label, color: c.color,
-      values: rows.map((x) => (c.key === 'owed' ? -(x.debts + x.shortfall) : x[c.key])),
+      values: rows.map((x) => (c.key === 'owed' ? -(x.debts + x.shortfall) : c.negative ? -x[c.key] : x[c.key])),
     })).filter((ser) => ser.values.some((v) => Math.abs(v) > 0.5));
 
     return [
@@ -126,10 +131,21 @@
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Stacked area chart of net worth by component, ${moneyNote}`,
         }),
-        h('p', { class: 'muted small' }, 'Debts and any unfunded shortfall are shown below zero.')),
+        h('p', { class: 'muted small' }, 'Debts, your student loan and any unfunded shortfall are shown below zero.')),
 
       tableCard(rows, a, moneyNote),
       notesCard(a)];
+  }
+
+  // When the student loan ends, if a balance was entered.
+  function studentLoanTile(sl, rows, end) {
+    if (!sl.tracked) return null;
+    if (sl.clearedRow) return tile('Student loan repaid', `Age ${sl.clearedRow.age}`, String(sl.clearedRow.year));
+    if (sl.writtenOffRow) {
+      const left = rows[sl.writtenOffRow.y].studentLoanWrittenOff;
+      return tile('Student loan written off', `Age ${sl.writtenOffAge}`, `${money(left)} left, April ${sl.writeOffYear}`);
+    }
+    return tile('Student loan', 'Still owing', `${money(rows[end.y].studentLoan)} at ${end.age}`);
   }
 
   function tile(label, value, sub, warn) {
@@ -148,7 +164,8 @@
       ['Investments', (x) => x.isa + x.gia],
       ['Pension', (x) => x.pension],
       ['Home equity', (x) => x.equity],
-      ['Owed', (x) => x.debts + x.shortfall],
+      ['Student loan', (x) => x.studentLoan],
+      ['Other owed', (x) => x.debts + x.shortfall],
       ['Net worth', (x) => x.netWorth],
     ];
     return h('details', { class: 'card' },
@@ -175,8 +192,9 @@
         h('li', null, 'Any surplus first repays an earlier shortfall, then is split as set below. Extra pension contributions get 20% basic-rate relief; higher-rate relief isn’t added.'),
         h('li', null, `Salary and workplace pension contributions stop at ${a.retirementAge}. State Pension starts at ${a.statePensionAge} and rises with inflation. Spending carries on at the same level in retirement.`),
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
+        h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
-        h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loan write-off (repayments continue until you retire), or changes to your mortgage after the term ends.')));
+        h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
   }
 
   // Shows whether the surplus split adds up to 100% (also used by Assumptions).

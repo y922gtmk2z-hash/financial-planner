@@ -26,9 +26,7 @@
       h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
         h('h2', { id: 'inc-in' }, 'Your pay'),
         h('p', { class: 'muted' }, 'These are the same figures as in Setup — changing them here changes them everywhere.'),
-        sec.fields.filter((f) => !f.advanced).map(make),
-        FP.bonusEditor.render(ctx, draw),
-        h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), sec.fields.filter((f) => f.advanced).map(make))),
+        FP.field.sectionBody(sec, make, FP.bonusEditor.render(ctx, draw))),
       results);
     draw();
   }
@@ -95,6 +93,7 @@
           input.studentLoanPlan !== 'none' ? `Student loan ${PLAN_LABELS[input.studentLoanPlan]}` : 'No student loan',
         ])),
       breakdownCard(r),
+      studentLoanCard(p, r),
       bandsCard(r),
       h('section', { class: 'card', 'aria-labelledby': 'notes-h' },
         h('h2', { id: 'notes-h' }, 'How this is worked out'),
@@ -142,6 +141,58 @@
           r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
       lumpy ? h('p', { class: 'muted small' },
         `The year is ${12 - bps.length} regular month${12 - bps.length === 1 ? '' : 's'} plus ${bps.map((b) => monthName(b.month)).join(', ')}.`) : null);
+  }
+
+  // Balance, interest and when the loan ends (from the projection).
+  function studentLoanCard(p, r) {
+    const inc = p.income;
+    const plan = inc.studentLoanPlan;
+    if (plan === 'none') return null;
+    const head = h('h2', { id: 'sl-h' }, 'Your student loan');
+    const writeOff = FP.studentLoan.writeOffYear(plan, inc.studentLoanStartYear);
+    if (!FP.studentLoan.tracked(p)) {
+      return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
+        h('p', null, `You\u2019re repaying ${money(r.studentLoan)} a year (${money(r.studentLoan / 12)} a month).`),
+        h('p', { class: 'muted' }, 'Add your balance and the year you were first due to repay (above) to see when your loan will be repaid or written off. Until then, the projection keeps repayments going until you retire.'));
+    }
+    const override = inc.studentLoanRate;
+    const rate = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override });
+    const later = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override, rpi: p.assumptions.inflation });
+    const followInflation = p.assumptions.studentLoanInterest === 'inflation';
+    const interest = inc.studentLoanBalance * rate / 100;
+    const until = FP.taxConfig.studentLoanInterest.until.split('-').map(Number);
+    const laterFrom = FP.dom.date(`${until[1] === 12 ? until[0] + 1 : until[0]}-${String(until[1] === 12 ? 1 : until[1] + 1).padStart(2, '0')}-01`).replace(/^1 /, '');
+    const proj = FP.projection.project(p);
+    const sl = proj.ok ? proj.events.studentLoan : null;
+    let outcome = null;
+    if (sl && sl.clearedRow) {
+      outcome = `On these assumptions you\u2019d repay it in ${sl.clearedRow.year}, at age ${sl.clearedRow.age}${writeOff ? ` \u2014 about ${writeOff - sl.clearedRow.year} years before it would be written off` : ''}.`;
+    } else if (sl && sl.writtenOffRow) {
+      const left = FP.projection.toReal(proj.rows[sl.writtenOffRow.y]).studentLoanWrittenOff;
+      outcome = `On these assumptions it wouldn\u2019t be repaid in full: about ${money(left)} (in today\u2019s money) would be written off in April ${writeOff}, at age ${sl.writtenOffAge}.`;
+    } else if (sl) {
+      outcome = `On these assumptions you\u2019d still owe about ${money(FP.projection.toReal(proj.rows[proj.years]).studentLoan)} (today\u2019s money) at ${proj.rows[proj.years].age}.`;
+    }
+    return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
+      h('dl', { class: 'rows' }, [
+        ['Balance today', money(inc.studentLoanBalance)],
+        ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && override == null ? ' (depends on income)' : ''}`],
+        followInflation
+          ? [`From ${laterFrom}`, override == null ? `${pct(later, 2)} (inflation ${pct(p.assumptions.inflation, 1)} + ${pct(later - p.assumptions.inflation, 2)})` : pct(later, 2)]
+          : null,
+        ['Interest this year (about)', money(interest)],
+        ['Repaying this year', money(r.studentLoan)],
+        ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
+      ].filter(Boolean).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
+      r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
+      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Setup to project when it ends.'),
+      chips([
+        followInflation
+          ? `Current rates until August 2027, then your ${pct(p.assumptions.inflation, 1)} inflation as RPI + plan margin`
+          : 'Current rates held in projections (change in Assumptions)',
+        plan === 'plan1' || plan === 'plan4' ? 'Plan 1 and 4: base-rate limit not modelled' : null,
+        'Check your balance and dates with the Student Loans Company',
+      ]));
   }
 
   function bandsCard(r) {

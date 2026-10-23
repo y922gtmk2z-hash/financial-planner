@@ -156,6 +156,13 @@
       h('div', { class: 'quick-grid' }, fields));
   }
 
+  function studentLoanText(sl) {
+    if (!sl || !sl.tracked) return '\u2014';
+    if (sl.clearedRow) return `Repaid at ${sl.clearedRow.age}`;
+    if (sl.writtenOffRow) return `Written off at ${sl.writtenOffAge}`;
+    return 'Still owing';
+  }
+
   function compareView(ctx, view, redraw) {
     const ws = ctx.workspace();
     const real = view === 'real';
@@ -180,6 +187,7 @@
       { label: 'Net worth at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.netWorth), delta(s.atRetirement.netWorth, base.atRetirement && base.atRetirement.netWorth)] : '—') },
       { label: 'Pension pot at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.pension), delta(s.atRetirement.pension, base.atRetirement && base.atRetirement.pension)] : '—') },
       { label: 'Mortgage-free', cell: (s) => ageText(s.mortgageFreeAge, 'Not in projection') },
+      { label: 'Student loan', cell: (s) => studentLoanText(s.studentLoan) },
       { label: 'Money runs short', cell: (s) => (s.runsOutAge ? h('span', { class: 'negative' }, `Age ${s.runsOutAge}`) : 'No') },
       commonAge ? {
         label: `Net worth at ${commonAge}`,

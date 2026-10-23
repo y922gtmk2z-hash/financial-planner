@@ -8,7 +8,7 @@
     homeValue: '--series-1', cashSavings: '--series-2', isa: '--series-3',
     gia: '--series-4', pension: '--series-5', other: '--series-6',
   };
-  const LIABILITY_COLORS = { mortgage: '--series-7', debts: '--series-8' };
+  const LIABILITY_COLORS = { mortgage: '--series-7', debts: '--series-8', studentLoan: '--series-neutral' };
 
   function render(root, ctx) {
     const p = ctx.profile();

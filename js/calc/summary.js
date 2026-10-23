@@ -83,11 +83,14 @@
     });
 
     const totalDebts = debts.reduce((s, d) => s + d.balance, 0);
+    // Student loan counts as a debt only when there's a plan and a balance.
+    const studentLoan = FP.studentLoan.tracked(profile) ? num(profile.income.studentLoanBalance) : 0;
     const liabilityItems = [
       { key: 'mortgage', label: 'Mortgage', value: mBalance },
       { key: 'debts', label: 'Other debts', value: totalDebts },
+      { key: 'studentLoan', label: 'Student loan', value: studentLoan },
     ];
-    const totalLiabilities = mBalance + totalDebts;
+    const totalLiabilities = mBalance + totalDebts + studentLoan;
 
     const homeValue = num(profile.assets.homeValue);
     const home = {

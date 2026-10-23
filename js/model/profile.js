@@ -85,8 +85,14 @@
           help: 'Your yearly salary before tax and deductions.' },
         { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true },
-        { path: 'income.studentLoanPlan', label: 'Student loan', type: 'select', options: STUDENT_LOAN_PLANS,
-          help: 'Which plan you repay, if any. Check your Student Loans Company account if unsure.' },
+        { path: 'income.studentLoanPlan', label: 'Your plan', type: 'select', options: STUDENT_LOAN_PLANS, group: 'studentLoan',
+          help: 'Your Student Loans Company account and payslip show it. As a guide: England or Wales courses from 1998 to 2011 are Plan 1, from 2012 to July 2023 Plan 2, from August 2023 Plan 5; Scotland Plan 4; Northern Ireland Plan 1.' },
+        { path: 'income.studentLoanBalance', label: 'Balance', type: 'money', group: 'studentLoan',
+          help: 'What you owe today, from your Student Loans Company online account. Leave blank and repayments simply carry on until you retire.' },
+        { path: 'income.studentLoanStartYear', label: 'Year you were first due to repay', type: 'int', min: 1990, max: 2040, nullable: true, placeholder: 'e.g. 2016', group: 'studentLoan',
+          help: 'The April after you left your course. Used to work out when any balance left is written off.' },
+        { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan',
+          help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
         { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
@@ -94,6 +100,14 @@
       ],
     },
   ];
+
+  // Fields with a `group` are shown together under a heading.
+  const FIELD_GROUPS = {
+    studentLoan: {
+      title: 'Student loan',
+      intro: 'Repayments come out of your pay. Add your balance to see when the loan will be repaid or written off.',
+    },
+  };
 
   const DEBT_FIELDS = [
     { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. Car loan' },
@@ -133,7 +147,10 @@
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
-      income: { grossSalary: 0, bonuses: [], studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay' },
+      income: {
+        grossSalary: 0, bonuses: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
+        studentLoanRate: null, region: 'rUK', pensionMethod: 'netPay',
+      },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -270,7 +287,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

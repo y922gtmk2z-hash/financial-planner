@@ -157,8 +157,20 @@
       const H = Math.round(Math.min(320, Math.max(220, W * 0.55)));
       const m = { l: 52, r: 12, t: 18, b: 28 };
       const pw = W - m.l - m.r;
-      const ph = H - m.t - m.b;
       const x = (i) => m.l + (n <= 1 ? 0 : (i / (n - 1)) * pw);
+      // Marker labels that would overlap go on a second (third...) row above the plot.
+      const markers = (opts.markers || []).filter((mk) => mk.index != null && mk.index >= 0 && mk.index < n)
+        .slice().sort((p, q) => p.index - q.index);
+      const rowEnds = [];
+      markers.forEach((mk) => {
+        const px = x(mk.index);
+        let row = rowEnds.findIndex((end) => px - end > 96);
+        if (row === -1) { row = rowEnds.length; rowEnds.push(0); }
+        rowEnds[row] = px;
+        mk.row = row;
+      });
+      m.t += Math.max(0, rowEnds.length - 1) * 13;
+      const ph = H - m.t - m.b;
       const y = (v) => m.t + (1 - (v - yMin) / (yMax - yMin || 1)) * ph;
 
       const svg = s('svg', {
@@ -184,10 +196,9 @@
       }
 
       // Markers
-      (opts.markers || []).forEach((mk) => {
-        if (mk.index == null || mk.index < 0 || mk.index >= n) return;
-        svg.appendChild(s('line', { x1: x(mk.index), x2: x(mk.index), y1: m.t, y2: m.t + ph, class: 'marker' }));
-        const lbl = s('text', { x: x(mk.index) + 4, y: m.t - 5, class: 'marker-label', 'text-anchor': mk.index > n * 0.8 ? 'end' : 'start' });
+      markers.forEach((mk) => {
+        svg.appendChild(s('line', { x1: x(mk.index), x2: x(mk.index), y1: m.t - mk.row * 13, y2: m.t + ph, class: 'marker' }));
+        const lbl = s('text', { x: x(mk.index) + 4, y: m.t - 5 - mk.row * 13, class: 'marker-label', 'text-anchor': mk.index > n * 0.8 ? 'end' : 'start' });
         if (mk.index > n * 0.8) lbl.setAttribute('x', x(mk.index) - 4);
         lbl.textContent = mk.label;
         svg.appendChild(lbl);

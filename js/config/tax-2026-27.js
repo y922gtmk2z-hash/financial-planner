@@ -24,6 +24,8 @@
       { label: 'HMRC: National Insurance rates and thresholds', url: 'https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027' },
       { label: 'Scottish Government: Scottish Income Tax 2026 to 2027', url: 'https://www.gov.scot/publications/scottish-income-tax-rates-and-bands/pages/2026-to-2027/' },
       { label: 'gov.uk: Repaying your student loan', url: 'https://www.gov.uk/repaying-your-student-loan/what-you-pay' },
+      { label: 'gov.uk: Student loan interest rates', url: 'https://www.gov.uk/government/news/student-loans-interest-rates-and-repayment-threshold-announcement--7' },
+      { label: 'gov.uk: When your student loan gets written off', url: 'https://www.gov.uk/repaying-your-student-loan/when-your-student-loan-gets-written-off-or-cancelled' },
     ],
 
     personalAllowance: 12570,
@@ -58,12 +60,33 @@
     },
 
     // Yearly repayment thresholds; repay `rate`% of income above the threshold.
+    //
+    // Interest is RPI plus a margin. RPI is set each year (from the previous
+    // March), so projections use your inflation assumption from the end of the
+    // current interest year:
+    //   Plan 1 and Plan 4: RPI (strictly the lower of RPI and Bank of England
+    //     base rate + 1%; base rate isn't modelled).
+    //   Plan 2: RPI + 0% at the repayment threshold, sliding to RPI + 3% at
+    //     interestUpperThreshold and above.
+    //   Plan 5: RPI.  Postgraduate: RPI + 3%.
+    // studentLoanInterest holds the published rates for the current interest
+    // year (1 Sep 2026 to 31 Aug 2027: RPI 4.1%, with a temporary 6% cap on
+    // Plan 2 and postgraduate loans). Check them every September.
+    //
+    // writeOffYears: written off this many years after the April you were first
+    //   due to repay (newer loans; some older Plan 1 and Plan 4 loans end at 65).
     studentLoans: {
-      plan1: { threshold: 26900, rate: 9 },
-      plan2: { threshold: 29385, rate: 9 },
-      plan4: { threshold: 33795, rate: 9 },
-      plan5: { threshold: 25000, rate: 9 },
-      postgrad: { threshold: 21000, rate: 6 },
+      plan1: { threshold: 26900, rate: 9, margin: 0, writeOffYears: 25 },
+      plan2: { threshold: 29385, rate: 9, margin: 0, marginMax: 3, interestUpperThreshold: 52885, writeOffYears: 30 },
+      plan4: { threshold: 33795, rate: 9, margin: 0, writeOffYears: 30 },
+      plan5: { threshold: 25000, rate: 9, margin: 0, writeOffYears: 40 },
+      postgrad: { threshold: 21000, rate: 6, margin: 3, writeOffYears: 30 },
+    },
+    studentLoanInterest: {
+      // Published rates apply up to and including this month (YYYY-MM).
+      until: '2027-08',
+      rpi: 4.1,
+      cap: 6.0, // temporary cap for this interest year only
     },
 
     // Relief-at-source pensions: the provider claims this rate back on your behalf.

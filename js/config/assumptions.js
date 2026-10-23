@@ -125,6 +125,15 @@
       help: 'Applies to the personal allowance, tax bands, NI thresholds and student loan thresholds. Frozen thresholds mean more of a rising salary is taxed (\u201cfiscal drag\u201d). Rates stay as they are today.',
     },
     {
+      key: 'studentLoanInterest', group: 'tax', label: 'Student loan interest in future years', unit: 'choice',
+      default: 'current', setOn: SET_ON,
+      options: [
+        { value: 'current', label: 'Stay at current rates' },
+        { value: 'inflation', label: 'Follow inflation (as RPI) plus the plan\u2019s margin' },
+      ],
+      help: 'Current rates are those published for September 2026 to August 2027 (RPI 4.1%; Plan 2 and postgraduate capped at 6%). Following inflation uses your inflation assumption as RPI from September 2027, with no cap. Your own rate in Setup overrides both.',
+    },
+    {
       key: 'statePension', group: 'tax', label: 'State Pension (today\u2019s money)', unit: 'money',
       default: 12547.6, min: 0, max: 50000, setOn: SET_ON,
       help: 'Full new State Pension for 2026/27 is \u00a3241.30 a week. Check your own forecast on GOV.UK \u2014 set to 0 if you won\u2019t get it. Rises with inflation in projections.',
