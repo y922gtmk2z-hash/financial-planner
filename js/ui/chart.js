@@ -132,7 +132,10 @@
           stacks[si][i] = [base, top];
           if (down) neg = top; else pos = top;
         } else {
-          stacks[si][i] = [v, v];
+          // Lines may have gaps (null), e.g. scenarios with different lengths.
+          const lv = ser.values[i] == null ? null : v;
+          stacks[si][i] = [lv, lv];
+          if (lv == null) return;
         }
         min = Math.min(min, stacks[si][i][1]);
         max = Math.max(max, stacks[si][i][1]);
@@ -201,7 +204,12 @@
           svg.appendChild(s('path', { d: `${d}Z`, fill: `var(${ser.color})`, class: 'area' }));
         } else {
           let d = '';
-          for (let i = 0; i < n; i += 1) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i][1]).toFixed(1)}`;
+          let pen = 'M';
+          for (let i = 0; i < n; i += 1) {
+            if (pts[i][1] == null) { pen = 'M'; continue; }
+            d += `${pen}${x(i).toFixed(1)},${y(pts[i][1]).toFixed(1)}`;
+            pen = 'L';
+          }
           svg.appendChild(s('path', { d, stroke: `var(${ser.color})`, class: `line${ser.dashed ? ' dashed' : ''}` }));
         }
       });
@@ -221,21 +229,22 @@
         cross.setAttribute('x2', x(active));
         cross.setAttribute('visibility', 'visible');
         dots.forEach((c, si) => {
+          const v = stacks[si][active][1];
           c.setAttribute('cx', x(active));
-          c.setAttribute('cy', y(stacks[si][active][1]));
-          c.setAttribute('visibility', 'visible');
+          c.setAttribute('cy', v == null ? 0 : y(v));
+          c.setAttribute('visibility', v == null ? 'hidden' : 'visible');
         });
-        const items = opts.series.map((ser) => ({ ser, v: ser.values[active] || 0 }))
-          .filter((it) => opts.type !== 'area' || Math.abs(it.v) > 0.5);
+        const items = opts.series.map((ser) => ({ ser, v: ser.values[active] }))
+          .filter((it) => opts.type !== 'area' || Math.abs(it.v || 0) > 0.5);
         const ordered = opts.type === 'area' ? items.slice().reverse() : items;
         FP.dom.fill(tip,
           h('strong', null, opts.xTitle(active)),
           h('ul', null, ordered.map((it) => h('li', null,
             h('span', { class: 'swatch', style: `background:var(${it.ser.color})` }),
             h('span', { class: 'tip-label' }, it.ser.label),
-            h('span', { class: 'tip-value' }, FP.dom.money(it.v))))),
+            h('span', { class: 'tip-value' }, it.v == null ? '\u2014' : FP.dom.money(it.v))))),
           opts.type === 'area' && opts.totalLabel
-            ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, FP.dom.money(items.reduce((t, it) => t + it.v, 0))))
+            ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, FP.dom.money(items.reduce((t, it) => t + (it.v || 0), 0))))
             : null);
         tip.hidden = false;
         const tw = tip.offsetWidth;

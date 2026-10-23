@@ -210,5 +210,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.future = { title: 'Future', render, drawSplitStatus };
+  FP.screens.future = { title: 'Future', render, drawSplitStatus, getView, setView };
 })(globalThis.FP = globalThis.FP || {});

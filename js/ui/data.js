@@ -15,8 +15,8 @@
         const r = FP.store.importJson(String(reader.result));
         fileInput.value = '';
         if (!r.ok) { ctx.toast(r.error); return; }
-        if (!confirm('Replace everything in the planner with the imported file?')) return;
-        ctx.replaceProfile(r.profile);
+        if (!confirm('Replace everything in the planner (all scenarios) with the imported file?')) return;
+        ctx.replaceWorkspace(r.workspace);
         ctx.toast('Imported');
       };
       reader.readAsText(file);
@@ -36,15 +36,15 @@
           h('label', { for: 'import-file', class: 'button secondary', tabindex: '0',
             onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } } }, 'Import a file'),
           fileInput),
-        h('p', { class: 'muted' }, 'Exports are plain JSON files containing your figures. Keep them somewhere private.')),
+        h('p', { class: 'muted' }, 'Exports are plain JSON files containing your figures for every scenario. Keep them somewhere private.')),
       h('section', { class: 'card' },
         h('h2', null, 'Start again'),
         h('div', { class: 'button-row' },
           h('button', {
             type: 'button', class: 'secondary',
             onclick: () => {
-              if (!confirm('Replace everything with the fictional sample data?')) return;
-              ctx.replaceProfile(FP.sample());
+              if (!confirm('Replace everything (all scenarios) with the fictional sample data?')) return;
+              ctx.replaceWorkspace(FP.sampleWorkspace());
               ctx.toast('Sample data loaded');
             },
           }, 'Load sample data'),
@@ -53,7 +53,7 @@
             onclick: () => {
               if (!confirm('Delete all your data from this browser? This can’t be undone. Export a file first if you want a backup.')) return;
               FP.store.clear();
-              ctx.replaceProfile(FP.profile.blank());
+              ctx.replaceWorkspace(FP.scenarios.fromProfile(FP.profile.blank()));
               ctx.toast('All data cleared');
             },
           }, 'Clear all data')),
@@ -61,7 +61,7 @@
   }
 
   function exportFile(ctx) {
-    const blob = new Blob([FP.store.exportJson(ctx.profile())], { type: 'application/json' });
+    const blob = new Blob([FP.store.exportJson(ctx.workspace())], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = h('a', { href: url, download: `finance-planner-export-${new Date().toISOString().slice(0, 10)}.json` });
     document.body.appendChild(a);

@@ -16,6 +16,13 @@ Everything is saved in your browser's local storage on this device only. Use the
 **Your data** screen (link in the header) to export a JSON backup, import one, load the fictional sample data,
 or clear everything. Exported files are git-ignored so they are never committed.
 
+## Scenarios
+
+Your plan is saved as a **Baseline** scenario. On the **Scenarios** screen you can copy
+it, change any input or assumption in the copy, and compare scenarios side by side.
+The scenario picker under the header shows which scenario every screen is editing.
+Export saves every scenario in one file.
+
 ## Tax rules
 
 All income tax, National Insurance and student loan rates and thresholds live in one
@@ -36,5 +43,5 @@ Built in stages — see [docs/PLAN.md](docs/PLAN.md).
 - [x] Stage 1: Setup, Today dashboard, Assumptions panel, data export/import
 - [x] Stage 2: UK take-home pay calculator wired into cash flow
 - [x] Stage 3: Future projection
-- [ ] Stage 4: Scenarios
+- [x] Stage 4: Scenarios
 - [ ] Stage 5: Tests, README and polish

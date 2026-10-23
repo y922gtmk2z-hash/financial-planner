@@ -135,14 +135,15 @@ main:focus, main:focus-visible { outline: none; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface); border-top: 1px solid var(--border);
 }
 .tabbar a {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  color: var(--text-2); text-decoration: none; font-size: 0.75rem; font-weight: 600;
+  color: var(--text-2); text-decoration: none; font-size: 0.7rem; font-weight: 600; letter-spacing: -0.01em;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tabbar .tab-icon { font-size: 1.15rem; line-height: 1; }
 .tabbar a[aria-current="page"] { color: var(--accent); }
@@ -161,6 +162,7 @@ main:focus, main:focus-visible { outline: none; }
   .disclaimer { order: 1; width: 100%; }
   .tabbar { order: 2; width: 100%; }
   .sample-banner { order: 3; width: 100%; }
+  .scenario-bar { order: 3; width: 100%; }
   main { order: 4; width: 100%; }
   .app-footer { order: 5; width: 100%; }
   .toast { order: 6; }
@@ -429,3 +431,46 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; white-space: nowrap;
 }
 .header-link[aria-current="page"] { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ---------- Stage 4: scenarios ---------- */
+.scenario-bar {
+  max-width: 760px; margin: 0 auto; padding: 8px var(--gutter);
+  display: flex; align-items: center; gap: 8px;
+}
+.scenario-bar.not-baseline { background: var(--warn-bg); }
+@media (min-width: 792px) { .scenario-bar { border-radius: var(--radius); margin-bottom: 8px; } }
+.scenario-label { font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+.scenario-select { flex: 1; min-width: 0; min-height: 38px; padding: 0 8px; }
+.scenario-select select { padding: 6px 0; font-weight: 600; font-size: 0.95rem; }
+
+.scenario-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.scenario-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.scenario-item.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.scenario-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+.scenario-name .swatch { width: 12px; height: 12px; }
+.scenario-name .rename { flex: 1; min-width: 160px; min-height: 38px; }
+.scenario-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px; }
+.diff-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 0.85rem; color: var(--text-2); }
+.diff-list li { padding: 2px 0; }
+.diff-from { text-decoration: line-through; color: var(--text-3); }
+.diff-list strong { color: var(--text); }
+
+.quick-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 12px; }
+@media (min-width: 560px) { .quick-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.quick-grid .field { min-width: 0; }
+.quick-grid .field.compact { margin: 8px 0; }
+
+.compare-table { font-size: 0.85rem; }
+.compare-table th[scope="col"] { white-space: nowrap; vertical-align: bottom; }
+.compare-table th[scope="col"] .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+.compare-table th[scope="col"].is-active { color: var(--accent); }
+.compare-table tbody th { font-weight: 600; min-width: 9rem; }
+.compare-table td { white-space: nowrap; }
+.compare-table td small { display: block; font-size: 0.75rem; font-weight: 600; }
+.compare-table th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+@media (max-width: 420px) { .tabbar a { font-size: 0.64rem; letter-spacing: -0.02em; } }
+.brand { white-space: nowrap; }
+@media (max-width: 420px) {
+  .save-status { font-size: 0.72rem; max-width: 7.5rem; line-height: 1.2; }
+  .header-right { gap: 8px; }
+}

@@ -38,13 +38,23 @@ test('normalise fills gaps, drops junk and keeps valid values', () => {
   assert.equal(p.debts[0].rate, null);
 });
 
-test('export then import round-trips the profile', () => {
-  const p = FP.sample();
-  const r = FP.store.importJson(FP.store.exportJson(p));
+test('export then import round-trips the workspace', () => {
+  const ws = FP.sampleWorkspace();
+  const r = FP.store.importJson(FP.store.exportJson(ws));
   assert.equal(r.ok, true);
-  assert.deepEqual(r.profile, p);
+  assert.deepEqual(r.workspace, ws);
   assert.equal(FP.store.importJson('{"profile":{}}').ok, false);
   assert.equal(FP.store.importJson('not json').ok, false);
+  assert.equal(FP.store.importJson('{"app":"uk-finance-planner","schemaVersion":99,"workspace":{}}').ok, false);
+});
+
+test('older single-profile exports import as a one-scenario workspace', () => {
+  const old = JSON.stringify({ app: 'uk-finance-planner', schemaVersion: 1, profile: FP.sample() });
+  const r = FP.store.importJson(old);
+  assert.equal(r.ok, true);
+  assert.equal(r.workspace.scenarios.length, 1);
+  assert.equal(r.workspace.scenarios[0].name, 'Baseline');
+  assert.deepEqual(r.workspace.scenarios[0].profile, FP.sample());
 });
 
 test('every assumption has a default inside its range and a set-on date', () => {
