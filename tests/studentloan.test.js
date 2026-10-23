@@ -12,19 +12,45 @@ function profile(income) {
   Object.assign(p.income, { grossSalary: 40000, studentLoanPlan: 'plan2' }, income);
   return p;
 }
-const project = (p) => FP.projection.project(p, { startYear: 2026 });
+// Projections start in October 2026, so the first year runs to September 2027.
+const project = (p) => FP.projection.project(p, { startYear: 2026, startMonth: 10 });
 
-test('interest rates by plan; Plan 2 slides with income; an override wins', () => {
-  assert.equal(SL.interestRate('plan1', 50000), 4.1);
-  assert.equal(SL.interestRate('plan5', 50000), 4.1);
-  assert.equal(SL.interestRate('postgrad', 50000), 6.0);
-  assert.equal(SL.interestRate('plan2', 20000), 4.1); // below the repayment threshold
-  assert.equal(SL.interestRate('plan2', 29385), 4.1);
-  close(SL.interestRate('plan2', (29385 + 52885) / 2), 5.05);
-  assert.equal(SL.interestRate('plan2', 52885), 6.0);
-  assert.equal(SL.interestRate('plan2', 90000), 6.0);
-  assert.equal(SL.interestRate('plan2', 90000, FP.taxConfig, 3), 3);
-  assert.equal(SL.interestRate('none', 90000), 0);
+test('published rates for the current interest year (RPI 4.1%, 6% cap)', () => {
+  const rate = (plan, income) => SL.interestRate(plan, income);
+  assert.equal(rate('plan1', 50000), 4.1);
+  assert.equal(rate('plan4', 50000), 4.1);
+  assert.equal(rate('plan5', 50000), 4.1);
+  assert.equal(rate('postgrad', 50000), 6.0); // RPI + 3% = 7.1%, capped at 6%
+  assert.equal(rate('plan2', 20000), 4.1); // below the repayment threshold: RPI only
+  assert.equal(rate('plan2', 29385), 4.1);
+  close(rate('plan2', (29385 + 52885) / 2), 5.6); // RPI + 1.5%
+  assert.equal(rate('plan2', 52885), 6.0); // RPI + 3% = 7.1%, capped
+  assert.equal(rate('plan2', 90000), 6.0);
+  assert.equal(rate('none', 90000), 0);
+});
+
+test('future rates follow inflation (as RPI) plus the plan margin, with no cap', () => {
+  const rate = (plan, income, rpi) => SL.interestRate(plan, income, FP.taxConfig, { rpi });
+  assert.equal(rate('plan1', 50000, 2.5), 2.5);
+  assert.equal(rate('plan4', 50000, 2.5), 2.5);
+  assert.equal(rate('plan5', 50000, 2.5), 2.5);
+  assert.equal(rate('postgrad', 50000, 2.5), 5.5);
+  assert.equal(rate('plan2', 20000, 2.5), 2.5);
+  close(rate('plan2', (29385 + 52885) / 2, 2.5), 4.0);
+  assert.equal(rate('plan2', 90000, 2.5), 5.5);
+  assert.equal(rate('postgrad', 50000, 5), 8); // the temporary cap doesn't carry forward
+});
+
+test('your own rate always wins', () => {
+  assert.equal(SL.interestRate('plan2', 90000, FP.taxConfig, { override: 3 }), 3);
+  assert.equal(SL.interestRate('plan2', 90000, FP.taxConfig, { override: 3, rpi: 9 }), 3);
+});
+
+test('published rates apply until August 2027', () => {
+  assert.equal(SL.publishedRatesApply(2026, 10), true);
+  assert.equal(SL.publishedRatesApply(2027, 8), true);
+  assert.equal(SL.publishedRatesApply(2027, 9), false);
+  assert.equal(SL.publishedRatesApply(2030, 1), false);
 });
 
 test('write-off year = first repayment April + the plan term', () => {
@@ -60,9 +86,9 @@ test('a small loan is paid off, then repayments stop and take-home rises', () =>
   const due = (40000 - 29385) * 0.09; // £955.35 a year
   close(r.rows[1].studentLoanRepaid, due, 0.01);
   assert.ok(r.rows[1].studentLoanInterest > 0);
-  // Year 1: interest at 4.1% (income below the Plan 2 upper threshold slides the rate up a little)
+  // Year 1: income between the Plan 2 thresholds slides the rate above RPI
   const rate = SL.interestRate('plan2', 40000);
-  assert.ok(rate > 4.1 && rate < 6);
+  close(rate, 4.1 + 3 * (40000 - 29385) / (52885 - 29385));
   const cleared = r.events.studentLoan.clearedRow;
   assert.ok(cleared && cleared.y === 3, `cleared in year ${cleared && cleared.y}`);
   assert.equal(r.rows[3].studentLoan, 0);
@@ -74,26 +100,39 @@ test('a small loan is paid off, then repayments stop and take-home rises', () =>
 });
 
 test('whatever is left is written off in April of the write-off year', () => {
-  const p = profile({ studentLoanBalance: 100000, studentLoanStartYear: 2000 }); // written off 2030
+  const p = profile({ studentLoanBalance: 100000, studentLoanStartYear: 2000 }); // written off April 2030
   const r = project(p);
   const ev = r.events.studentLoan;
   assert.equal(ev.writeOffYear, 2030);
-  assert.equal(ev.writtenOffRow.year, 2031); // the projection year that starts in 2030
-  assert.equal(ev.writtenOffAge, 34); // age 30 in 2026, so 34 in April 2030
+  // Projection year 4 runs Oct 2029 - Sep 2030, so it contains April 2030
+  assert.equal(ev.writtenOffRow.y, 4);
+  assert.equal(ev.writtenOffAge, 33);
   assert.ok(ev.writtenOff > 90000);
   assert.equal(ev.clearedRow, null);
-  assert.equal(r.rows[5].studentLoan, 0);
+  assert.equal(r.rows[4].studentLoan, 0);
+  assert.ok(r.rows[3].studentLoan > 90000);
+  // Oct-Mar repayments were still taken that year
+  assert.ok(r.rows[4].studentLoanRepaid > 0 && r.rows[4].studentLoanRepaid < r.rows[3].studentLoanRepaid);
   // net worth jumps by the amount written off
-  assert.ok(r.rows[5].netWorth - r.rows[4].netWorth > ev.writtenOff * 0.9);
+  assert.ok(r.rows[4].netWorth - r.rows[3].netWorth > ev.writtenOff * 0.9);
   const noLoan = project(profile({ studentLoanPlan: 'none' }));
-  close(r.rows[6].takeHome, noLoan.rows[6].takeHome, 0.05);
+  close(r.rows[5].takeHome, noLoan.rows[5].takeHome, 0.05);
+});
+
+test('a write-off date already passed clears the balance straight away', () => {
+  const r = project(profile({ studentLoanBalance: 5000, studentLoanStartYear: 1990 }));
+  assert.equal(r.events.studentLoan.writtenOffRow.y, 1);
+  assert.equal(r.rows[1].studentLoanRepaid, 0);
 });
 
 test('a balance grows when repayments don\'t cover the interest', () => {
   const p = profile({ grossSalary: 25000, studentLoanBalance: 30000 }); // under the threshold: no repayments
   const r = project(p);
   assert.equal(r.rows[1].studentLoanRepaid, 0);
-  close(r.rows[1].studentLoan, 30000 * (1 + 0.041 / 12) ** 12, 0.01);
+  // Oct 2026 - Aug 2027 at the published 4.1%, then Sep 2027 at 2.5% (inflation)
+  close(r.rows[1].studentLoan, 30000 * (1 + 0.041 / 12) ** 11 * (1 + 0.025 / 12), 0.01);
+  // A later year: inflation only
+  close(r.rows[3].studentLoan, r.rows[2].studentLoan * (1 + 0.025 / 12) ** 12, 0.01);
   assert.equal(r.events.studentLoan.writtenOffRow, null); // no start year: write-off unknown
   assert.ok(r.events.studentLoan.owingAtEnd > 30000);
 });
@@ -116,4 +155,19 @@ test('the sample household clears its loan before it would be written off', () =
   assert.equal(ev.tracked, true);
   assert.equal(ev.writeOffYear, 2047);
   assert.ok(ev.clearedRow && ev.clearedRow.year <= 2047);
+});
+
+test('higher inflation means more interest and a later payoff', () => {
+  const run = (inflation) => {
+    const p = profile({ grossSalary: 45000, studentLoanBalance: 30000, studentLoanStartYear: 2020 });
+    p.assumptions.inflation = inflation;
+    return project(p);
+  };
+  const low = run(1);
+  const high = run(5);
+  assert.ok(high.rows[5].studentLoan > low.rows[5].studentLoan);
+  const year = (r) => (r.events.studentLoan.clearedRow ? r.events.studentLoan.clearedRow.y : Infinity);
+  assert.ok(year(high) > year(low));
+  // Year 1 is mostly at the published rate, so the two runs barely differ at first
+  assert.ok(Math.abs(high.rows[1].studentLoan - low.rows[1].studentLoan) < 150); // one month (September) differs
 });

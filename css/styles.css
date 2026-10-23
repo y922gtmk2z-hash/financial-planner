@@ -487,3 +487,5 @@ fieldset.row-card { min-width: 0; }
   .save-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 .sl-outcome { margin-top: 12px; font-weight: 600; }
+.field-group { margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.field-group h3 { margin-top: 0; }

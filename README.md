@@ -74,7 +74,8 @@ All income tax, National Insurance and student loan rates and thresholds live in
 file per tax year: **`js/config/tax-2026-27.js`** (6 April 2026 – 5 April 2027). It
 includes rest-of-UK and Scottish bands, the personal allowance taper over £100,000,
 employee NI, student loan plans 1, 2, 4, 5 and postgraduate (thresholds, interest
-rates and write-off terms), and links to the official sources.
+margins, the current interest year's published rates and write-off terms), and links
+to the official sources.
 
 **These figures must be checked against HMRC, gov.scot and gov.uk at the start of
 each tax year.** The Income screen shows a warning once today's date is outside the
@@ -97,12 +98,23 @@ the loan is repaid, repayments stop and your take-home pay rises. Any balance le
 the scenario comparison show when it ends. The loan counts as a debt in your net
 worth until then.
 
-Interest rates for the year from 1 September 2026 are in the tax config: RPI 4.1%.
-Plan 2 slides from 4.1% to a temporary 6% cap with income (between £29,385 and
-£52,885). Postgraduate loans are 6%. You can enter your own rate under **Advanced**.
-Rates are reset every September and are held at today's level in projections. Some
-older Plan 1 and Plan 4 loans are written off at 65 instead. Without a balance,
-repayments simply carry on until you retire.
+Choose your plan under **Student loan** in Setup or on Income (the help text says
+which plan you're likely to be on). Interest is RPI plus a margin:
+
+| Plan | Interest |
+| --- | --- |
+| Plan 1, Plan 4 | RPI (strictly the lower of RPI and base rate + 1%; base rate isn't modelled) |
+| Plan 2 | RPI, rising to RPI + 3% as income goes from £29,385 to £52,885 |
+| Plan 5 | RPI |
+| Postgraduate | RPI + 3% |
+
+For the current interest year (to 31 August 2027) the published rates are used: RPI
+4.1%, with a temporary 6% cap on Plan 2 and postgraduate loans. After that, the
+projection uses **your inflation assumption as RPI**, plus the plan's margin, and the
+cap no longer applies. So if you raise inflation in Assumptions, student loan interest
+rises with it. RPI has usually run above CPI. To allow for that, or to use a rate you
+know, enter your own rate. Without a balance, repayments simply carry on until you
+retire.
 
 ## How the projection works
 
@@ -161,14 +173,15 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-83 tests cover:
+88 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
-- **Student loans:** interest by plan (Plan 2 by income), write-off years, repayment
-  until cleared (then take-home rises), write-off of what's left, balances that grow,
-  and custom rates.
+- **Student loans:** published and inflation-based interest by plan (Plan 2 by
+  income, the temporary cap ending), write-off years and timing, repayment until
+  cleared (then take-home rises), write-off of what's left, balances that grow, custom
+  rates, and higher inflation delaying payoff.
 - **Compound growth and inflation** conversion.
 - **Mortgage amortisation:** payment formula, overpayments, rate changes, the
   overpayment limit, and no term left.

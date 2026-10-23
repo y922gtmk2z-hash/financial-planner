@@ -68,7 +68,11 @@
     const years = Math.min(MAX_YEARS, (a.endAge || 0) - age0);
     if (years < 1) return { ok: false, reason: 'endAge', message: 'Your projection end age must be after your current age.' };
 
-    const startYear = opts.startYear || new Date().getFullYear();
+    const now = new Date();
+    const startYear = opts.startYear || now.getFullYear();
+    // Month the projection starts (1-12). Each projection year runs from here.
+    const startMonth = opts.startMonth || now.getMonth() + 1;
+    const startMonthIndex = startYear * 12 + (startMonth - 1);
     const region = profile.income.region;
     const shares = splitShares(a);
     const warnings = [];
@@ -146,20 +150,29 @@
         slPay = th.niablePay;
       }
 
-      // Student loan balance: written off in April of the write-off year;
-      // otherwise interest is added and repayments taken month by month.
-      // Once it's cleared, repayments stop and take-home rises.
+      // Student loan balance, month by month: written off in April of the
+      // write-off year; otherwise interest is added (published rates for the
+      // current interest year, then your inflation assumption as RPI plus the
+      // plan's margin) and repayments taken. Once it's cleared, repayments
+      // stop and take-home rises.
       let slRepaid = slDue;
       let slInterest = 0;
       let slWrittenOff = 0;
       if (slTracked) {
-        if (slBal > 0 && slWriteOff != null && startYear + g >= slWriteOff) {
-          slWrittenOff = slBal;
-          slBal = 0;
-        }
         slRepaid = 0;
-        const rate = FP.studentLoan.interestRate(slPlan, slPay, cfgY, profile.income.studentLoanRate);
-        for (let m = 0; m < 12 && slBal > 0.005; m += 1) {
+        const override = profile.income.studentLoanRate;
+        const ratePublished = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override });
+        const rateFuture = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override, rpi: a.inflation });
+        for (let m = 0; m < 12; m += 1) {
+          const abs = startMonthIndex + 12 * g + m; // months since year 0
+          const year = Math.floor(abs / 12);
+          const month = (abs % 12) + 1;
+          if (slBal > 0 && slWriteOff != null && (year > slWriteOff || (year === slWriteOff && month >= 4))) {
+            slWrittenOff = slBal;
+            slBal = 0;
+          }
+          if (slBal <= 0.005) break;
+          const rate = FP.studentLoan.publishedRatesApply(year, month, cfgY) ? ratePublished : rateFuture;
           const interest = slBal * rate / 100 / 12;
           const paid = Math.min(slBal + interest, slDue / 12);
           slBal = slBal + interest - paid;
@@ -328,7 +341,7 @@
     const last = rows[rows.length - 1];
     return {
       tracked: true, clearedRow, writtenOffRow, writeOffYear,
-      // Written off in April of writeOffYear, at the start of writtenOffRow's year.
+      // Written off in April of writeOffYear, during writtenOffRow's year.
       writtenOffAge: writtenOffRow ? writtenOffRow.age - 1 : null,
       writtenOff: writtenOffRow ? writtenOffRow.studentLoanWrittenOff : 0,
       owingAtEnd: last.studentLoan,

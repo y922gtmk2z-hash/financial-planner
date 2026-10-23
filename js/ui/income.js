@@ -26,9 +26,7 @@
       h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
         h('h2', { id: 'inc-in' }, 'Your pay'),
         h('p', { class: 'muted' }, 'These are the same figures as in Setup — changing them here changes them everywhere.'),
-        sec.fields.filter((f) => !f.advanced).map(make),
-        FP.bonusEditor.render(ctx, draw),
-        h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), sec.fields.filter((f) => f.advanced).map(make))),
+        FP.field.sectionBody(sec, make, FP.bonusEditor.render(ctx, draw))),
       results);
     draw();
   }
@@ -157,13 +155,17 @@
         h('p', null, `You\u2019re repaying ${money(r.studentLoan)} a year (${money(r.studentLoan / 12)} a month).`),
         h('p', { class: 'muted' }, 'Add your balance and the year you were first due to repay (above) to see when your loan will be repaid or written off. Until then, the projection keeps repayments going until you retire.'));
     }
-    const rate = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, inc.studentLoanRate);
+    const override = inc.studentLoanRate;
+    const rate = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override });
+    const later = FP.studentLoan.interestRate(plan, r.niablePay, FP.taxConfig, { override, rpi: p.assumptions.inflation });
     const interest = inc.studentLoanBalance * rate / 100;
+    const until = FP.taxConfig.studentLoanInterest.until.split('-').map(Number);
+    const laterFrom = FP.dom.date(`${until[1] === 12 ? until[0] + 1 : until[0]}-${String(until[1] === 12 ? 1 : until[1] + 1).padStart(2, '0')}-01`).replace(/^1 /, '');
     const proj = FP.projection.project(p);
     const sl = proj.ok ? proj.events.studentLoan : null;
     let outcome = null;
     if (sl && sl.clearedRow) {
-      outcome = `On these assumptions you\u2019d repay it in ${sl.clearedRow.year}, at age ${sl.clearedRow.age}${writeOff ? ` \u2014 ${writeOff - sl.clearedRow.year + 1} years before it would be written off` : ''}.`;
+      outcome = `On these assumptions you\u2019d repay it in ${sl.clearedRow.year}, at age ${sl.clearedRow.age}${writeOff ? ` \u2014 about ${writeOff - sl.clearedRow.year} years before it would be written off` : ''}.`;
     } else if (sl && sl.writtenOffRow) {
       const left = FP.projection.toReal(proj.rows[sl.writtenOffRow.y]).studentLoanWrittenOff;
       outcome = `On these assumptions it wouldn\u2019t be repaid in full: about ${money(left)} (in today\u2019s money) would be written off in April ${writeOff}, at age ${sl.writtenOffAge}.`;
@@ -173,7 +175,8 @@
     return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
       h('dl', { class: 'rows' }, [
         ['Balance today', money(inc.studentLoanBalance)],
-        ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && inc.studentLoanRate == null ? ' (depends on income)' : ''}`],
+        ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && override == null ? ' (depends on income)' : ''}`],
+        [`From ${laterFrom}`, override == null ? `${pct(later, 2)} (inflation ${pct(p.assumptions.inflation, 1)} + ${pct(later - p.assumptions.inflation, 2)})` : pct(later, 2)],
         ['Interest this year (about)', money(interest)],
         ['Repaying this year', money(r.studentLoan)],
         ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
@@ -181,8 +184,9 @@
       r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
       outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Setup to project when it ends.'),
       chips([
-        `Interest rates for ${FP.taxConfig.taxYear} \u2014 reset each September`,
-        'Rates held at today\u2019s level in projections',
+        'Published rates until August 2027',
+        `Then RPI = your ${pct(p.assumptions.inflation, 1)} inflation assumption, plus the plan\u2019s margin`,
+        plan === 'plan1' || plan === 'plan4' ? 'Plan 1 and 4: base-rate limit not modelled' : null,
         'Check your balance and dates with the Student Loans Company',
       ]));
   }

@@ -23,14 +23,10 @@
       value: FP.profile.get(p, f.path),
       onChange: (v) => ctx.update(f.path, v),
     });
-    const basic = sec.fields.filter((f) => !f.advanced).map(make);
-    const adv = sec.fields.filter((f) => f.advanced).map(make);
     return h('section', { class: 'card', 'aria-labelledby': `sec-${sec.id}` },
       h('h2', { id: `sec-${sec.id}` }, sec.title),
       sec.intro ? h('p', { class: 'muted' }, sec.intro) : null,
-      basic,
-      sec.id === 'income' ? FP.bonusEditor.render(ctx) : null,
-      adv.length ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), adv) : null);
+      FP.field.sectionBody(sec, make, sec.id === 'income' ? FP.bonusEditor.render(ctx) : null));
   }
 
   function debtsCard(ctx) {
