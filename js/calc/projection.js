@@ -29,11 +29,13 @@
   }
 
   /*
-   * The surplus split as fractions. Under 100% in total: the rest goes to
-   * cash. Over 100%: scaled down proportionally.
+   * The leftover split ({ cash, invest, mortgage, pension } in %) as fractions.
+   * Under 100% in total: the rest goes to cash. Over 100%: scaled down
+   * proportionally.
    */
-  function splitShares(a) {
-    const raw = FP.assumptions.SPLIT_KEYS.map((k) => Math.max(0, a[k] || 0));
+  function splitShares(split) {
+    const src = split || {};
+    const raw = ['cash', 'invest', 'mortgage', 'pension'].map((k) => Math.max(0, src[k] || 0));
     const total = sum(raw);
     const scale = total > 100 ? 1 / total : 1 / 100;
     const [cash, invest, mortgage, pension] = raw.map((v) => v * scale);
@@ -76,7 +78,7 @@
     const [clY, clM] = cfg.isa.cashLimitFrom.split('-').map(Number);
     const cashLimitFromIndex = clY * 12 + (clM - 1);
     const region = profile.income.region;
-    const shares = splitShares(a);
+    const shares = splitShares(profile.leftover);
     const warnings = [];
     const warnOnce = (key, text) => { if (!warnings.some((w) => w.key === key)) warnings.push({ key, level: 'warn', text }); };
 
@@ -252,7 +254,7 @@
       }
       const surplus = netIncome - spending - mortgagePaid - debtPaid - saved.total;
 
-      // Regular savings go in first (so they take ISA allowance before the surplus split).
+      // Regular savings go in first (so they take ISA allowance before the leftover money is shared out).
       cash += saved.cash;
       isa += saved.isa;
       gia += saved.gia;
@@ -333,8 +335,8 @@
       warnings.push({
         key: 'split', level: 'info',
         text: shares.status === 'under'
-          ? `Your surplus split adds up to ${shares.total}%. The other ${100 - shares.total}% goes to cash savings.`
-          : `Your surplus split adds up to ${shares.total}%, so each share is scaled down to make 100%.`,
+          ? `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% goes to cash savings.`
+          : `What you do with your leftover money adds up to ${shares.total}%, so each share is scaled down to make 100%.`,
       });
     }
 

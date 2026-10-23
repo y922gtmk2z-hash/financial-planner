@@ -14,10 +14,9 @@
     { id: 'borrowing', label: 'Mortgage & debts' },
     { id: 'pension', label: 'Pension & retirement' },
     { id: 'tax', label: 'Tax & State Pension in projections' },
-    { id: 'split', label: 'Where your surplus goes' },
   ];
 
-  // unit: 'pct' (% per year), 'pctOfPay', 'pctOfBalance', 'pctOfSurplus',
+  // unit: 'pct' (% per year), 'pctOfPay', 'pctOfBalance',
   //       'age', 'year', 'money' (£ a year), 'choice' (one of `options`)
   const DEFS = [
     {
@@ -146,41 +145,19 @@
     {
       key: 'isaAllowance', group: 'tax', label: 'ISA allowance', unit: 'money',
       default: 20000, min: 0, max: 100000, setOn: SET_ON, advanced: true,
-      help: 'Regular ISA savings use this first. Surplus put into investments then goes into your ISA up to what\u2019s left, then into a general investment account.',
+      help: 'Regular ISA savings use this first. Leftover money you choose to invest then goes into your ISA up to what\u2019s left, then into a general investment account.',
     },
     {
       key: 'cashIsaLimit', group: 'tax', label: 'Cash ISA limit (from April 2027)', unit: 'money',
       default: 12000, min: 0, max: 100000, setOn: SET_ON, advanced: true,
       help: 'From 6 April 2027, under-65s can put at most this much a year into cash ISAs, within the overall ISA allowance. Over-65s are exempt. Cash saved above it stays as ordinary cash savings.',
     },
-    {
-      key: 'splitCash', group: 'split', label: 'Cash savings', unit: 'pctOfSurplus',
-      default: 30, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share of each year\u2019s surplus added to cash savings.',
-    },
-    {
-      key: 'splitInvest', group: 'split', label: 'Investments', unit: 'pctOfSurplus',
-      default: 50, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share invested \u2014 into your ISA first, then a general investment account.',
-    },
-    {
-      key: 'splitMortgage', group: 'split', label: 'Mortgage overpayments', unit: 'pctOfSurplus',
-      default: 10, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share paid off the mortgage as a yearly lump sum. Goes to cash once the mortgage is cleared.',
-    },
-    {
-      key: 'splitPension', group: 'split', label: 'Extra pension contributions', unit: 'pctOfSurplus',
-      default: 10, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share paid into your pension, with 20% basic-rate tax relief added. Goes to cash once you retire.',
-    },
   ];
 
   const UNIT_SUFFIX = {
-    pct: '% a year', pctOfPay: '% of salary', pctOfBalance: '% of balance', pctOfSurplus: '% of surplus',
+    pct: '% a year', pctOfPay: '% of salary', pctOfBalance: '% of balance',
     age: 'years old', year: 'years', money: 'a year', choice: '',
   };
-
-  const SPLIT_KEYS = ['splitCash', 'splitInvest', 'splitMortgage', 'splitPension'];
 
   function defaults() {
     const out = {};
@@ -192,5 +169,5 @@
     return DEFS.find((d) => d.key === key);
   }
 
-  FP.assumptions = { GROUPS, DEFS, UNIT_SUFFIX, SPLIT_KEYS, defaults, def };
+  FP.assumptions = { GROUPS, DEFS, UNIT_SUFFIX, defaults, def };
 })(globalThis.FP = globalThis.FP || {});

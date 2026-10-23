@@ -54,7 +54,7 @@ test('mortgage amortises like the stand-alone calculator; equity = value - balan
   const p = profile();
   p.assets.homeValue = 300000;
   p.mortgage = { balance: 200000, remainingTermYears: 25, monthlyOverpayment: 100 };
-  p.assumptions.splitMortgage = 0;
+  p.leftover.mortgage = 0;
   const r = FP.projection.project(p).rows;
   const ref = FP.mortgage.amortise({ balance: 200000, annualRatePct: 4.5, termMonths: 300, monthlyOverpayment: 100 });
   close(r[5].mortgage, ref.yearEndBalances[4], 0.01);
@@ -66,7 +66,7 @@ test('mortgage amortises like the stand-alone calculator; equity = value - balan
 test('mortgage rate change applies after the chosen number of years', () => {
   const p = profile();
   p.mortgage = { balance: 200000, remainingTermYears: 25, monthlyOverpayment: 0 };
-  p.assumptions.splitMortgage = 0;
+  p.leftover.mortgage = 0;
   p.assumptions.mortgageRateChangeYear = 2;
   p.assumptions.mortgageRateAfterChange = 6;
   const r = FP.projection.project(p).rows;
@@ -91,16 +91,21 @@ test('surplus is split by the savings split; ISA first, then GIA', () => {
 });
 
 test('split under 100% sends the rest to cash; over 100% is scaled', () => {
-  const a = FP.assumptions.defaults();
-  Object.assign(a, { splitCash: 0, splitInvest: 50, splitMortgage: 0, splitPension: 0 });
-  const under = FP.projection.splitShares(a);
+  const under = FP.projection.splitShares({ cash: 0, invest: 50, mortgage: 0, pension: 0 });
   assert.equal(under.status, 'under');
   close(under.cash, 0.5);
-  Object.assign(a, { splitCash: 100, splitInvest: 100 });
-  const over = FP.projection.splitShares(a);
+  const over = FP.projection.splitShares({ cash: 100, invest: 100, mortgage: 0, pension: 0 });
   assert.equal(over.status, 'over');
   close(over.cash, 0.5);
   close(over.invest, 0.5);
+  assert.equal(FP.projection.splitShares(undefined).cash, 1); // nothing set: all to cash
+});
+
+test('older saves keep their split (it used to be four assumptions)', () => {
+  const p = FP.profile.normalise({ assumptions: { splitCash: 10, splitInvest: 60, splitMortgage: 0, splitPension: 30 } });
+  assert.deepEqual(p.leftover, { cash: 10, invest: 60, mortgage: 0, pension: 30 });
+  assert.equal(p.assumptions.splitCash, undefined);
+  assert.deepEqual(FP.profile.blank().leftover, { cash: 30, invest: 50, mortgage: 10, pension: 10 });
 });
 
 test('salary and bonuses grow; salary stops at retirement', () => {

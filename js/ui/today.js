@@ -135,11 +135,12 @@
         ]),
       ] : null,
       h('div', { class: 'total-row surplus' },
-        h('span', null, cf.surplus < 0 ? 'Shortfall each month' : 'Surplus each month'),
+        h('span', null, cf.surplus < 0 ? 'Shortfall each month' : 'Left over each month'),
         h('strong', { class: cf.surplus < 0 ? 'negative' : 'positive' }, money(Math.abs(cf.surplus)))),
       h('p', { class: 'muted small' }, cf.savingsMonthly > 0
-        ? 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings. In projections it\u2019s shared out by your surplus split.'
-        : 'Surplus = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments. Add regular savings in Setup.'),
+        ? 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings.'
+        : 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.',
+        ' ', h('a', { href: '#setup' }, 'Choose what to do with it'), ' (with suggestions) at the end of Setup.'),
       chips([
         `Tax year ${pay.taxYear}`,
         region,

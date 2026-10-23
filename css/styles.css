@@ -552,3 +552,21 @@ fieldset.row-card { min-width: 0; }
 .saving-row .field:nth-child(3) { grid-column: 2 / 4; grid-row: 2; }
 .saving-row .icon-btn { grid-column: 3; grid-row: 1; }
 .savings-totals .total-row { margin-top: 4px; }
+
+/* ---------- Leftover money ---------- */
+.leftover-amount { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; margin: 8px 0 14px;
+  background: var(--accent-soft); border-radius: 10px; }
+.leftover-amount strong { font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.leftover-row .field { margin: 10px 0; }
+.leftover-money { display: block; margin-top: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.suggested-split { border: 1px dashed var(--accent); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+.suggested-split p { margin: 0 0 6px; }
+.ideas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.idea { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.idea p { margin: 2px 0 0; font-size: 0.88rem; color: var(--text-2); }
+.idea-icon { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid currentColor; font-weight: 800; font-size: 0.75rem; line-height: 1; }
+.idea.warn { background: var(--warn-bg); }
+.idea.warn .idea-icon, .idea.warn strong { color: var(--warn-ink); }
+.idea.good .idea-icon { color: var(--good); }
+.idea.tip .idea-icon { color: var(--accent); }
