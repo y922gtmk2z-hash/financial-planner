@@ -3,7 +3,7 @@
  * no DOM. These are general rules of thumb to consider - not advice.
  *
  * Returns { left, essentials, emergency, suggestions: [{ id, tone, title, text }],
- *           split: { cash, invest, mortgage, pension } | null, splitReason }
+ *           split: { emergency, cash, invest, mortgage, pension } | null, splitReason }
  * tone: 'warn' (fix first), 'tip' (worth considering), 'good' (already fine).
  */
 (function (FP) {
@@ -18,6 +18,13 @@
     return `£${Math.round(n).toLocaleString('en-GB')}`;
   }
 
+  // "8 months", "about 3 years", "over 10 years".
+  function duration(months) {
+    if (months <= 24) return `${months} month${months === 1 ? '' : 's'}`;
+    if (months > 120) return 'over 10 years';
+    return `about ${Math.round(months / 12)} years`;
+  }
+
   function analyse(profile) {
     const a = profile.assumptions;
     const pay = FP.tax.forProfile(profile);
@@ -27,12 +34,18 @@
     const essentials = cf.outgoings;
     const cash = profile.assets.cashSavings || 0;
     const months = essentials > 0 ? cash / essentials : Infinity;
+    const targetMonths = profile.leftover.emergencyMonths || EMERGENCY_MIN_MONTHS;
     const emergency = {
       months,
+      targetMonths,
+      target: essentials * targetMonths,
       min: essentials * EMERGENCY_MIN_MONTHS,
       max: essentials * EMERGENCY_MAX_MONTHS,
-      short: essentials > 0 && months < EMERGENCY_MIN_MONTHS,
+      short: essentials > 0 && months < targetMonths,
     };
+    // Months to fill the fund from `share` (a fraction) of what's left each month.
+    emergency.monthsToFill = (share) => (emergency.short && share > 0 && left > 0
+      ? Math.ceil((emergency.target - cash) / (left * share)) : 0);
     const out = [];
     const add = (id, tone, title, text) => out.push({ id, tone, title, text });
 
@@ -55,19 +68,23 @@
         `It costs ${d.rate}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${x.rate}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Raise the monthly payment in Setup.`);
     }
 
+    const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
+    const inTaper = pay.personalAllowance < FP.taxConfig.personalAllowance && pay.personalAllowance > 0;
+    const m = today.mortgage;
+    const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && a.mortgageRate > a.savingsRate), expensive: expensive.length > 0 });
+
     // 2. Emergency fund
+    const aim = `A common aim is ${EMERGENCY_MIN_MONTHS}–${EMERGENCY_MAX_MONTHS} months (${money(emergency.min)}–${money(emergency.max)})`;
     if (emergency.short) {
-      const gap = emergency.min - cash;
-      add('emergency', 'warn', 'Build an emergency fund',
-        `Your cash covers about ${months.toFixed(1)} months of essential outgoings. A common aim is ${EMERGENCY_MIN_MONTHS}–${EMERGENCY_MAX_MONTHS} months (${money(emergency.min)}–${money(emergency.max)}). Putting all ${money(left)} a month into cash would get you to ${EMERGENCY_MIN_MONTHS} months in about ${Math.ceil(gap / left)} months.`);
+      const share = split.emergency / 100;
+      add('emergency', 'warn', 'Build your emergency fund',
+        `Your cash covers about ${months.toFixed(1)} months of essential outgoings; your target is ${targetMonths} (${money(emergency.target)}). ${aim}. Putting ${split.emergency}% of what’s left (${money(left * share)} a month) into your emergency fund gets you there in ${duration(emergency.monthsToFill(share))}${share < 1 ? `, or ${duration(emergency.monthsToFill(1))} with all of it` : ''}.`);
     } else if (essentials > 0) {
       add('emergencyOk', 'good', 'Emergency fund in place',
-        `Your cash covers about ${months >= 24 ? 'over 24' : months.toFixed(1)} months of essential outgoings${months > EMERGENCY_MAX_MONTHS * 2 ? ' — more than you need in easy-access cash; some could work harder in investments or your pension' : ''}.`);
+        `Your cash covers about ${months >= 24 ? 'over 24' : months.toFixed(1)} months of essential outgoings, meeting your ${targetMonths}-month target${months > EMERGENCY_MAX_MONTHS * 2 ? ' — more than you need in easy-access cash; some could work harder in investments or your pension' : ''}. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices.`);
     }
 
     // 3. Pension tax relief
-    const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
-    const inTaper = pay.personalAllowance < FP.taxConfig.personalAllowance && pay.personalAllowance > 0;
     if (inTaper) {
       add('taper', 'tip', 'Use your pension to avoid the 60% band',
         `Between £100,000 and £125,140 you lose some personal allowance, so you keep only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(profile)))} of each extra £100. Pension contributions (or salary sacrifice) bring your income down and win that back.`);
@@ -81,7 +98,6 @@
     }
 
     // 4. Mortgage vs savings
-    const m = today.mortgage;
     const netInvest = FP.growth.netRate(a.investmentReturn, a.investmentFees);
     if (m && m.balance > 0) {
       if (a.mortgageRate > a.savingsRate) {
@@ -109,30 +125,36 @@
         `On these assumptions it’s written off in April ${sl.writeOffYear} before you repay it, so extra payments would mostly be lost. Your leftover money is likely to do more elsewhere.`);
     }
 
-    const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && a.mortgageRate > a.savingsRate), expensive: expensive.length > 0 });
     return { left, essentials, emergency, suggestions: out, split, splitReason: reason, pay, today };
   }
 
-  // A sensible starting split for the leftover money (adds up to 100%).
+  // A sensible starting split for the leftover money (adds up to 100%). It always
+  // includes the emergency fund: mostly while it's short, and a small share once
+  // it's full so it keeps up with rising costs (the projection passes on
+  // anything beyond the target).
   function suggestSplit(s) {
-    if (s.emergency.short || s.expensive) {
+    if (s.emergency.short) {
       return {
-        split: { cash: 80, invest: 10, mortgage: 0, pension: 10 },
-        reason: s.expensive
-          ? 'Mostly cash for now, so you can clear expensive debts and keep a safety net. Revisit once they’re gone.'
-          : 'Mostly cash until your emergency fund reaches 3 months. Revisit once it does.',
+        split: { emergency: 80, cash: 0, invest: 10, mortgage: 0, pension: 10 },
+        reason: `Mostly into your emergency fund until it covers ${s.emergency.targetMonths || EMERGENCY_MIN_MONTHS} months${s.expensive ? ', while you pay extra off expensive debts' : ''}. In your projection, this share moves to your other choices once the fund is full.`,
+      };
+    }
+    if (s.expensive) {
+      return {
+        split: { emergency: 10, cash: 70, invest: 10, mortgage: 0, pension: 10 },
+        reason: 'Mostly cash for now, to put towards clearing expensive debts, with a top-up to keep your emergency fund at its target. Revisit once the debts are gone.',
       };
     }
     if (s.inTaper) {
-      return { split: { cash: 10, invest: 20, mortgage: 0, pension: 70 }, reason: 'Mostly pension, to win back the personal allowance you lose between £100,000 and £125,140.' };
+      return { split: { emergency: 10, cash: 0, invest: 20, mortgage: 0, pension: 70 }, reason: 'Mostly pension, to win back the personal allowance you lose between £100,000 and £125,140, with a top-up to keep your emergency fund at its target.' };
     }
+    const emergency = 10;
     const pension = s.topRate >= 40 ? 40 : 20;
     const mortgage = s.hasMortgage && s.mortgageBeatsCash ? (s.topRate >= 40 ? 10 : 20) : 0;
-    const cash = 10;
     return {
-      split: { cash, invest: 100 - cash - pension - mortgage, mortgage, pension },
+      split: { emergency, cash: 0, invest: 100 - emergency - pension - mortgage, mortgage, pension },
       reason: [
-        'A small top-up to cash',
+        'A top-up to keep your emergency fund at its target as costs rise',
         s.topRate >= 40 ? 'a bigger pension share for higher-rate tax relief' : 'some pension for tax relief',
         mortgage ? 'some mortgage overpayment because it costs more than cash earns' : null,
         'and the rest invested for the long term (ISA first)',
@@ -140,5 +162,5 @@
     };
   }
 
-  FP.suggest = { analyse, suggestSplit, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
+  FP.suggest = { analyse, suggestSplit, duration, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
 })(globalThis.FP = globalThis.FP || {});

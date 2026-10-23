@@ -79,6 +79,7 @@ test('surplus is split by the savings split; ISA first, then GIA', () => {
   const p = profile();
   p.income.grossSalary = 60000;
   p.assumptions.isaAllowance = 5000;
+  Object.assign(p.leftover, { emergency: 0, cash: 30 });
   const r = FP.projection.project(p).rows[1];
   assert.ok(r.surplus > 0);
   close(r.netIncome, FP.tax.forProfile(p).takeHome);
@@ -103,9 +104,35 @@ test('split under 100% sends the rest to cash; over 100% is scaled', () => {
 
 test('older saves keep their split (it used to be four assumptions)', () => {
   const p = FP.profile.normalise({ assumptions: { splitCash: 10, splitInvest: 60, splitMortgage: 0, splitPension: 30 } });
-  assert.deepEqual(p.leftover, { cash: 10, invest: 60, mortgage: 0, pension: 30 });
+  assert.deepEqual(p.leftover, { emergency: 0, cash: 10, invest: 60, mortgage: 0, pension: 30, emergencyMonths: 3 });
   assert.equal(p.assumptions.splitCash, undefined);
-  assert.deepEqual(FP.profile.blank().leftover, { cash: 30, invest: 50, mortgage: 10, pension: 10 });
+  // Saved before the emergency fund share: it starts at 0 so the split still adds up.
+  const q = FP.profile.normalise({ leftover: { cash: 30, invest: 50, mortgage: 10, pension: 10 } });
+  assert.equal(q.leftover.emergency, 0);
+  assert.deepEqual(FP.profile.blank().leftover, { emergency: 10, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 });
+  assert.equal(FP.profile.normalise({ leftover: { emergencyMonths: 99 } }).leftover.emergencyMonths, 3);
+});
+
+test('the emergency fund share fills cash to the target, then goes to the other choices', () => {
+  const p = profile();
+  p.income.grossSalary = 40000;
+  p.spending = [{ id: 's', category: 'All', monthly: 1000 }];
+  p.assets.cashSavings = 0;
+  Object.assign(p.leftover, { emergency: 50, cash: 0, invest: 50, mortgage: 0, pension: 0, emergencyMonths: 1 });
+  const rows = FP.projection.project(p).rows;
+  const r1 = rows[1];
+  close(r1.emergencyTarget, 1000);
+  // Only the gap (one month of outgoings) goes to the fund; the rest of its share is invested.
+  close(r1.toEmergency, 1000);
+  close(r1.toInvest, r1.surplus - 1000);
+  close(r1.cash, 1000);
+  // Year 2: the fund only needs topping up for rising costs (plus the interest it already earned).
+  const r2 = rows[2];
+  close(r2.toEmergency, Math.max(0, r2.emergencyTarget - 1000 * (1 + p.assumptions.savingsRate / 100)));
+  // No other choices: the overflow stays in cash.
+  Object.assign(p.leftover, { emergency: 100, invest: 0 });
+  const r = FP.projection.project(p).rows[1];
+  close(r.toEmergency + r.toCash, r.surplus);
 });
 
 test('salary and bonuses grow; salary stops at retirement', () => {
