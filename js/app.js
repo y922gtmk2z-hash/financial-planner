@@ -120,6 +120,7 @@
     const el = document.getElementById(target)
       || main.querySelector(`[data-path="${CSS.escape(target)}"]`);
     if (!el) return false;
+    el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true })); // e.g. Setup opens the right step
     for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
     el.scrollIntoView({ block: 'center' });
     const input = el.matches('input, select, button') ? el : el.querySelector('input[inputmode], select') || el.querySelector('input');
@@ -160,6 +161,10 @@
     lastY = y;
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
+  // Lets things pinned under the header (Setup's steps) sit just below it.
+  const setHeaderHeight = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  window.addEventListener('resize', setHeaderHeight);
+  setHeaderHeight();
   window.addEventListener('pagehide', save);
 
   // The full disclaimer shows on your first visit; after that it's one line (tap for more).
