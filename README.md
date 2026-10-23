@@ -14,6 +14,23 @@ calls.
 - Or serve the folder with any static server, e.g. `python3 -m http.server`, and open
   <http://localhost:8000>.
 
+### Publish on GitHub Pages
+
+The site is plain static files with `index.html` at the repository root. All paths
+are relative, so it works from a project subfolder such as
+`https://<user>.github.io/<repo>/`. To publish it:
+
+1. On GitHub, open **Settings → Pages**.
+2. Under **Build and deployment**, choose **Source: Deploy from a branch**, then
+   **Branch: `main`** and folder **`/ (root)`**, and save.
+3. After a minute or so the site is live at `https://<user>.github.io/<repo>/`.
+
+`.nojekyll` tells Pages to serve the files exactly as they are, with no Jekyll build.
+There is nothing to build or configure. Navigation uses `#` links, so links straight
+to a screen, such as `…/#future`, work and need no server rules. The `/docs` folder
+holds the build plan only, not the site, so don't choose it as the Pages folder.
+`npm test` checks that every path in `index.html` stays relative.
+
 The first time you open it, it shows a **clearly fictional sample household** with two
 example scenarios. Use **Start with my own data** in the banner to begin with an empty
 form, or **Keep these figures as mine** to edit the sample.
@@ -43,6 +60,10 @@ is checked as you type, with plain-English errors. Blank boxes count as £0.
 - **Clear all data** removes everything the planner stored in this browser.
 - Exported files (`finance-planner-export-*.json`) are git-ignored so personal data is
   never committed. The sample data is fictional.
+- **On GitHub Pages**, browser storage is shared by every project site under the same
+  `<user>.github.io` address. Your figures still never leave your browser, but another
+  page you publish there could read them. Use **Clear all data** when you're done on a
+  shared computer, or host the planner on its own domain if that matters to you.
 
 ## Default assumptions
 
@@ -174,7 +195,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-90 tests cover:
+92 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
@@ -194,8 +215,8 @@ npm test   # Node 18+, no dependencies to install
   upgrading older data.
 - **Data handling:** parsing and validation, cleaning up imported data,
   export/import round trips.
-- **Checks on the source:** no code can make network requests, and every script is
-  loaded.
+- **Checks on the source:** no code can make network requests, every script is
+  loaded, and every path stays relative (for GitHub Pages).
 
 ## Accessibility
 

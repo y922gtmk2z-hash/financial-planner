@@ -44,3 +44,25 @@ test('exported data files are git-ignored', () => {
   assert.match(read('.gitignore'), /finance-planner-export-\*\.json/);
   assert.match(read('js/ui/data.js'), /finance-planner-export-/);
 });
+
+test('GitHub Pages: every local path in index.html is relative and exists', () => {
+  const html = read('index.html');
+  const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1])
+    .filter((u) => !u.startsWith('#') && !u.startsWith('data:') && !/^https?:/.test(u));
+  assert.ok(refs.length > 10);
+  refs.forEach((u) => {
+    assert.ok(!u.startsWith('/'), `${u} must be relative so the site works from a subfolder`);
+    assert.ok(fs.existsSync(path.join(root, u)), `${u} is missing`);
+  });
+  assert.ok(!/<base\b/i.test(html), 'no <base> tag');
+  assert.ok(fs.existsSync(path.join(root, '.nojekyll')), '.nojekyll serves files as-is');
+});
+
+test('GitHub Pages: no code builds absolute paths', () => {
+  jsFiles('js').forEach((f) => {
+    const src = read(f);
+    assert.ok(!/(src|href)\s*[:=]\s*['"`]\//.test(src), `${f} uses an absolute path`);
+    assert.ok(!/location\.(pathname|origin)/.test(src), `${f} depends on the URL path`);
+  });
+  assert.ok(!/url\(\s*['"]?\//.test(read('css/styles.css')), 'CSS uses an absolute url()');
+});
