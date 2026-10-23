@@ -106,9 +106,27 @@
     scenarioBar.classList.toggle('not-baseline', !FP.scenarios.isBaseline(workspace, current.id));
   }
 
+  // "#setup/about.age" or "#setup/leftover": a screen, then optionally a
+  // field (by its profile path) or a section (by id) to scroll to.
+  function parseHash() {
+    const [name, ...rest] = (location.hash || '#overview').slice(1).split('/');
+    return { id: ROUTES.includes(name) ? name : 'overview', target: rest.length ? decodeURIComponent(rest.join('/')) : null };
+  }
+
+  function goToTarget(target) {
+    const el = document.getElementById(target)
+      || main.querySelector(`[data-path="${CSS.escape(target)}"]`);
+    if (!el) return false;
+    for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    el.scrollIntoView({ block: 'center' });
+    const input = el.matches('input, select, button') ? el : el.querySelector('input[inputmode], select') || el.querySelector('input');
+    if (input) input.focus({ preventScroll: true });
+    else { el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true }); }
+    return true;
+  }
+
   function route() {
-    const name = (location.hash || '#overview').slice(1);
-    const id = ROUTES.includes(name) ? name : 'overview';
+    const { id, target } = parseHash();
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -118,14 +136,15 @@
     main.replaceChildren();
     FP.screens[id].render(main, ctx);
     document.title = `${FP.screens[id].title} · Finance planner`;
+    return target;
   }
 
   window.addEventListener('hashchange', () => {
     save();
-    route();
+    const target = route();
     window.scrollTo(0, 0);
     header.classList.remove('is-hidden');
-    main.focus({ preventScroll: true });
+    if (!(target && goToTarget(target))) main.focus({ preventScroll: true });
   });
 
   // The header (with Setup) stays pinned to the top, slides away while you
@@ -142,5 +161,6 @@
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : 'Sample data';
   if (loaded.error) toast(loaded.error);
-  route();
+  const firstTarget = route();
+  if (firstTarget) goToTarget(firstTarget);
 })(globalThis.FP = globalThis.FP || {});

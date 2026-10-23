@@ -75,7 +75,7 @@
     const prefix = field.type === 'money' ? h('span', { class: 'affix', 'aria-hidden': 'true' }, '£') : null;
     const suffix = field.suffix ? h('span', { class: 'affix', 'aria-hidden': 'true' }, field.suffix) : null;
 
-    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}` },
+    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}`, 'data-path': field.path || null },
       h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
       h('div', { class: 'input-wrap' }, prefix, input, suffix),
       field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : h('span', { id: helpId, hidden: true }),

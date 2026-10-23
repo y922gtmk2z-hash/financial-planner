@@ -169,7 +169,8 @@
     const sums = ws.scenarios.map((sc) => ({ sc, s: FP.compare.summarise(sc.profile, real) }));
     const ok = sums.filter((x) => x.s.ok);
     if (!ok.length) {
-      return h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
+      return FP.checklist.card(ctx.profile(), { what: 'projections side by side' })
+        || h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
     }
     const commonAge = FP.compare.commonEndAge(sums.map((x) => x.s));
     const base = sums[0].s;

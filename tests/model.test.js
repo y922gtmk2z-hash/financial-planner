@@ -110,3 +110,21 @@ test('older saves with a single bonus are converted to the list', () => {
   assert.equal(p.income.bonus, undefined);
   assert.deepEqual(FP.profile.normalise({ income: { bonus: 0 } }).income.bonuses, []);
 });
+
+test('checklist: age and spending are needed before a projection; others are optional', () => {
+  const p = FP.profile.blank();
+  let c = FP.summary.checklist(p);
+  assert.equal(c.ready, false);
+  assert.deepEqual(c.blocking.map((i) => i.id), ['age', 'spending']);
+  p.about.age = 30;
+  p.spending = [{ id: 's', category: 'All', monthly: 900 }];
+  c = FP.summary.checklist(p);
+  assert.equal(c.ready, true);
+  assert.deepEqual(c.optional.map((i) => i.id), ['salary', 'pension', 'cash']);
+  // Retired: no salary expected.
+  p.about.age = 70;
+  assert.ok(!FP.summary.checklist(p).optional.some((i) => i.id === 'salary'));
+  // Not ready: comparisons have no projection either.
+  p.spending = [];
+  assert.equal(FP.compare.summarise(p).ok, false);
+});

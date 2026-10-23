@@ -49,6 +49,8 @@
   }
 
   function resultsView(p, view) {
+    const missing = FP.checklist.card(p);
+    if (missing) return missing;
     const r = FP.projection.project(p);
     if (!r.ok) {
       return h('section', { class: 'card' }, h('p', null, r.message), h('a', { href: '#setup' }, 'Go to Setup'));

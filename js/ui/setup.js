@@ -17,7 +17,7 @@
     root.appendChild(spendingCard(ctx, p));
     root.appendChild(FP.savingsEditor.render(ctx));
     // Leftover money updates as you change anything above it.
-    const leftover = FP.leftoverCard.render(ctx);
+    const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
     root.appendChild(leftover);
     let timer = null;
     const refresh = (e) => {
@@ -86,7 +86,7 @@
   }
 
   function spendingCard(ctx) {
-    const card = h('section', { class: 'card', 'aria-labelledby': 'sec-spend' });
+    const card = h('section', { class: 'card', id: 'spending', 'aria-labelledby': 'sec-spend' });
     const total = h('strong');
     const updateTotal = () => {
       total.textContent = `${money(ctx.profile().spending.reduce((s, r) => s + (r.monthly || 0), 0))} a month`;

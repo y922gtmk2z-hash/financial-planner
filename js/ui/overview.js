@@ -12,7 +12,8 @@
     const real = FP.screens.future.getView() === 'real';
     const pay = FP.tax.forProfile(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
-    const proj = FP.projection.project(p);
+    const ready = FP.summary.checklist(p).ready;
+    const proj = ready ? FP.projection.project(p) : { ok: false };
     const rows = proj.ok ? (real ? proj.rows.map(FP.projection.toReal) : proj.rows) : null;
     const ev = proj.ok ? proj.events : null;
     const a = p.assumptions;
@@ -26,7 +27,7 @@
     const tiles = [
       tile('#income', 'Take-home pay', `${money(pay.takeHomeMonthly)}`, 'a month'),
       cf.savingsMonthly > 0 ? tile('#today', 'Regular savings', money(cf.savingsMonthly), 'a month') : null,
-      tile('#setup', cf.surplus < 0 ? 'Monthly shortfall' : 'Left over each month', money(Math.abs(cf.surplus)),
+      tile('#setup/leftover', cf.surplus < 0 ? 'Monthly shortfall' : 'Left over each month', money(Math.abs(cf.surplus)),
         cf.savingsMonthly > 0 ? 'after spending, debts and saving' : 'after spending and debts', cf.surplus < 0),
     ].filter(Boolean);
     if (proj.ok) {
@@ -62,9 +63,11 @@
         h('span', { class: `hero-number${today.netWorth < 0 ? ' negative' : ''}` }, money(today.netWorth)),
         h('span', { class: 'muted' }, `${money(today.assets.total)} owned − ${money(today.liabilities.total)} owed`),
         h('span', { class: 'go', 'aria-hidden': 'true' }, '›')),
+      FP.checklist.card(p),
       h('div', { class: 'tile-grid' }, tiles),
-      proj.ok ? chartCard(rows, ev, a, moneyNote) : h('section', { class: 'card' },
-        h('p', null, proj.message), h('a', { href: '#setup' }, 'Go to Setup')),
+      ready ? FP.checklist.note(p) : null,
+      proj.ok ? chartCard(rows, ev, a, moneyNote) : ready ? h('section', { class: 'card' },
+        h('p', null, proj.message), h('a', { href: '#setup' }, 'Go to Setup')) : null,
       h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
         h('h2', { id: 'next-h' }, 'Explore'),
         h('ul', null,

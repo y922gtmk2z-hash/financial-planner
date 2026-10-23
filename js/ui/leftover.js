@@ -15,7 +15,7 @@
    */
   function render(ctx, opts) {
     opts = opts || {};
-    const card = h('section', { class: 'card leftover', 'aria-labelledby': 'leftover-h' });
+    const card = h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' });
     const headline = h('div', { class: 'leftover-amount', role: 'status', 'aria-live': 'polite' });
     const rows = h('div', { class: 'leftover-rows' });
     const status = h('p', { class: 'split-status', role: 'status' });
