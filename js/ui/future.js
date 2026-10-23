@@ -111,6 +111,15 @@
         : tile(`Net worth at ${end.age}`, money(end.netWorth), String(end.year)),
     ].filter(Boolean);
 
+    // Net worth if investment and pension returns are 2 points a year lower or higher.
+    const range = (shift) => {
+      const q = JSON.parse(JSON.stringify(p));
+      q.assumptions.investmentReturn += shift;
+      q.assumptions.pensionGrowth += shift;
+      const rr = FP.projection.project(q);
+      return (real ? rr.rows.map(FP.projection.toReal) : rr.rows).map((x) => x.netWorth);
+    };
+    const band = { label: 'Returns \u00b12 points', color: '--series-7', low: range(-2), high: range(2) };
     const netSeries = [
       { label: 'Net worth', color: '--series-7', values: rows.map((x) => x.netWorth) },
       { label: 'Home equity', color: '--series-1', values: rows.map((x) => x.equity) },
@@ -128,13 +137,14 @@
 
       h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
         h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
-        FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))),
+        FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))
+          .concat({ label: 'If returns are 2 points lower or higher', color: '--series-7', band: true })),
         FP.chart.timeChart({
-          type: 'line', series: netSeries, markers,
+          type: 'line', series: netSeries, markers, band,
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
         }),
-        h('p', { class: 'muted small' }, 'Ages along the bottom. Home equity = home value minus mortgage.'),
+        h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${money(band.low[band.low.length - 1])} to ${money(band.high[band.high.length - 1])}). Real returns vary from year to year, so the actual path could fall outside it.`),
         keyAssumptions),
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },

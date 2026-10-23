@@ -406,6 +406,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tchart .line { fill: none; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
 .tchart .line.dashed { stroke-dasharray: 5 4; }
 .tchart .area { stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; }
+.tchart .band { opacity: 0.14; }
 .tchart .marker { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 3 3; }
 .tchart .marker-label { fill: var(--text-2); font-size: 11px; font-weight: 600; }
 .tchart .crosshair { stroke: var(--text-2); stroke-width: 1; }
@@ -421,6 +422,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .legend-inline li { padding: 0; }
 .legend-inline .legend-label { flex: none; }
 .swatch-line { height: 3px; width: 14px; border-radius: 2px; }
+.swatch-band { opacity: 0.25; width: 14px; }
 
 .view-toggle { margin: 4px 0 12px; }
 .view-toggle .field { margin: 0; }
