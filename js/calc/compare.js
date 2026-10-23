@@ -33,6 +33,7 @@
       mortgageFreeAge: ev.hasMortgage ? (ev.mortgageFree ? ev.mortgageFree.age : null) : undefined,
       runsOutAge: ev.runsOut ? ev.runsOut.age : null,
       studentLoan: ev.studentLoan,
+      retirementSpend: FP.projection.retirementSpend(profile),
     };
   }
 

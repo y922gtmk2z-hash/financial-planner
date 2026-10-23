@@ -639,3 +639,4 @@ fieldset.row-card { min-width: 0; }
 .ideas-put-away summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; padding: 6px 0; }
 .ideas-put-away .ideas { margin-top: 4px; }
 .ideas-put-away .idea { opacity: 0.8; }
+.preset-row { display: flex; flex-wrap: wrap; gap: 8px; }
