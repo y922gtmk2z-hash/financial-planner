@@ -457,7 +457,20 @@
    * the 40-year limit on the shown projection. Returns null when there are no
    * retirement years or no spending entered; else { monthly, now, factor, endAge }.
    */
+  // It runs the projection ~30 times, so results are remembered for recent inputs
+  // (Scenarios redraws every scenario as you type).
+  const spendCache = new Map();
+
   function retirementSpend(profile, opts) {
+    const key = JSON.stringify([profile, opts || null, new Date().getFullYear(), new Date().getMonth()]);
+    if (spendCache.has(key)) return spendCache.get(key);
+    const result = solveRetirementSpend(profile, opts);
+    spendCache.set(key, result);
+    if (spendCache.size > 30) spendCache.delete(spendCache.keys().next().value);
+    return result;
+  }
+
+  function solveRetirementSpend(profile, opts) {
     opts = { ...opts, maxYears: 100 };
     const base = project(profile, opts);
     if (!base.ok || !base.events.retirement || base.events.retirement.y >= base.rows.length - 1) return null;
