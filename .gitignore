@@ -1,0 +1,5 @@
+# Never commit personal financial data exported from the planner.
+finance-planner-export-*.json
+*.export.json
+node_modules/
+.DS_Store

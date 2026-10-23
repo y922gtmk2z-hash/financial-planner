@@ -1,0 +1,127 @@
+/*
+ * Every number the model depends on is defined here, once.
+ * Each default records the date it was set so you can tell when it may be stale.
+ * Values are edited in the Assumptions panel and stored in profile.assumptions.
+ */
+(function (FP) {
+  'use strict';
+
+  const SET_ON = '2026-10-23';
+
+  const GROUPS = [
+    { id: 'economy', label: 'Economy' },
+    { id: 'returns', label: 'Savings & investment returns' },
+    { id: 'borrowing', label: 'Mortgage & debts' },
+    { id: 'pension', label: 'Pension & retirement' },
+  ];
+
+  // unit: 'pct' (% per year), 'pctOfPay', 'pctOfBalance', 'age', 'year'
+  const DEFS = [
+    {
+      key: 'inflation', group: 'economy', label: 'Inflation (CPI)', unit: 'pct',
+      default: 2.5, min: -5, max: 20, setOn: SET_ON,
+      help: 'How fast prices rise each year. Used to show future values in today’s money.',
+    },
+    {
+      key: 'salaryGrowth', group: 'economy', label: 'Salary growth', unit: 'pct',
+      default: 3.0, min: -10, max: 20, setOn: SET_ON,
+      help: 'How much your gross salary rises each year on average.',
+    },
+    {
+      key: 'spendingGrowth', group: 'economy', label: 'Spending growth', unit: 'pct',
+      default: 2.5, min: -10, max: 20, setOn: SET_ON, advanced: true,
+      help: 'How fast your monthly spending rises each year. Usually set to match inflation.',
+    },
+    {
+      key: 'housePriceGrowth', group: 'economy', label: 'House price growth', unit: 'pct',
+      default: 3.0, min: -20, max: 20, setOn: SET_ON,
+      help: 'Average yearly change in your home’s value.',
+    },
+    {
+      key: 'savingsRate', group: 'returns', label: 'Savings interest rate', unit: 'pct',
+      default: 3.5, min: 0, max: 20, setOn: SET_ON,
+      help: 'Interest on cash savings. Enter it after any tax — the planner does not model savings tax.',
+    },
+    {
+      key: 'investmentReturn', group: 'returns', label: 'Investment return (before fees)', unit: 'pct',
+      default: 5.0, min: -20, max: 20, setOn: SET_ON,
+      help: 'Average yearly growth of ISA and general investment accounts, before fees.',
+    },
+    {
+      key: 'investmentFees', group: 'returns', label: 'Investment fees', unit: 'pct',
+      default: 0.4, min: 0, max: 5, setOn: SET_ON, advanced: true,
+      help: 'Platform and fund charges, taken off the return each year.',
+    },
+    {
+      key: 'pensionGrowth', group: 'returns', label: 'Pension growth (before fees)', unit: 'pct',
+      default: 5.0, min: -20, max: 20, setOn: SET_ON,
+      help: 'Average yearly growth of your pension pot, before fees.',
+    },
+    {
+      key: 'pensionFees', group: 'returns', label: 'Pension fees', unit: 'pct',
+      default: 0.5, min: 0, max: 5, setOn: SET_ON, advanced: true,
+      help: 'Pension provider and fund charges, taken off the growth each year.',
+    },
+    {
+      key: 'mortgageRate', group: 'borrowing', label: 'Mortgage interest rate', unit: 'pct',
+      default: 4.5, min: 0, max: 25, setOn: SET_ON,
+      help: 'The rate on your mortgage today. Also shown in Setup — both edit the same value.',
+    },
+    {
+      key: 'mortgageRateChangeYear', group: 'borrowing', label: 'Rate changes after (years)', unit: 'year',
+      default: null, nullable: true, min: 1, max: 40, setOn: SET_ON, advanced: true,
+      help: 'Optional. For example, when a fixed deal ends. Leave blank for no change.',
+    },
+    {
+      key: 'mortgageRateAfterChange', group: 'borrowing', label: 'New mortgage rate', unit: 'pct',
+      default: null, nullable: true, min: 0, max: 25, setOn: SET_ON, advanced: true,
+      help: 'The rate after the change above. Leave blank for no change.',
+    },
+    {
+      key: 'otherDebtRate', group: 'borrowing', label: 'Default rate for other debts', unit: 'pct',
+      default: 7.0, min: 0, max: 100, setOn: SET_ON,
+      help: 'Used for any debt in Setup where you leave the rate blank.',
+    },
+    {
+      key: 'overpaymentLimitPct', group: 'borrowing', label: 'Overpayment warning level', unit: 'pctOfBalance',
+      default: 10, min: 0, max: 100, setOn: SET_ON, advanced: true,
+      help: 'Warn when yearly overpayments exceed this share of the balance. 10% is a common early-repayment-charge limit — check your own deal.',
+    },
+    {
+      key: 'employeePensionPct', group: 'pension', label: 'Your pension contribution', unit: 'pctOfPay',
+      default: 5, min: 0, max: 100, setOn: SET_ON,
+      help: 'Share of gross salary you pay into your pension. Also shown in Setup.',
+    },
+    {
+      key: 'employerPensionPct', group: 'pension', label: 'Employer pension contribution', unit: 'pctOfPay',
+      default: 3, min: 0, max: 100, setOn: SET_ON,
+      help: 'Share of gross salary your employer adds. Also shown in Setup.',
+    },
+    {
+      key: 'retirementAge', group: 'pension', label: 'Retirement age', unit: 'age',
+      default: 67, min: 40, max: 80, setOn: SET_ON,
+      help: 'When salary and pension contributions stop in projections.',
+    },
+    {
+      key: 'endAge', group: 'pension', label: 'Projection end age', unit: 'age',
+      default: 95, min: 50, max: 110, setOn: SET_ON, advanced: true,
+      help: 'How far ahead projections run (capped at 40 years from today).',
+    },
+  ];
+
+  const UNIT_SUFFIX = {
+    pct: '% a year', pctOfPay: '% of salary', pctOfBalance: '% of balance', age: 'years old', year: 'years',
+  };
+
+  function defaults() {
+    const out = {};
+    DEFS.forEach((d) => { out[d.key] = d.default; });
+    return out;
+  }
+
+  function def(key) {
+    return DEFS.find((d) => d.key === key);
+  }
+
+  FP.assumptions = { GROUPS, DEFS, UNIT_SUFFIX, defaults, def };
+})(globalThis.FP = globalThis.FP || {});
