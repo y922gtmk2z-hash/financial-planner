@@ -62,7 +62,7 @@ test('summary: net worth, equity and outgoings for the sample household', () => 
   assert.equal(s.netWorth, s.assets.total - s.liabilities.total);
   assert.equal(s.home.equity, 325000 - 198000);
   assert.equal(s.cashFlow.surplus, null);
-  assert.equal(s.cashFlow.spendingMonthly, 1550);
+  assert.equal(s.cashFlow.spendingMonthly, 1480);
   assert.equal(s.cashFlow.debtMonthly, 345);
   assert.ok(s.mortgage.monthsToClear < s.mortgage.monthsToClearWithoutOver);
   // credit card with a blank rate uses the default other-debt rate

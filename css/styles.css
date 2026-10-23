@@ -17,6 +17,7 @@
   --info-bg: #e8f1fc;
   --info-ink: #184f95;
   --negative: #b42318;
+  --good: #0f7a3d;
   --focus: #2a78d6;
 
   --series-1: #2a78d6;
@@ -52,6 +53,7 @@
     --info-bg: #142338;
     --info-ink: #a9cbf3;
     --negative: #f07a72;
+    --good: #4cc38a;
     --focus: #6da7ec;
 
     --series-1: #3987e5;
@@ -133,7 +135,7 @@ main:focus, main:focus-visible { outline: none; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface); border-top: 1px solid var(--border);
@@ -326,3 +328,42 @@ button.link.danger { color: var(--danger); }
 @media (prefers-reduced-motion: no-preference) {
   .seg { transition: opacity 0.15s; }
 }
+
+/* ---------- Stage 2: income ---------- */
+.positive { color: var(--good); }
+.total-row.surplus strong { font-size: 1.25rem; }
+.small { font-size: 0.82rem; }
+.rows dd a { color: inherit; text-decoration-color: var(--text-3); text-underline-offset: 3px; }
+
+.toggle { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.toggle label { margin: 0; justify-content: center; text-align: center; min-height: 40px; padding: 4px 8px;
+  border-radius: 7px; font-weight: 600; font-size: 0.9rem; color: var(--text-2); cursor: pointer; }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle input:checked + label { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }
+.toggle input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 1px; }
+.field-legend { font-weight: 600; margin-bottom: 4px; font-size: 0.95rem; padding: 0; }
+fieldset.field { border: 0; padding: 0; min-width: 0; }
+
+.tax-year {
+  background: var(--info-bg); color: var(--info-ink); border-radius: var(--radius);
+  padding: 12px 14px; margin: 12px 0; font-size: 0.9rem;
+}
+.tax-year.stale { background: var(--warn-bg); color: var(--warn-ink); }
+.tax-year ul { margin: 6px 0 0; padding-left: 18px; }
+.tax-year a { color: inherit; }
+
+.breakdown td.minus { color: var(--text-2); }
+.breakdown tr.result th, .breakdown tr.result td { font-weight: 750; border-top: 2px solid var(--border); border-bottom: 0; }
+.breakdown tr.aside td, .breakdown tr.aside th { color: var(--text-3); font-size: 0.85rem; border-bottom: 0; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 12px; }
+.stat-grid div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.stat-grid span { display: block; color: var(--text-2); font-size: 0.8rem; }
+.stat-grid strong { font-variant-numeric: tabular-nums; }
+.hero-number .per { font-size: 1rem; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
+.notes { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 0.9rem; }
+.notes li { margin-bottom: 6px; }
+details.card > summary { cursor: pointer; }
+.rules table { margin-top: 14px; }
+.rules caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
+.card > .notice { margin-top: 10px; }

@@ -19,6 +19,20 @@
     const errId = `${id}-err`;
     const err = h('p', { class: 'field-error', id: errId, role: 'alert', hidden: true });
 
+    if (field.type === 'toggle') {
+      // Segmented radio buttons for a short list of choices.
+      return h('fieldset', { class: 'field', 'aria-describedby': helpId },
+        h('legend', { class: 'field-legend' }, field.label),
+        h('div', { class: 'toggle' }, field.options.map((o, i) => [
+          h('input', {
+            type: 'radio', name: id, id: `${id}-${i}`, value: o.value, checked: o.value === opts.value,
+            onchange: (e) => { if (e.target.checked) opts.onChange(o.value); },
+          }),
+          h('label', { for: `${id}-${i}` }, o.label),
+        ])),
+        field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : null);
+    }
+
     let input;
     if (field.type === 'select') {
       input = h('select', { id, 'aria-describedby': helpId },

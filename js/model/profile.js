@@ -17,6 +17,17 @@
     { value: 'postgrad', label: 'Postgraduate loan' },
   ];
 
+  const REGIONS = [
+    { value: 'rUK', label: 'England, Wales or NI' },
+    { value: 'scotland', label: 'Scotland' },
+  ];
+
+  const PENSION_METHODS = [
+    { value: 'netPay', label: 'Taken before tax (net pay)' },
+    { value: 'salarySacrifice', label: 'Salary sacrifice' },
+    { value: 'reliefAtSource', label: 'Taken after tax (relief at source)' },
+  ];
+
   // Setup screen fields. `path` is where the value lives in the profile.
   // Fields under `assumptions.` are the same values shown in the Assumptions panel.
   const SECTIONS = [
@@ -62,8 +73,10 @@
     },
     {
       id: 'income', title: 'Income',
-      intro: 'Your take-home pay is calculated from these (from Stage 2).',
+      intro: 'Used to work out your take-home pay. You can also edit these on the Income screen.',
       fields: [
+        { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS,
+          help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
         { path: 'income.grossSalary', label: 'Gross salary', type: 'money', suffix: 'a year',
           help: 'Your yearly salary before tax and deductions.' },
         { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
@@ -73,7 +86,9 @@
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
         { path: 'income.bonus', label: 'Yearly bonus', type: 'money', suffix: 'a year', advanced: true,
-          help: 'Typical yearly bonus before tax. Leave blank if none.' },
+          help: 'Typical yearly bonus before tax. Leave blank if none. Spread evenly across the year in cash flow.' },
+        { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
+          help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
       ],
     },
   ];
@@ -110,7 +125,7 @@
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
-      income: { grossSalary: 0, bonus: 0, studentLoanPlan: 'none' },
+      income: { grossSalary: 0, bonus: 0, studentLoanPlan: 'none', region: 'rUK', pensionMethod: 'netPay' },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -156,7 +171,7 @@
     if (field.type === 'text') {
       return { ok: true, value: String(raw == null ? '' : raw).trim().slice(0, 60) };
     }
-    if (field.type === 'select') {
+    if (field.type === 'select' || field.type === 'toggle') {
       const ok = field.options.some((o) => o.value === raw);
       return ok ? { ok: true, value: raw } : { ok: false, error: 'Choose an option from the list.' };
     }
@@ -234,7 +249,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS,
+    SCHEMA_VERSION, SECTIONS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});
