@@ -40,5 +40,18 @@
     });
   }
 
+  // Sample workspace: the baseline plus two example scenarios to compare.
+  function sampleWorkspace() {
+    const ws = FP.scenarios.fromProfile(sample(), 'Baseline');
+    const base = ws.scenarios[0].id;
+    const early = FP.scenarios.clone(ws, base, 'Retire at 60 (sample)');
+    early.profile.assumptions.retirementAge = 60;
+    const markets = FP.scenarios.clone(ws, base, 'Stronger markets (sample)');
+    Object.assign(markets.profile.assumptions, { investmentReturn: 7, pensionGrowth: 7, housePriceGrowth: 4 });
+    ws.activeId = base;
+    return ws;
+  }
+
   FP.sample = sample;
+  FP.sampleWorkspace = sampleWorkspace;
 })(globalThis.FP = globalThis.FP || {});

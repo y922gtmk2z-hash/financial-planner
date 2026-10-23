@@ -5,6 +5,7 @@ const FILES = [
   'js/config/assumptions.js',
   'js/config/tax-2026-27.js',
   'js/model/profile.js',
+  'js/model/scenarios.js',
   'js/model/sample.js',
   'js/model/store.js',
   'js/calc/mortgage.js',
@@ -12,6 +13,7 @@ const FILES = [
   'js/calc/tax.js',
   'js/calc/growth.js',
   'js/calc/projection.js',
+  'js/calc/compare.js',
 ];
 
 FILES.forEach((f) => require(path.join(__dirname, '..', f)));
