@@ -76,6 +76,7 @@
       ready ? FP.checklist.note(p) : null,
       proj.ok ? chartCard(rows, ev, a, moneyNote) : ready ? h('section', { class: 'card' },
         h('p', null, proj.message), h('a', { href: '#setup' }, 'Go to Setup')) : null,
+      ready ? ideasCard(p) : null,
       h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
         h('h2', { id: 'next-h' }, 'Explore'),
         h('ul', null,
@@ -95,6 +96,25 @@
         h('summary', null, `${sorted.length - 1} more ${sorted.length === 2 ? 'note' : 'notes'}`),
         h('ul', { class: 'notices' }, sorted.slice(1).map(item))) : null,
     ];
+  }
+
+  function firstSentence(text) {
+    const m = text.match(/^.*?[.!?](?=\s|$)/);
+    return m ? m[0] : text;
+  }
+
+  // The ideas you haven't ticked off or hidden yet, most pressing first.
+  function ideasCard(p) {
+    const r = FP.suggest.analyse(p);
+    const marks = p.ideas || {};
+    const open = r.suggestions.filter((x) => x.tone !== 'good' && !marks[x.id])
+      .sort((x, y) => (x.tone === 'warn' ? 0 : 1) - (y.tone === 'warn' ? 0 : 1));
+    if (!open.length) return null;
+    return h('section', { class: 'card next-steps', 'aria-labelledby': 'ideas-h' },
+      h('h2', { id: 'ideas-h' }, `${open.length} ${open.length === 1 ? 'idea' : 'ideas'} to look at`),
+      h('ul', null, open.slice(0, 3).map((x) => h('li', null, h('a', { href: '#setup/ideas' },
+        h('strong', null, `${x.tone === 'warn' ? '! ' : ''}${x.title}`), h('span', null, firstSentence(x.text)), h('span', { class: 'go', 'aria-hidden': 'true' }, '›'))))),
+      h('p', { class: 'muted small' }, open.length > 3 ? `And ${open.length - 3} more. ` : '', h('a', { href: '#setup/ideas' }, 'See all ideas'), ' \u2014 general rules of thumb, not advice.'));
   }
 
   function tile(href, label, value, sub, warn) {

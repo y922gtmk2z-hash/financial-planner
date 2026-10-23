@@ -634,3 +634,8 @@ fieldset.row-card { min-width: 0; }
 .step-footer { margin: 16px 0; }
 .step-footer .button-row { justify-content: space-between; }
 .step-footer .button-row button:only-child { margin-left: auto; }
+.idea-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 6px; font-size: 0.88rem; }
+.idea-actions .link { min-height: 32px; padding: 0; }
+.ideas-put-away summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; padding: 6px 0; }
+.ideas-put-away .ideas { margin-top: 4px; }
+.ideas-put-away .idea { opacity: 0.8; }

@@ -128,3 +128,9 @@ test('checklist: age and spending are needed before a projection; others are opt
   p.spending = [];
   assert.equal(FP.compare.summarise(p).ok, false);
 });
+
+test('ideas you mark done or hidden are kept; anything else is dropped', () => {
+  const p = FP.profile.normalise({ ideas: { isa: 'done', match: 'hidden', relief: 'maybe', 'bad key!': 'done' } });
+  assert.deepEqual(p.ideas, { isa: 'done', match: 'hidden' });
+  assert.deepEqual(FP.profile.blank().ideas, {});
+});

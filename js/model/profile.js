@@ -205,6 +205,8 @@
       },
       savings: [],
       leftover: { ...LEFTOVER_DEFAULT },
+      // Ideas you've marked done or hidden: { [idea id]: 'done' | 'hidden' }.
+      ideas: {},
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
       assumptions: FP.assumptions.defaults(),
     };
@@ -330,6 +332,11 @@
     if (hasSplit && leftoverSrc.emergency === undefined) p.leftover.emergency = 0;
     if (leftoverSrc.emergencyMonths !== undefined) {
       p.leftover.emergencyMonths = coerce(EMERGENCY_MONTHS_FIELD, leftoverSrc.emergencyMonths, LEFTOVER_DEFAULT.emergencyMonths);
+    }
+    if (src.ideas && typeof src.ideas === 'object') {
+      Object.entries(src.ideas).slice(0, 40).forEach(([k, v]) => {
+        if (/^[a-zA-Z]{1,30}$/.test(k) && (v === 'done' || v === 'hidden')) p.ideas[k] = v;
+      });
     }
     if (Array.isArray(src.savings)) {
       p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
