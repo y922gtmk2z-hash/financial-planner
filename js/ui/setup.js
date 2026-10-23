@@ -15,6 +15,26 @@
       if (sec.id === 'mortgage') root.appendChild(debtsCard(ctx));
     });
     root.appendChild(spendingCard(ctx, p));
+    root.appendChild(calculateCard(ctx, root));
+  }
+
+  // Changes save as you type; Calculate takes you to the results.
+  function calculateCard(ctx, root) {
+    return h('section', { class: 'card calculate', 'aria-label': 'Calculate' },
+      h('button', {
+        type: 'button', class: 'calculate-btn',
+        onclick: () => {
+          const bad = root.querySelector('[aria-invalid="true"]');
+          if (bad) {
+            bad.focus();
+            bad.scrollIntoView({ block: 'center' });
+            ctx.toast('Fix the highlighted box first.');
+            return;
+          }
+          ctx.go('overview');
+        },
+      }, 'Calculate my plan'),
+      h('p', { class: 'help' }, 'Your figures save as you type. Calculate shows your overview — you can come back to Setup at any time from the top of the screen.'));
   }
 
   function sectionCard(sec, ctx) {
@@ -26,7 +46,7 @@
     return h('section', { class: 'card', 'aria-labelledby': `sec-${sec.id}` },
       h('h2', { id: `sec-${sec.id}` }, sec.title),
       sec.intro ? h('p', { class: 'muted' }, sec.intro) : null,
-      FP.field.sectionBody(sec, make, sec.id === 'income' ? FP.bonusEditor.render(ctx) : null));
+      FP.field.sectionBody(sec, make, sec.id === 'income' ? [FP.bonusEditor.render(ctx), FP.sacrificeEditor.render(ctx)] : null));
   }
 
   function debtsCard(ctx) {

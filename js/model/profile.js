@@ -117,6 +117,24 @@
     { key: 'monthlyPayment', label: 'Monthly payment', type: 'money' },
   ];
 
+  const SACRIFICE_TYPES = [
+    { value: 'car', label: 'Car scheme' },
+    { value: 'cycle', label: 'Cycle to work' },
+    { value: 'other', label: 'Other (e.g. tech, holiday)' },
+  ];
+  const MAX_SACRIFICES = 10;
+  const SACRIFICE_FIELDS = [
+    { key: 'type', label: 'Type', type: 'select', options: SACRIFICE_TYPES },
+    { key: 'monthly', label: 'Monthly amount', type: 'money',
+      help: 'Taken from your salary before tax each month.' },
+    { key: 'monthsLeft', label: 'Months left', type: 'int', min: 0, max: 600, nullable: true, placeholder: 'Ongoing',
+      help: 'Leave blank if it carries on.' },
+    { key: 'carValue', label: 'Car list price (P11D value)', type: 'money', carOnly: true,
+      help: 'From your scheme quote. Used to work out the benefit-in-kind tax.' },
+    { key: 'bikRate', label: 'Benefit-in-kind rate', type: 'pct', min: 0, max: 37, suffix: '% of list price', carOnly: true,
+      help: 'Fully electric cars: 4% in 2026/27 (5% in 2027/28). Check your scheme quote.' },
+  ];
+
   const MAX_BONUSES = 12;
   const BONUS_FIELDS = [
     { key: 'amount', label: 'Bonus amount', type: 'money' },
@@ -148,7 +166,7 @@
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
       income: {
-        grossSalary: 0, bonuses: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
+        grossSalary: 0, bonuses: [], sacrifices: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
         studentLoanRate: null, region: 'rUK', pensionMethod: 'netPay',
       },
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
@@ -259,6 +277,10 @@
       const amount = coerce(BONUS_FIELDS[0], srcIncome.bonus, 0);
       if (amount > 0) p.income.bonuses = [normaliseRow({ amount, month: srcIncome.bonusMonth }, BONUS_FIELDS, 'b')];
     }
+    if (Array.isArray(srcIncome.sacrifices)) {
+      p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
+        .map((x) => normaliseRow(x, SACRIFICE_FIELDS, 'ss'));
+    }
     if (Array.isArray(src.spending)) {
       p.spending = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40).map((s) => normaliseRow(s, SPENDING_FIELDS, 's'));
     }
@@ -278,6 +300,14 @@
     return { id: newId('d'), name: '', balance: 0, rate: null, monthlyPayment: 0 };
   }
 
+  function newSacrifice(type) {
+    const t = type || 'cycle';
+    return {
+      id: newId('ss'), type: t, monthly: 0, monthsLeft: null,
+      carValue: 0, bikRate: t === 'car' ? FP.taxConfig.electricCarBikPct : 0,
+    };
+  }
+
   function newBonus() {
     return { id: newId('b'), amount: 0, month: 'spread' };
   }
@@ -287,7 +317,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSpending,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES,
+    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

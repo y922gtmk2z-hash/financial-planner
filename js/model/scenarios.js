@@ -134,6 +134,7 @@
     push('Other debt payments (a month)', total(a.debts, 'monthlyPayment'), total(b.debts, 'monthlyPayment'), 'money');
     push('Monthly spending', total(a.spending, 'monthly'), total(b.spending, 'monthly'), 'money');
     push('Bonuses (a year)', total(a.income.bonuses, 'amount'), total(b.income.bonuses, 'amount'), 'money');
+    push('Salary sacrifice (a month)', total(a.income.sacrifices, 'monthly'), total(b.income.sacrifices, 'monthly'), 'money');
     const timing = (p) => p.income.bonuses.filter((x) => x.amount > 0).map((x) => x.month).sort().join(',');
     if (timing(a) !== timing(b) && total(a.income.bonuses, 'amount') === total(b.income.bonuses, 'amount')) {
       out.push({ label: 'Bonus months', kind: 'note' });

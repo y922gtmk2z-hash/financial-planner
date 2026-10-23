@@ -66,3 +66,17 @@ test('GitHub Pages: no code builds absolute paths', () => {
   });
   assert.ok(!/url\(\s*['"]?\//.test(read('css/styles.css')), 'CSS uses an absolute url()');
 });
+
+test('navigation: every route has a screen; Setup is in the header, views are tabs', () => {
+  const routes = JSON.parse(read('js/app.js').match(/const ROUTES = (\[[^\]]+\])/)[1].replace(/'/g, '"'));
+  const ui = jsFiles('js/ui').map((f) => read(f)).join('\n');
+  routes.forEach((r) => assert.match(ui, new RegExp(`FP\\.screens\\.${r} = \\{`), `no screen for #${r}`));
+  const html = read('index.html');
+  const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+  const tabs = html.slice(html.indexOf('<nav class="tabbar"'), html.indexOf('</nav>', html.indexOf('<nav class="tabbar"')));
+  assert.match(header, /href="#setup"/);
+  assert.doesNotMatch(tabs, /href="#setup"/);
+  const tabRoutes = [...tabs.matchAll(/data-route="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(tabRoutes, ['overview', 'today', 'income', 'future', 'scenarios', 'assumptions']);
+  tabRoutes.forEach((r) => assert.ok(routes.includes(r)));
+});
