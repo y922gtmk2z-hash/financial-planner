@@ -715,3 +715,19 @@ html.sheet-open { overflow: hidden; }
 .sheet-titles { min-width: 0; }
 .sheet-status { margin: 2px 0 0; font-size: 0.9rem; font-weight: 600; }
 .mode-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+
+/* ---------- Segmented control (Now) ---------- */
+.segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; margin: 0 0 12px; border-radius: 12px; background: var(--surface-2); }
+.segmented button { min-height: 40px; padding: 4px 6px; border: 0; border-radius: 9px; background: none; color: var(--text-2); font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+.segmented button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+
+/* ---------- Header "More" menu ---------- */
+.header-menu { position: relative; }
+.header-menu > summary { list-style: none; cursor: pointer; }
+.header-menu > summary::-webkit-details-marker { display: none; }
+.menu-list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 170px; display: grid; padding: 6px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.menu-list a { padding: 10px 12px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.menu-list a:hover, .menu-list a[aria-current="page"] { background: var(--accent-soft); }

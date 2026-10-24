@@ -113,7 +113,7 @@
     return h('section', { class: 'card', 'aria-labelledby': 'cf-h' },
       h('h2', { id: 'cf-h' }, 'Monthly cash flow'),
       dl([
-        ['Take-home pay', h('a', { href: '#income' }, money(cf.takeHomeMonthly))],
+        ['Take-home pay', h('a', { href: '#now/pay' }, money(cf.takeHomeMonthly))],
       ]),
       pay.bonusPayments.length ? h('p', { class: 'muted small' },
         'A regular month, without bonuses paid in a particular month. After deductions, bonuses add ',
@@ -162,5 +162,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.today = { title: 'Today', render };
+  FP.screens.today = { title: 'Today', render, parts: { netWorthCard, chartCard, homeCard, cashFlowCard } };
 })(globalThis.FP = globalThis.FP || {});

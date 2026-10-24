@@ -16,14 +16,20 @@
 
   <header class="app-header" id="app-header">
     <div class="app-header-inner">
-      <a class="brand" href="#overview" aria-label="Finance planner: overview">
+      <a class="brand" href="#overview" aria-label="Finance planner: your plan">
         <span class="brand-mark" aria-hidden="true">£</span>
         <span class="brand-name">Finance planner</span>
       </a>
       <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
       <nav class="header-nav" aria-label="Your details">
         <a href="#setup" data-route="setup" class="header-setup"><span aria-hidden="true">✎</span> Setup</a>
-        <a href="#data" data-route="data" class="header-link">Your data</a>
+        <details class="header-menu" id="header-menu">
+          <summary class="header-link" aria-label="More: assumptions and your data">More</summary>
+          <div class="menu-list">
+            <a href="#assumptions" data-route="assumptions">Assumptions</a>
+            <a href="#data" data-route="data">Your data</a>
+          </div>
+        </details>
       </nav>
     </div>
   </header>
@@ -51,12 +57,10 @@
   </footer>
 
   <nav class="tabbar" aria-label="Views">
-    <a href="#overview" data-route="overview"><span class="tab-icon" aria-hidden="true">◉</span>Overview</a>
-    <a href="#today" data-route="today"><span class="tab-icon" aria-hidden="true">◎</span>Today</a>
-    <a href="#income" data-route="income"><span class="tab-icon" aria-hidden="true">₤</span>Income</a>
+    <a href="#overview" data-route="overview"><span class="tab-icon" aria-hidden="true">◉</span>Your plan</a>
+    <a href="#now" data-route="now"><span class="tab-icon" aria-hidden="true">◎</span>Now</a>
     <a href="#future" data-route="future"><span class="tab-icon" aria-hidden="true">↗</span>Future</a>
-    <a href="#scenarios" data-route="scenarios"><span class="tab-icon" aria-hidden="true">⇄</span><span class="tab-full">Scenarios</span><span class="tab-short" aria-hidden="true">Compare</span></a>
-    <a href="#assumptions" data-route="assumptions"><span class="tab-icon" aria-hidden="true">%</span><span class="tab-full">Assumptions</span><span class="tab-short" aria-hidden="true">Assume</span></a>
+    <a href="#scenarios" data-route="scenarios"><span class="tab-icon" aria-hidden="true">⇄</span>Scenarios</a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -91,6 +95,7 @@
   <script src="js/ui/today.js"></script>
   <script src="js/ui/setup.js"></script>
   <script src="js/ui/income.js"></script>
+  <script src="js/ui/now.js"></script>
   <script src="js/ui/future.js"></script>
   <script src="js/ui/scenarios.js"></script>
   <script src="js/ui/assumptions.js"></script>

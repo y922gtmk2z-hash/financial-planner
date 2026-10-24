@@ -180,7 +180,7 @@
     ].filter(Boolean);
     return h('section', { class: 'card', 'aria-labelledby': 'ov-chart-h' },
       h('h2', { id: 'ov-chart-h' }, 'Net worth over time'),
-      h('p', { class: 'muted' }, h('a', { href: '#today' }, `${money(today.netWorth)} today`), ` (${money(today.assets.total)} owned \u2212 ${money(today.liabilities.total)} owed)`),
+      h('p', { class: 'muted' }, h('a', { href: '#now/own' }, `${money(today.netWorth)} today`), ` (${money(today.assets.total)} owned \u2212 ${money(today.liabilities.total)} owed)`),
       FP.chart.timeChart({
         type: 'line', series, markers,
         xLabels: rows.map((x) => String(x.age)),
@@ -192,5 +192,5 @@
 
 
   FP.screens = FP.screens || {};
-  FP.screens.overview = { title: 'Overview', render };
+  FP.screens.overview = { title: 'Your plan', render };
 })(globalThis.FP = globalThis.FP || {});

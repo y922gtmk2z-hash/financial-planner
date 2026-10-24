@@ -13,18 +13,10 @@
     { id: 'savings', label: 'Cash & investments', get: (r) => r.cash + r.isa + r.gia },
   ];
 
-  // Common levers, shown for the scenario being edited. Everything else is on the other screens.
-  const QUICK = [
-    'income.grossSalary', 'mortgage.monthlyOverpayment', 'assumptions.retirementAge',
-    'assumptions.investmentReturn', 'assumptions.pensionGrowth', 'assumptions.housePriceGrowth',
-    'assumptions.employeePensionPct',
-  ];
-
   let metric = 'netWorth';
 
   function render(root, ctx) {
     const ws = ctx.workspace();
-    const current = S.active(ws);
     const results = h('div');
     let view = FP.screens.future.getView();
     const draw = () => FP.dom.fill(results, compareView(ctx, view, draw));
@@ -37,7 +29,6 @@
       list,
       presetCard(ctx),
       createCard(ctx),
-      quickCard(ctx, current, () => { draw(); drawList(); }),
       h('div', { class: 'view-toggle' }, FP.field.render({
         label: 'Show amounts in', type: 'toggle',
         options: [{ value: 'real', label: 'Today’s money' }, { value: 'nominal', label: 'Future money' }],
@@ -160,26 +151,8 @@
           h('div', { class: 'field' }, h('label', { for: 'new-sc-name' }, 'Name'), h('div', { class: 'input-wrap' }, nameInput)),
           h('div', { class: 'field' }, h('label', { for: 'new-sc-from' }, 'Start from a copy of'), h('div', { class: 'input-wrap' }, from)),
           h('button', { type: 'button', onclick: create }, 'Create and edit'),
-          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it here, or in Setup and Assumptions.'),
+          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it in Setup and Assumptions while it\u2019s selected \u2014 or tap any figure on Your plan, try changes there and save them as a scenario.'),
         ]);
-  }
-
-  function quickCard(ctx, current, onChange) {
-    const p = current.profile;
-    const fields = QUICK.map((path) => {
-      const key = path.startsWith('assumptions.') ? path.slice(12) : null;
-      const base = key ? FP.profile.assumptionField(key) : FP.profile.fieldFor(path);
-      const d = key ? FP.assumptions.def(key) : null;
-      const field = { ...base, suffix: d ? FP.assumptions.UNIT_SUFFIX[d.unit] : base.suffix };
-      return FP.field.render(field, {
-        value: FP.profile.get(p, path), compact: true,
-        onChange: (v) => { ctx.update(path, v); onChange(); },
-      });
-    });
-    return h('section', { class: 'card', 'aria-labelledby': 'quick-h' },
-      h('h2', { id: 'quick-h' }, `Quick changes to “${current.name}”`),
-      h('p', { class: 'muted' }, 'Common things to try. Everything else can be changed on the other screens while this scenario is selected.'),
-      h('div', { class: 'quick-grid' }, fields));
   }
 
   function studentLoanText(sl) {
