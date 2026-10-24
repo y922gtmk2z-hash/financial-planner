@@ -114,6 +114,11 @@
       help: 'When salary and pension contributions stop in projections.',
     },
     {
+      key: 'lifeExpectancy', group: 'pension', label: 'Life expectancy', unit: 'age',
+      default: 86, min: 60, max: 110, setOn: SET_ON,
+      help: 'How long a first look at your plan pays for retirement. 86 is about average for someone aged 65 in the UK, men and women together (ONS cohort projections: 84.8 for men, 87.5 for women). Many people live longer, so the full plan runs to the projection end age.',
+    },
+    {
       key: 'endAge', group: 'pension', label: 'Projection end age', unit: 'age',
       default: 95, min: 50, max: 110, setOn: SET_ON, advanced: true,
       help: 'How far ahead projections run (capped at 40 years from today).',
