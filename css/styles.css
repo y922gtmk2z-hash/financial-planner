@@ -218,6 +218,7 @@ main:focus, main:focus-visible { outline: none; }
 /* Phones: while the on-screen keyboard is up (a field has focus), the tab bar steps aside. */
 @media (max-width: 899px) {
   body.kbd-open { padding-bottom: 0; }
+  body:has(.tabbar[hidden]) { padding-bottom: 0; }
   .kbd-open .tabbar { display: none; }
   .kbd-open .live-strip { bottom: 8px; }
   .kbd-open .toast { bottom: 16px; }
@@ -341,6 +342,8 @@ main:focus, main:focus-visible { outline: none; }
   min-height: 46px; padding: 0 12px;
 }
 .input-wrap:focus-within { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+/* Time left: the number, then months or years. */
+.term-row { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem; gap: 8px; }
 .input-wrap input, .input-wrap select {
   flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
   font: inherit; font-size: 1rem; /* 16px stops iOS zooming */ padding: 10px 4px; outline: none;

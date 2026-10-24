@@ -107,9 +107,9 @@
         ? h('p', { class: 'muted' }, 'No home or mortgage entered. If you own a home, add it in Your figures.')
         : body,
       m ? chips([
-        `Mortgage rate ${pct(a.mortgageRate, 2)}`,
+        `Mortgage rate ${pct(m.rate, 2)}${m.worked === 'rate' ? ' (worked out)' : m.rateIsDefault ? ' (assumed)' : ''}`,
         rateChange,
-        `${p.mortgage.remainingTermYears || 0} years left`,
+        `${months(m.termMonths)} left${m.worked === 'months' ? ' (worked out)' : ''}`,
         `Overpayment warning above ${a.overpaymentLimitPct}% a year`,
         'Payment stays fixed; overpayments shorten the term',
       ]) : null);
@@ -159,7 +159,7 @@
         pay.bonusSpread > 0 ? 'Some bonus spread over 12 months' : null,
         `${p.spending.filter((r) => r.monthly > 0).length} spending categories`,
         defaultRateUsed ? `Other debts default rate ${pct(a.otherDebtRate, 1)}` : null,
-        `Mortgage rate ${pct(a.mortgageRate, 2)}`,
+        s.mortgage ? `Mortgage rate ${pct(s.mortgage.rate, 2)}` : null,
       ]));
   }
 

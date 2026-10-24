@@ -49,7 +49,17 @@ retirement how much you'd need in savings and pensions when you retire, how much
 on course for and how long it would last at your spending. It doesn't say whether
 you're "on track" yet, and next steps, ideas and the net-worth chart wait until you've
 added more (savings, pensions, debts or pay details, or been through Assets and
-Debts). The quick-start answers then live under About you in Your figures. You can also fill in all your figures, or **Load
+Debts). The quick-start answers then live under About you in Your figures.
+
+**The planner opens up in stages**, so there's only a little to take in at a time:
+
+1. **Before the quick start:** just the welcome and quick start. No tabs, no Your
+   figures; the More menu has only Your data (to import a backup) and Settings.
+2. **After it:** Your plan, Your figures and Today.
+3. **Once you've added more detail** (savings, pensions, debts or pay details, or
+   been through Assets and Debts): Future, Scenarios and Assumptions too.
+
+A link to a screen that isn't open yet goes to Your plan instead. You can also **Load
 sample data** (a clearly fictional household, with a banner saying so) from the
 welcome screen or Your data. Until you add figures, every screen says to add them to
 see results; no illustrative data is used.
@@ -78,8 +88,15 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
      like), what you save each month, then **money left over each month**: a
      suggested split to use in one tap, with your own split and ideas folded away.
    - **Assets:** what you own today.
-   - **Debts:** your mortgage (its rate and term appear once you enter a balance)
-     and other debts.
+   - **Debts:** your mortgage and other debts. For each, give the **balance** and
+     any two of **monthly payment**, **time left** (in months or years) and
+     **interest rate**, and the third is worked out and shown under it (for example
+     "Interest rate worked out from your payment and time left: about 6.6% APR").
+     Loans and cards ask for the **APR**, the true yearly cost, so interest is
+     charged monthly at (1 + APR)^(1/12) − 1. The mortgage asks for the **yearly
+     rate on your deal, not the APRC**, charged at rate ÷ 12 a month, as lenders do.
+     A blank rate that can't be worked out uses the default (other debts: the
+     Assumptions rate; mortgage: 4.5%), and the note says so.
 2. **Your plan** answers four questions, each with a verdict and its top
    recommendation: **Each month** (take-home, what's left over, emergency fund),
    **Debt-free** (mortgage, student loan, other debts), **Retirement** (how much

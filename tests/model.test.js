@@ -33,7 +33,7 @@ test('normalise fills gaps, drops junk and keeps valid values', () => {
   assert.equal(p.assets.hacked, undefined);
   assert.equal(p.extra, undefined);
   assert.equal(p.assumptions.inflation, 3);
-  assert.equal(p.assumptions.mortgageRate, 4.5);
+  assert.equal(p.assumptions.mortgageRate, null); // out of range: back to the default, blank
   assert.equal(p.debts.length, 1);
   assert.equal(p.debts[0].rate, null);
 });

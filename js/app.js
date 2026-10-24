@@ -7,6 +7,31 @@
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 
+  /*
+   * The planner opens up as you go, so there's only ever a little to take in:
+   *   0 - before the quick start: just the welcome (and Your data, Settings);
+   *   1 - after it: Your plan, Your figures and Today;
+   *   2 - once you've added more detail: everything.
+   */
+  const STAGE_ROUTES = [
+    ['overview', 'data', 'settings'],
+    ['overview', 'data', 'settings', 'setup', 'now'],
+    ROUTES,
+  ];
+  function stage() {
+    const p = FP.scenarios.active(workspace).profile;
+    if (!FP.summary.checklist(p).ready) return 0;
+    return FP.welcome.isRough(p) ? 1 : 2;
+  }
+
+  // Shows only the tabs and links for what's open at this stage.
+  function drawStage(s) {
+    document.body.dataset.stage = String(s);
+    document.querySelectorAll('[data-route]').forEach((a) => { a.hidden = !STAGE_ROUTES[s].includes(a.dataset.route); });
+    const tabs = document.querySelector('.tabbar');
+    tabs.hidden = tabs.querySelectorAll('a:not([hidden])').length < 2;
+  }
+
   // Theme: 'system' (no attribute, follows the device), 'light' or 'dark'.
   FP.theme = {
     get: () => (['light', 'dark'].includes(FP.store.pref('theme')) ? FP.store.pref('theme') : 'system'),
@@ -134,7 +159,7 @@
             if (!confirm('Clear the sample data (and its example scenarios) and start with an empty form?')) return;
             workspace = FP.scenarios.fromProfile(FP.profile.blank());
             save();
-            location.hash = '#setup';
+            location.hash = '#overview';
             route();
           },
         }, 'Start with my own figures'),
@@ -191,7 +216,15 @@
   }
 
   function route() {
-    const { id, target } = parseHash();
+    let { id, target } = parseHash();
+    const s = stage();
+    drawStage(s);
+    if (!STAGE_ROUTES[s].includes(id)) {
+      // Not open yet: back to Your plan (the welcome, until the quick start's done).
+      history.replaceState(null, '', '#overview');
+      id = 'overview';
+      target = null;
+    }
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');

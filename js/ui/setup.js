@@ -231,32 +231,68 @@
       h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(make)));
   }
 
+  /*
+   * What's been worked out for a loan, in a sentence (or a prompt to give
+   * more). `yearly` describes the rate: '% APR' or '% a year'.
+   */
+  function loanNote(loan, yearly) {
+    if (!(loan.balance > 0)) return '';
+    if (loan.error) return loan.error;
+    const rate = `${Math.round(loan.rate * 10) / 10}${yearly}`;
+    const assumed = loan.rateIsDefault ? ` That uses ${rate}; add your rate if you know it.` : '';
+    if (loan.worked === 'rate') return `Interest rate worked out from your payment and time left: about ${rate}.`;
+    if (loan.worked === 'payment') return `Monthly payment to clear it in that time: about ${money(loan.payment)}.${assumed}`;
+    if (loan.worked === 'months') {
+      return loan.months === Infinity
+        ? `At this payment it\u2019s never paid off: the payment doesn\u2019t cover the interest.${assumed}`
+        : `At this payment it\u2019s paid off in about ${FP.dom.months(Math.ceil(loan.months))}.${assumed}`;
+    }
+    if (!(loan.payment > 0)) return 'Give any two of monthly payment, time left and interest rate, and the third is worked out.';
+    return '';
+  }
+
   function debtsCard(ctx) {
     const sec = section('debts');
     const make = maker(ctx);
+    // Each note redraws from the profile; the other debts' notes are rebuilt with their rows.
+    const note = (get, list) => {
+      const el = h('p', { class: 'help loan-note', role: 'status' });
+      const draw = () => { el.textContent = get(); el.hidden = !el.textContent; };
+      draw();
+      list.push(draw);
+      return el;
+    };
+    const mortgageNotes = [];
+    let debtNotes = [];
     const others = h('div', { class: 'field-group', role: 'group', 'aria-labelledby': 'grp-otherDebts', id: 'other-debts' });
     const drawOthers = () => {
       const p = ctx.profile();
+      debtNotes = [];
       FP.dom.fill(others,
         h('h3', { id: 'grp-otherDebts' }, 'Other debts'),
-        h('p', { class: 'help' }, 'Loans, car finance, credit cards. Leave the rate blank to use the default in Assumptions.'),
+        h('p', { class: 'help' }, 'Loans, car finance, credit cards. Give the balance and any two of payment, time left and APR.'),
         p.debts.map((d, i) => h('fieldset', { class: 'row-card' },
           h('legend', null, d.name || `Debt ${i + 1}`),
           P.DEBT_FIELDS.map((f) => FP.field.render(f, {
             value: d[f.key],
             compact: f.key !== 'rate',
-            nullPlaceholder: `Default ${p.assumptions.otherDebtRate}%`,
+            nullPlaceholder: 'Not sure',
             onChange: (v) => ctx.update(`debts.${i}.${f.key}`, v),
           })),
+          note(() => loanNote(FP.loan.forDebt(ctx.profile().debts[i] || {}, ctx.profile().assumptions), '% APR'), debtNotes),
           h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt'))),
         h('button', { type: 'button', class: 'secondary', onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawOthers(); } }, '+ Add a debt'));
     };
+    const mortgage = group(sec, 'mortgage', make);
+    mortgage.insertBefore(note(() => loanNote(FP.loan.forMortgage(ctx.profile()), '% a year'), mortgageNotes), mortgage.querySelector('details'));
     drawOthers();
-    return h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
+    const card = h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
       h('h2', { id: 'sec-debts' }, 'Debts'),
       h('p', { class: 'muted' }, sec.intro),
-      group(sec, 'mortgage', make),
+      mortgage,
       others);
+    card.refreshNotes = () => mortgageNotes.concat(debtNotes).forEach((d) => d());
+    return card;
   }
 
   function render(root, ctx) {
@@ -268,12 +304,13 @@
 
     const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
     const income = incomeCard(ctx);
+    const debts = debtsCard(ctx);
     const groups = [
       [aboutCard(ctx), projectionsCard()],
       [income],
       [spendCard(ctx), leftover],
       [assetsCard(ctx)],
-      [debtsCard(ctx)],
+      [debts],
     ].map((cards, i) => h('div', { class: 'setup-step', 'data-step': STEPS[i].id }, cards));
     const nav = h('nav', { class: 'step-nav', 'aria-label': 'Your figures sections' });
     const intro = h('div', { class: 'setup-intro' });
@@ -365,6 +402,7 @@
         if (!leftover.contains(e.target)) leftover.refresh();
         strip.refresh();
         income.refreshStatus();
+        debts.refreshNotes();
         showNeeded(root, ctx.profile());
         // Typing in a section counts as having been there.
         const g = e.target.closest && e.target.closest('[data-step]');

@@ -18,8 +18,8 @@
 
   function render(root, ctx) {
     const p = ctx.profile();
-    // Nothing entered yet: say what this is and how to start.
-    if (FP.checklist.isEmpty(p)) { FP.welcome.render(root, ctx); return; }
+    // Until the quick start's done: say what this is and how to start.
+    if (!FP.summary.checklist(p).ready) { FP.welcome.render(root, ctx); return; }
     const pay = FP.tax.forProfile(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
     const ready = FP.summary.checklist(p).ready;

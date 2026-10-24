@@ -52,6 +52,8 @@
         field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : null);
     }
 
+    if (field.type === 'term') return termField(field, opts, { id, helpId, errId, err });
+
     let input;
     if (field.type === 'select') {
       input = h('select', { id, 'aria-describedby': helpId, 'aria-label': opts.ariaLabel || null },
@@ -113,6 +115,47 @@
           : h('span', { id: helpId, hidden: true }),
       blank,
       err,
+      opts.extra || null);
+  }
+
+  /*
+   * Time left: a number in months or years (your choice), stored in the
+   * field's own unit (field.store: 'months' or 'years').
+   */
+  function termField(field, opts, ids) {
+    const toMonths = (v) => (v == null ? null : field.store === 'years' ? v * 12 : v);
+    const months = toMonths(opts.value);
+    let unit = months && months % 12 !== 0 ? 'months' : 'years';
+    const shown = (m) => (m ? String(Number((unit === 'years' ? m / 12 : m).toFixed(2))) : '');
+    const input = h('input', {
+      id: ids.id, type: 'text', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false', maxlength: 8,
+      placeholder: field.nullable === false ? '0' : 'Not sure', value: shown(months),
+      'aria-describedby': `${ids.helpId} ${ids.errId}`, 'aria-label': opts.ariaLabel || null,
+    });
+    const unitSel = h('select', { 'aria-label': `${field.label}: months or years`, class: 'term-unit' },
+      ['years', 'months'].map((u) => h('option', { value: u, selected: u === unit }, u)));
+    const maxMonths = field.store === 'years' ? field.max * 12 : field.max;
+    function commit() {
+      const r = FP.profile.parseValue({ type: 'years', nullable: true, min: 0, max: unit === 'years' ? maxMonths / 12 : maxMonths }, input.value);
+      if (!r.ok) {
+        ids.err.hidden = false;
+        ids.err.textContent = r.error;
+        input.setAttribute('aria-invalid', 'true');
+        return;
+      }
+      ids.err.hidden = true;
+      input.removeAttribute('aria-invalid');
+      const m = r.value == null || r.value === 0 ? null : unit === 'years' ? r.value * 12 : r.value;
+      const stored = m == null ? (field.nullable ? null : 0) : field.store === 'years' ? m / 12 : m;
+      opts.onChange(stored);
+    }
+    input.addEventListener('input', commit);
+    unitSel.addEventListener('change', () => { unit = unitSel.value; commit(); });
+    return h('div', { class: `field term${opts.compact ? ' compact' : ''}`, 'data-path': field.path || null },
+      h('label', { for: ids.id }, field.label),
+      h('div', { class: 'term-row' }, h('div', { class: 'input-wrap' }, input), h('div', { class: 'input-wrap term-unit-wrap' }, unitSel)),
+      field.help && !opts.compact ? h('p', { class: 'help', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
+      ids.err,
       opts.extra || null);
   }
 

@@ -166,15 +166,18 @@
     let shortfall = 0;
 
     let mBal = profile.mortgage.balance || 0;
-    const termMonths = Math.round((profile.mortgage.remainingTermYears || 0) * 12);
+    const mLoan = FP.loan.forMortgage(profile);
+    const termMonths = FP.summary.mortgageMonths(mLoan);
     const overMonthly = mBal > 0 ? profile.mortgage.monthlyOverpayment || 0 : 0;
-    let mRate = a.mortgageRate || 0;
+    let mRate = mLoan.rate;
     let mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths);
     let monthsElapsed = 0;
 
-    const debts = profile.debts.map((d) => ({
-      bal: d.balance || 0, rate: FP.summary.debtRate(d, a), pay: d.monthlyPayment || 0,
-    }));
+    // Rates are APRs, so interest is charged at the matching monthly rate.
+    const debts = profile.debts.map((d) => {
+      const loan = FP.loan.forDebt(d, a);
+      return { bal: d.balance || 0, rate: loan.rate, monthly: FP.loan.monthlyRate(loan.rate, 'apr'), pay: loan.payment };
+    });
     // Student loan: tracked only when there's a plan and a balance. Otherwise
     // repayments simply continue while working.
     const slPlan = profile.income.studentLoanPlan;
@@ -333,7 +336,7 @@
       let debtPaid = 0;
       debts.forEach((d) => {
         for (let m = 0; m < 12 && d.bal > 0.005; m += 1) {
-          const due = d.bal * (1 + d.rate / 100 / 12);
+          const due = d.bal * (1 + d.monthly);
           const paid = Math.min(due, d.pay);
           d.bal = due - paid;
           debtPaid += paid;

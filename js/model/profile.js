@@ -121,10 +121,14 @@
       fields: [
         { path: 'mortgage.balance', label: 'Mortgage balance', type: 'money', group: 'mortgage',
           help: 'How much you still owe, from your latest statement. Leave blank if you don\u2019t have one.' },
-        { path: 'assumptions.mortgageRate', label: 'Interest rate', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage', needsMortgage: true,
-          help: 'Your current rate. Shared with the Assumptions panel.', shared: true },
-        { path: 'mortgage.remainingTermYears', label: 'Years left on the mortgage', type: 'years', min: 0, max: 40, suffix: 'years', group: 'mortgage', needsMortgage: true,
-          help: 'Remaining term, for example 22 or 22.5.' },
+        { path: 'assumptions.mortgageRate', label: 'Interest rate (yearly rate, not APRC)', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage', needsMortgage: true, nullable: true,
+          nullPlaceholder: 'Not sure',
+          help: 'The rate on your current deal, from your mortgage offer or statement (not the APRC, which includes fees). Not sure? Leave it blank and give your monthly payment.' },
+        { path: 'mortgage.remainingTermYears', label: 'Time left', type: 'term', store: 'years', min: 0, max: 40, group: 'mortgage', needsMortgage: true,
+          help: 'How long until it\u2019s paid off, from your statement. Leave blank if you don\u2019t know and give your monthly payment.' },
+        { path: 'mortgage.monthlyPayment', label: 'Monthly payment', type: 'money', suffix: 'a month', group: 'mortgage', needsMortgage: true, nullable: true,
+          nullPlaceholder: 'Not sure',
+          help: 'Your normal payment, without overpayments. Give any two of rate, time left and payment and the third is worked out.' },
         { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true, needsMortgage: true,
           help: 'Extra paid on top of your normal payment each month. Most lenders allow up to 10% of the balance a year without a charge.' },
       ],
@@ -143,9 +147,11 @@
   const DEBT_FIELDS = [
     { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. Car loan' },
     { key: 'balance', label: 'Balance', type: 'money' },
-    { key: 'rate', label: 'Interest rate', type: 'pct', min: 0, max: 100, nullable: true, suffix: '%',
-      help: 'Leave blank to use the default rate in Assumptions.' },
-    { key: 'monthlyPayment', label: 'Monthly payment', type: 'money' },
+    { key: 'monthlyPayment', label: 'Monthly payment', type: 'money', suffix: 'a month' },
+    { key: 'termMonths', label: 'Time left', type: 'term', store: 'months', min: 0, max: 600, nullable: true,
+      help: 'Until it\u2019s paid off, if it has a fixed end (not for credit cards).' },
+    { key: 'rate', label: 'Interest rate (APR)', type: 'pct', min: 0, max: 100, nullable: true, suffix: '% APR',
+      help: 'From your statement (for a credit card, the purchase APR). Not sure? Leave it blank.' },
   ];
 
   // Taxable workplace benefits (benefits in kind): taxed as income, no employee NI.
@@ -243,7 +249,7 @@
       isSample: false,
       about: { age: null, riskAppetite: '' },
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
-      mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
+      mortgage: { balance: 0, remainingTermYears: 0, monthlyPayment: null, monthlyOverpayment: 0 },
       debts: [],
       income: {
         grossSalary: 0, bonuses: [], sacrifices: [], benefits: [], otherIncome: 0, taxFreeIncome: 0, otherIncomeAfterRetirement: 'no', studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
@@ -417,7 +423,7 @@
   }
 
   function newDebt() {
-    return { id: newId('d'), name: '', balance: 0, rate: null, monthlyPayment: 0 };
+    return { id: newId('d'), name: '', balance: 0, rate: null, monthlyPayment: 0, termMonths: null };
   }
 
   function newBenefit(type) {

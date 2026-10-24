@@ -169,8 +169,9 @@ test('paying off debts faster clears the most expensive first, then passes its s
   const plain = FP.projection.project({ ...p, debts: [] }).rows[1];
   const r1 = FP.projection.project(p).rows[1];
   // Half of the leftover money is more than the debts owe after a year's
-  // interest (added monthly), so they're cleared and the rest is invested.
-  const owed = 3000 * (1 + 0.06 / 12) ** 12 + 2000 * (1 + 0.20 / 12) ** 12;
+  // interest (rates are APRs, so a year adds exactly the APR), so they're
+  // cleared and the rest is invested.
+  const owed = 3000 * 1.06 + 2000 * 1.20;
   assert.ok(plain.surplus / 2 > owed);
   close(r1.toDebts, owed);
   assert.equal(r1.debts, 0);
@@ -179,8 +180,8 @@ test('paying off debts faster clears the most expensive first, then passes its s
   p.leftover.debts = 5; p.leftover.invest = 95;
   const small = FP.projection.project(p).rows[1];
   assert.ok(small.toDebts < 2000);
-  const card = 2000 * (1 + 0.20 / 12) ** 12 - small.toDebts;
-  close(small.debts, 3000 * (1 + 0.06 / 12) ** 12 + card, 0.5);
+  const card = 2000 * 1.20 - small.toDebts;
+  close(small.debts, 3000 * 1.06 + card, 0.5);
 });
 
 test('the emergency fund share fills cash to the target, then goes to the other choices', () => {

@@ -9,6 +9,7 @@ const FILES = [
   'js/model/sample.js',
   'js/model/store.js',
   'js/calc/mortgage.js',
+  'js/calc/loan.js',
   'js/calc/summary.js',
   'js/calc/tax.js',
   'js/calc/studentloan.js',

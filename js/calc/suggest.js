@@ -18,6 +18,9 @@
     return `£${Math.round(n).toLocaleString('en-GB')}`;
   }
 
+  // A rate to one decimal place (worked-out rates aren't round numbers).
+  const pctText = (n) => String(Math.round(n * 10) / 10);
+
   // "8 months", "about 3 years", "over 10 years".
   function duration(months) {
     if (months <= 24) return `${months} month${months === 1 ? '' : 's'}`;
@@ -65,7 +68,7 @@
     if (expensive.length) {
       const d = expensive[0];
       add('debt', 'warn', `Clear ${d.name} first`,
-        `It costs ${d.rate}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${x.rate}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into \u201cPaying off debts faster\u201d (most expensive first), or raise the monthly payment in Your figures.`);
+        `It costs ${pctText(d.rate)}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${pctText(x.rate)}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into \u201cPaying off debts faster\u201d (most expensive first), or raise the monthly payment in Your figures.`);
     }
 
     const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
@@ -74,7 +77,7 @@
     const taperTop = cfg.taperThreshold + cfg.personalAllowance / cfg.taperRate;
     const inTaper = pay.adjustedNetIncome > cfg.taperThreshold && pay.adjustedNetIncome < taperTop;
     const m = today.mortgage;
-    const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && a.mortgageRate > a.savingsRate), expensive: expensive.length > 0 });
+    const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && m.rate > a.savingsRate), expensive: expensive.length > 0 });
 
     // 2. Emergency fund
     const aim = `A common aim is ${EMERGENCY_MIN_MONTHS}–${EMERGENCY_MAX_MONTHS} months (${money(emergency.min)}–${money(emergency.max)})`;
@@ -103,12 +106,12 @@
     // 4. Mortgage vs savings
     const netInvest = FP.growth.netRate(a.investmentReturn, a.investmentFees);
     if (m && m.balance > 0) {
-      if (a.mortgageRate > a.savingsRate) {
+      if (m.rate > a.savingsRate) {
         add('mortgage', 'tip', 'Overpaying the mortgage beats cash savings',
-          `Your mortgage costs ${a.mortgageRate}% and cash earns ${a.savingsRate}%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return ${netInvest.toFixed(1)}% after fees but can fall. Most lenders allow ${a.overpaymentLimitPct}% of the balance a year without a charge.`);
+          `Your mortgage costs ${pctText(m.rate)}% and cash earns ${a.savingsRate}%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return ${netInvest.toFixed(1)}% after fees but can fall. Most lenders allow ${a.overpaymentLimitPct}% of the balance a year without a charge.`);
       } else {
         add('mortgageLow', 'tip', 'Your mortgage is cheap',
-          `At ${a.mortgageRate}% it costs less than cash earns (${a.savingsRate}%), so there’s little gain in overpaying.`);
+          `At ${pctText(m.rate)}% it costs less than cash earns (${a.savingsRate}%), so there’s little gain in overpaying.`);
       }
     }
 
