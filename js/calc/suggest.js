@@ -2,9 +2,13 @@
  * Ideas for money left over each month, based on the profile. Pure functions,
  * no DOM. These are general rules of thumb to consider - not advice.
  *
- * Returns { left, essentials, emergency, suggestions: [{ id, tone, title, text }],
+ * Returns { left, essentials, emergency, suggestions: [{ id, tone, title, text, patch, impact, howTo }],
  *           split: { emergency, debts, cash, invest, mortgage, pension } | null, splitReason }
  * tone: 'warn' (fix first), 'tip' (worth considering), 'good' (already fine).
+ * patch: the one change to the plan the idea suggests (see FP.patch), or null
+ * when there isn't one. impact: FP.patch.impact of that change, or null; it
+ * re-runs the plan, so it's only worked out the first time it's read.
+ * howTo: steps to make the change (none yet).
  */
 (function (FP) {
   'use strict';
@@ -50,7 +54,23 @@
     emergency.monthsToFill = (share) => (emergency.short && share > 0 && left > 0
       ? Math.ceil((emergency.target - cash) / (left * share)) : 0);
     const out = [];
-    const add = (id, tone, title, text) => out.push({ id, tone, title, text });
+    // The plan as it is now, for working out each idea's impact later.
+    let asNow = null;
+    const add = (id, tone, title, text, patch) => {
+      const idea = { id, tone, title, text, patch: patch || null };
+      if (idea.patch && !asNow) asNow = JSON.parse(JSON.stringify(profile));
+      const from = asNow;
+      let impact;
+      Object.defineProperty(idea, 'impact', {
+        enumerable: true,
+        get: () => {
+          if (impact === undefined) impact = idea.patch ? FP.patch.impact(from, idea.patch) : null;
+          return impact;
+        },
+      });
+      idea.howTo = [];
+      out.push(idea);
+    };
 
     // Nothing left over: that comes first.
     if (!(left > 0)) {
@@ -67,8 +87,10 @@
       .sort((x, y) => y.rate - x.rate);
     if (expensive.length) {
       const d = expensive[0];
+      const at = profile.debts.findIndex((x) => x.id === d.id);
       add('debt', 'warn', `Clear ${d.name} first`,
-        `It costs ${pctText(d.rate)}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${pctText(x.rate)}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into \u201cPaying off debts faster\u201d (most expensive first), or raise the monthly payment in Your figures.`);
+        `It costs ${pctText(d.rate)}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${pctText(x.rate)}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into \u201cPaying off debts faster\u201d (most expensive first), or raise the monthly payment in Your figures.`,
+        at >= 0 ? [{ path: `debts.${at}.monthlyPayment`, op: 'add', value: 50 }] : null);
     }
 
     const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
@@ -84,7 +106,8 @@
     if (emergency.short) {
       const share = split.emergency / 100;
       add('emergency', 'warn', 'Build your emergency fund',
-        `Your cash covers about ${months.toFixed(1)} months of essential outgoings; your target is ${targetMonths} (${money(emergency.target)}). ${aim}. Putting ${split.emergency}% of what’s left (${money(left * share)} a month) into your emergency fund gets you there in ${duration(emergency.monthsToFill(share))}${share < 1 ? `, or ${duration(emergency.monthsToFill(1))} with all of it` : ''}.`);
+        `Your cash covers about ${months.toFixed(1)} months of essential outgoings; your target is ${targetMonths} (${money(emergency.target)}). ${aim}. Putting ${split.emergency}% of what’s left (${money(left * share)} a month) into your emergency fund gets you there in ${duration(emergency.monthsToFill(share))}${share < 1 ? `, or ${duration(emergency.monthsToFill(1))} with all of it` : ''}.`,
+        [{ path: 'leftover.unit', op: 'set', value: 'pct' }].concat(FP.projection.SPLIT_KEYS.map((k) => ({ path: `leftover.${k}`, op: 'set', value: split[k] }))));
     } else if (essentials > 0) {
       add('emergencyOk', 'good', 'Emergency fund in place',
         `Your cash covers about ${months >= 24 ? 'over 24' : months.toFixed(1)} months of essential outgoings, meeting your ${targetMonths}-month target${months > EMERGENCY_MAX_MONTHS * 2 ? ' — more than you need in easy-access cash; some could work harder in investments or your pension' : ''}. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices.`);
@@ -93,10 +116,12 @@
     // 3. Pension tax relief
     if (inTaper) {
       add('taper', 'tip', 'Use your pension to avoid the 60% band',
-        `Between £100,000 and £125,140 you lose some personal allowance, so you keep only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(profile)))} of each extra £100. Pension contributions (or salary sacrifice) bring your income down and win that back.`);
+        `Between £100,000 and £125,140 you lose some personal allowance, so you keep only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(profile)))} of each extra £100. Pension contributions (or salary sacrifice) bring your income down and win that back.`,
+        taperPatch(profile, cfg.taperThreshold));
     } else if (topRate >= 40) {
       add('relief', 'tip', 'Higher-rate pension relief',
-        `You pay ${topRate}% tax on your top slice of pay, so each £1 into your pension costs you only about ${Math.round(100 - topRate)}p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.`);
+        `You pay ${topRate}% tax on your top slice of pay, so each £1 into your pension costs you only about ${Math.round(100 - topRate)}p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.`,
+        pensionPatch(profile, 3));
     }
     if ((a.employerPensionPct || 0) > 0) {
       add('match', 'tip', 'Check for employer matching',
@@ -108,7 +133,8 @@
     if (m && m.balance > 0) {
       if (m.rate > a.savingsRate) {
         add('mortgage', 'tip', 'Overpaying the mortgage beats cash savings',
-          `Your mortgage costs ${pctText(m.rate)}% and cash earns ${a.savingsRate}%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return ${netInvest.toFixed(1)}% after fees but can fall. Most lenders allow ${a.overpaymentLimitPct}% of the balance a year without a charge.`);
+          `Your mortgage costs ${pctText(m.rate)}% and cash earns ${a.savingsRate}%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return ${netInvest.toFixed(1)}% after fees but can fall. Most lenders allow ${a.overpaymentLimitPct}% of the balance a year without a charge.`,
+          [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: 200 }]);
       } else {
         add('mortgageLow', 'tip', 'Your mortgage is cheap',
           `At ${pctText(m.rate)}% it costs less than cash earns (${a.savingsRate}%), so there’s little gain in overpaying.`);
@@ -119,8 +145,11 @@
     const saving = FP.savings.monthlyTotals(profile.savings);
     const isaRoom = Math.max(0, (a.isaAllowance || 0) - (saving.cashIsa + saving.ssIsa) * 12);
     if (isaRoom > 0) {
+      // Into a stocks & shares ISA: what's left over, up to the allowance, in £10s.
+      const isaMonthly = Math.floor(Math.min(isaRoom / 12, left) / 10) * 10;
       add('isa', 'tip', 'Use your ISA allowance',
-        `You have about ${money(isaRoom)} of this year’s ${money(a.isaAllowance)} ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.`);
+        `You have about ${money(isaRoom)} of this year’s ${money(a.isaAllowance)} ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.`,
+        isaMonthly >= 10 ? [{ path: 'savings', op: 'set', value: profile.savings.concat({ id: 'idea-isa', type: 'ssIsa', monthly: isaMonthly, grows: 'fixed' }) }] : null);
     }
 
     // 6. Student loan
@@ -128,10 +157,28 @@
     const sl = proj.ok ? proj.events.studentLoan : null;
     if (sl && sl.tracked && sl.writtenOffRow) {
       add('studentLoan', 'tip', 'Don’t rush to overpay your student loan',
-        `On these assumptions it’s written off in April ${sl.writeOffYear} before you repay it, so extra payments would mostly be lost. Your leftover money is likely to do more elsewhere.`);
+        `On these assumptions it’s written off in April ${sl.writeOffYear} before you repay it, so extra payments would mostly be lost. Your leftover money is likely to do more elsewhere.`,
+        (profile.income.studentLoanOverpayment || 0) > 0 ? [{ path: 'income.studentLoanOverpayment', op: 'set', value: 0 }] : null);
     }
 
     return { left, essentials, emergency, suggestions: out, split, splitReason: reason, pay, today };
+  }
+
+  // Pay `pct` more of your salary into your pension (up to 100%), or null.
+  function pensionPatch(profile, pct) {
+    const room = 100 - (profile.assumptions.employeePensionPct || 0);
+    const value = Math.min(pct, room);
+    return value > 0 && (profile.income.grossSalary || 0) > 0 ? [{ path: 'assumptions.employeePensionPct', op: 'add', value }] : null;
+  }
+
+  // The smallest whole % more into your pension that brings your income down
+  // to where the allowance starts to go (or as close as 100% gets), or null.
+  function taperPatch(profile, threshold) {
+    const room = 100 - (profile.assumptions.employeePensionPct || 0);
+    if (!((profile.income.grossSalary || 0) > 0) || room <= 0) return null;
+    let n = 1;
+    while (n < room && FP.tax.forProfile(FP.patch.applyPatch(profile, pensionPatch(profile, n))).adjustedNetIncome > threshold) n += 1;
+    return pensionPatch(profile, n);
   }
 
   // A sensible starting split for the leftover money (adds up to 100%). It always

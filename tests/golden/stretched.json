@@ -2596,7 +2596,10 @@
         "id": "noSurplus",
         "tone": "warn",
         "title": "Nothing left over each month",
-        "text": "You’re £483 a month short after spending, debts and regular savings. Look at your biggest spending categories, or reduce regular savings until it balances."
+        "text": "You’re £483 a month short after spending, debts and regular savings. Look at your biggest spending categories, or reduce regular savings until it balances.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       }
     ],
     "split": null
