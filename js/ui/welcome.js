@@ -52,13 +52,16 @@
     return card;
   }
 
+  // Set when Get started couldn't be saved (storage blocked), so the button still works this visit.
+  let startedUnsaved = false;
+
   /*
    * Until you start: a front page with the app's name, what happens next and
    * one button. Then the quick start on its own. Someone who has already
    * entered something goes straight to the quick start.
    */
   function render(root, ctx) {
-    const started = FP.store.pref('started') === '1' || !FP.checklist.isEmpty(ctx.profile());
+    const started = startedUnsaved || FP.store.pref('started') === '1' || !FP.checklist.isEmpty(ctx.profile());
     if (started) quickStartPage(root, ctx); else frontPage(root, ctx);
   }
 
@@ -90,6 +93,7 @@
           type: 'button', class: 'gate-go',
           onclick: () => {
             FP.store.pref('started', '1');
+            startedUnsaved = FP.store.pref('started') !== '1';
             // The front page has just shown the notice, so the bar stays one line.
             document.getElementById('disclaimer').open = false;
             ctx.rerender();
@@ -100,7 +104,7 @@
         }, 'Get started'),
         otherWays(ctx),
         h('p', { class: 'gate-note' }, 'Everything stays in this browser: no accounts, nothing sent anywhere.'),
-        h('details', { class: 'gate-notice' },
+        h('details', { class: 'gate-notice', open: true },
           h('summary', null, 'A planning illustration, not financial advice'),
           h('p', null, 'Results depend on the assumptions you set, and projections are not guaranteed. Figures are estimates based on your inputs and the assumptions you can see and change. Investments can fall as well as rise. Consider speaking to a regulated financial adviser before making decisions.'))));
   }
