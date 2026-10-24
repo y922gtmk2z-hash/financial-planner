@@ -264,6 +264,8 @@
           c.setAttribute('cy', v == null ? 0 : y(v));
           c.setAttribute('visibility', v == null ? 'hidden' : 'visible');
         });
+        // Points are a year apart from today, so from the fifth on they're estimates: rounded.
+        const fmt = (v) => FP.dom.money(v, { approx: FP.dom.far(active) });
         const items = opts.series.map((ser) => ({ ser, v: ser.values[active] }))
           .filter((it) => opts.type !== 'area' || Math.abs(it.v || 0) > 0.5);
         const ordered = opts.type === 'area' ? items.slice().reverse() : items;
@@ -272,10 +274,10 @@
           h('ul', null, ordered.map((it) => h('li', null,
             h('span', { class: 'swatch', style: `background:var(${it.ser.color})` }),
             h('span', { class: 'tip-label' }, it.ser.label),
-            h('span', { class: 'tip-value' }, it.v == null ? '\u2014' : FP.dom.money(it.v))))),
-          band ? h('p', { class: 'tip-total' }, h('span', null, band.label), h('span', null, `${FP.dom.money(band.low[active])} \u2013 ${FP.dom.money(band.high[active])}`)) : null,
+            h('span', { class: 'tip-value' }, it.v == null ? '\u2014' : fmt(it.v))))),
+          band ? h('p', { class: 'tip-total' }, h('span', null, band.label), h('span', null, `${fmt(band.low[active])} \u2013 ${fmt(band.high[active])}`)) : null,
           opts.type === 'area' && opts.totalLabel
-            ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, FP.dom.money(items.reduce((t, it) => t + (it.v || 0), 0))))
+            ? h('p', { class: 'tip-total' }, h('span', null, opts.totalLabel), h('span', null, fmt(items.reduce((t, it) => t + (it.v || 0), 0))))
             : null);
         tip.hidden = false;
         const tw = tip.offsetWidth;

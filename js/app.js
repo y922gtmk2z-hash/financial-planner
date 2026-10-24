@@ -149,8 +149,9 @@
 
   const isSample = () => workspace.scenarios.some((s) => s.profile.isSample);
 
-  // The sample banner is in full on the first screen you see, then one line.
-  let bannerSeen = false;
+  // The sample banner is in full on the first screen you see (once per
+  // browser, remembered like the disclaimer), then one line.
+  let bannerSeen = FP.store.pref('seenSampleBanner') === '1';
   function drawBanner() {
     banner.hidden = !isSample();
     if (banner.hidden) return;
@@ -168,10 +169,11 @@
       return;
     }
     bannerSeen = true;
+    FP.store.pref('seenSampleBanner', '1');
     FP.dom.fill(banner,
-      h('p', null, h('strong', null, 'This is a fictional example household. '), 'Look around, then put in your own figures.'),
-      h('div', { class: 'button-row' },
-        h('button', { type: 'button', class: 'small', onclick: ownFigures }, 'Start with my own figures'),
+      h('p', null, h('strong', null, 'This is a fictional example household. '), 'Look around, then ',
+        h('button', { type: 'button', class: 'link', onclick: ownFigures }, 'start with your own figures'),
+        ' or ',
         h('button', {
           type: 'button', class: 'link',
           onclick: () => {
@@ -179,7 +181,8 @@
             save();
             drawBanner();
           },
-        }, 'or edit this example as mine')));
+        }, 'edit this example as yours'),
+        '.'));
   }
 
   // Shows which scenario every screen is editing, and lets you switch.
@@ -190,7 +193,7 @@
     if (scenarioBar.hidden) return;
     const current = FP.scenarios.active(workspace);
     const select = h('select', { id: 'scenario-select', 'aria-label': 'Scenario you are viewing and editing' },
-      list.map((s, i) => h('option', { value: s.id, selected: s.id === current.id }, i === 0 ? `${s.name} (baseline)` : s.name)));
+      list.map((s, i) => h('option', { value: s.id, selected: s.id === current.id }, i === 0 && s.name !== 'Baseline' ? `${s.name} (baseline)` : s.name)));
     select.addEventListener('change', () => ctx.setActive(select.value));
     FP.dom.fill(scenarioBar,
       h('label', { for: 'scenario-select', class: 'scenario-label' }, 'Scenario'),

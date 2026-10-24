@@ -542,6 +542,7 @@
       });
       calc.hidden = steps;
       footer.hidden = !steps;
+      strip.refresh();
       if (steps) {
         const last = current === STEPS.length - 1;
         const missing = stepMissing(STEPS[current], pp);
@@ -555,7 +556,10 @@
       }
     }
 
-    FP.dom.add(root, h('h1', null, 'Your figures'), intro, nav, groups, footer, calc);
+    // The strip sits above the Back and Next buttons: pinned to the bottom of
+    // the screen, it's only ever pushed up from where it sits, so it can't cover them.
+    const strip = liveStrip(ctx, root, () => (mode === 'steps' ? STEPS[current].id : openAll >= 0 ? STEPS[openAll].id : null));
+    FP.dom.add(root, h('h1', null, 'Your figures'), intro, nav, groups, strip, footer, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {
@@ -565,7 +569,6 @@
       if (mode === 'all' && i >= 0 && i !== openAll) { openAll = i; draw(); }
     });
 
-    const strip = liveStrip(ctx, root);
     let timer = null;
     const refresh = (e) => {
       clearTimeout(timer);
@@ -595,7 +598,6 @@
     root.addEventListener('input', refresh);
     root.addEventListener('change', refresh);
     root.addEventListener('click', refresh);
-    root.appendChild(strip);
     draw();
 
     // On the one-page view, a section counts as visited once you've scrolled to it.
@@ -619,20 +621,40 @@
     }
   }
 
-  // Shows the result of what you've entered so far, pinned above the tabs.
-  function liveStrip(ctx, root) {
+  /*
+   * Pinned above the tabs: the result the section you're in changes (About you:
+   * what you could spend in retirement; Income: take-home; Outgoings: left over;
+   * Assets and Debts: net worth). On the one-page view with nothing open, take-home
+   * and left over. section(): the id of the section you're in, or null.
+   */
+  const STRIP = {
+    you: (p) => {
+      const rs = FP.summary.checklist(p).ready ? FP.projection.retirementSpend(p) : null;
+      return [[FP.dom.measure('couldSpend'), rs ? `${money(rs.monthly, { approx: FP.dom.far(p.assumptions.retirementAge - p.about.age) })} a month` : '\u2014']];
+    },
+    income: (p) => [['Take-home', `${money(FP.tax.forProfile(p).takeHomeMonthly)} a month`]],
+    outgoings: (p) => [leftCell(p)],
+    assets: (p) => [netWorthCell(p)],
+    debts: (p) => [netWorthCell(p)],
+  };
+  function leftCell(p) {
+    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus || 0;
+    return [left < 0 ? 'Short by' : 'Left over', `${money(Math.abs(left))} a month`, left < 0];
+  }
+  function netWorthCell(p) {
+    return [FP.dom.measure('netWorth'), money(FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).netWorth)];
+  }
+
+  function liveStrip(ctx, root, section) {
     const figures = h('p', { class: 'live-figures', role: 'status', 'aria-live': 'polite' });
-    const strip = h('div', { class: 'live-strip', role: 'group', 'aria-label': 'Each month, from what you’ve entered' }, figures,
+    const strip = h('div', { class: 'live-strip', role: 'group', 'aria-label': 'From what you’ve entered' }, figures,
       h('button', { type: 'button', class: 'small', onclick: () => calculate(ctx, root) }, 'See my plan'));
     strip.refresh = () => {
       const p = ctx.profile();
-      const pay = FP.tax.forProfile(p);
-      const left = FP.summary.compute(p, pay.takeHomeMonthly).cashFlow.surplus;
-      FP.dom.fill(figures,
-        h('span', null, h('small', null, 'Take-home'), h('strong', null, money(pay.takeHomeMonthly))),
-        h('span', null, h('small', null, left < 0 ? 'Short by' : 'Left over'), h('strong', { class: left < 0 ? 'negative' : null }, money(Math.abs(left || 0)))));
+      const show = STRIP[section()];
+      const cells = show ? show(p) : [['Take-home', money(FP.tax.forProfile(p).takeHomeMonthly)], leftCell(p)];
+      FP.dom.fill(figures, cells.map(([label, value, bad]) => h('span', null, h('small', null, label), h('strong', { class: bad ? 'negative' : null }, value))));
     };
-    strip.refresh();
     return strip;
   }
 

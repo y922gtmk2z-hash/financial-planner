@@ -39,10 +39,28 @@
 
   const gbp0 = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 });
 
-  function money(n) {
+  // Figures this many years or more ahead are estimates, shown rounded (see money).
+  const APPROX_YEARS = 5;
+  const far = (yearsAhead) => yearsAhead >= APPROX_YEARS;
+
+  /*
+   * £ to the pound, or with { approx: true } to three significant figures:
+   * £1.20m, £292k, £45.7k, £3,800. For projected figures five or more years
+   * ahead, so they don't look more exact than they are.
+   */
+  function money(n, opts) {
     if (!Number.isFinite(n)) return '—';
+    if (opts && opts.approx) return approxMoney(n);
     const s = gbp0.format(Math.round(n));
     return s === '-£0' ? '£0' : s;
+  }
+
+  function approxMoney(n) {
+    const a = Math.abs(n);
+    const sign = n < 0 && Number(a.toPrecision(3)) >= 0.5 ? '-' : '';
+    if (Number((a / 1e3).toPrecision(3)) >= 1000) return `${sign}£${(a / 1e6).toPrecision(3)}m`;
+    if (Number(a.toPrecision(3)) >= 1e4) return `${sign}£${(a / 1e3).toPrecision(3)}k`;
+    return `${sign}${gbp0.format(Math.round(Number(a.toPrecision(3))))}`;
   }
 
   function pct(n, dp = 1) {
@@ -80,12 +98,33 @@
       items.filter(Boolean).map((t) => h('li', { class: 'chip' }, t)));
   }
 
-  // A tab's heading, its one-line subtitle and (optionally) a way back to Setup.
-  function pageHead(title, sub, opts) {
+  // A tab's heading and its one-line subtitle. (Your figures is in the header.)
+  function pageHead(title, sub) {
     return h('div', { class: 'page-head' },
-      h('div', null, h('h1', null, title), h('p', { class: 'page-sub' }, sub)),
-      opts && opts.edit ? h('a', { class: 'button secondary edit-figures', href: '#setup' }, 'Edit your figures') : null);
+      h('div', null, h('h1', null, title), h('p', { class: 'page-sub' }, sub)));
   }
+
+  // A text link at the foot of a card, to the figures behind it.
+  function cardFoot(href, text) {
+    return h('p', { class: 'card-foot' }, h('a', { href: href || '#setup' }, text || 'Edit your figures'));
+  }
+
+  /*
+   * One name for each measure, used on every screen (see the README glossary),
+   * with what it includes for the detail sheets. of(row): its value from a
+   * projection row.
+   */
+  const MEASURES = {
+    savingsPensions: { label: 'Savings and pensions', includes: 'Includes cash, ISAs, other investments and pensions. Not your home.', of: (r) => r.cash + r.isa + r.gia + r.pension },
+    pensionPots: { label: 'Pension pots', includes: 'Includes your pensions only.', of: (r) => r.pension },
+    netWorth: { label: 'Net worth', includes: 'Includes everything you own, your home too, minus everything you owe.', of: (r) => r.netWorth },
+    moneyLastsTo: { label: 'Money lasts to', includes: 'The age your savings and pensions last to, spending your retirement goal each month.' },
+    couldSpend: { label: 'Could spend in retirement', includes: 'The most you could spend each month from retirement, in today\u2019s money, without running short.' },
+  };
+  const measure = (id, age) => (age == null ? MEASURES[id].label : `${MEASURES[id].label} at ${age}`);
+
+  // "Money lasts to", from FP.projection.retirementNeed: an age, or "95+" when it lasts.
+  const lastsTo = (need) => (need.lastsUntil ? `Age ${need.lastsUntil}` : `${need.endAge}+`);
 
   // One plain-English line under a chart: what it means for you.
   function soWhat(text) {
@@ -102,5 +141,5 @@
       h('div', { class: 'fold-body' }, children));
   }
 
-  FP.dom = { h, append, add, fill, money, pct, months, date, inputText, chips, pageHead, soWhat, foldCard };
+  FP.dom = { h, append, add, fill, money, far, APPROX_YEARS, pct, months, date, inputText, chips, pageHead, cardFoot, soWhat, foldCard, MEASURES, measure, lastsTo };
 })(globalThis.FP = globalThis.FP || {});

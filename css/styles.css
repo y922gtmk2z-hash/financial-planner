@@ -172,10 +172,12 @@ p { margin: 0 0 10px; }
 .sample-banner .button-row { align-items: center; }
 
 .sample-banner {
-  max-width: 760px; margin: 0 auto 8px; padding: 12px 14px;
+  max-width: 760px; margin: 0 auto 8px; padding: 8px 14px;
   background: var(--info-bg); color: var(--info-ink); font-size: 0.9rem;
 }
-.sample-banner p { margin-bottom: 8px; }
+.sample-banner p { margin: 0; }
+/* Links inside the sentence sit in the text (inline links are exempt from target size). */
+.sample-banner:not(.slim) button.link { display: inline; min-height: 0; text-decoration: underline; text-underline-offset: 2px; }
 .sample-banner.slim { padding: 6px 14px; }
 .sample-banner.slim p { margin: 0; }
 @media (min-width: 792px) { .sample-banner { border-radius: var(--radius); } }
@@ -565,7 +567,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---------- Stage 4: scenarios ---------- */
 .scenario-bar {
-  max-width: 760px; margin: 0 auto; padding: 8px var(--gutter);
+  max-width: 760px; margin: 0 auto; padding: 4px var(--gutter);
   display: flex; align-items: center; gap: 8px;
 }
 .scenario-bar.not-baseline { background: var(--warn-bg); }
@@ -733,6 +735,8 @@ fieldset.row-card { min-width: 0; }
 .edit-link { font-size: 0.85rem; margin-left: 6px; white-space: nowrap; }
 
 /* ---------- Live strip (Setup) ---------- */
+/* Boxes you move to (Tab, or a link to a field) stop clear of the strip and the tabs. */
+html:has(.live-strip) { scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 80px); }
 .live-strip {
   position: sticky; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -806,6 +810,7 @@ html.sheet-open { overflow: hidden; }
 .sheet-body { overflow-y: auto; padding: 12px var(--gutter) calc(24px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
 .sheet-headline { font-size: 1.5rem; font-weight: 700; margin: 0 0 2px; font-variant-numeric: tabular-nums; }
 .sheet-metrics { margin: 10px 0; }
+.facts dt .includes { display: block; font-size: 0.8rem; color: var(--text-3); }
 .sheet-chart { margin: 8px 0 4px; }
 .delta { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 .delta.better { color: var(--good); }
@@ -918,10 +923,12 @@ body:has(main > .gate) > :is(.app-header, aside, .sample-banner, .scenario-bar, 
   box-shadow: inset 0 0 0 1px var(--text-3);
 }
 .alloc-notice { margin-top: 8px; }
-.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 8px; }
 .page-head h1 { margin-bottom: 0; }
+/* A link to the figures behind a card, at its foot (instead of a page-level button). */
+.card-foot { margin: 8px 0 0; font-size: 0.9rem; }
+.card-foot a { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-weight: 600; }
 .page-sub { margin: 2px 0 0; color: var(--text-2); }
-.edit-figures { min-height: 44px; padding: 0 14px; font-size: 0.9rem; text-decoration: none; }
 .so-what { margin: 8px 0 4px; }
 .delta-list { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 10px; }
 .delta-list > li { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }

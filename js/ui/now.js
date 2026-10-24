@@ -53,7 +53,7 @@
       return;
     }
     FP.dom.add(root,
-      FP.dom.pageHead('Today', 'Where you stand this month', { edit: true }),
+      FP.dom.pageHead('Today', 'Where you stand this month'),
       s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>
         h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
       nav, body);

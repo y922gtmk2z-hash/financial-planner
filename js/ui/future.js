@@ -2,7 +2,11 @@
 (function (FP) {
   'use strict';
 
-  const { h, money, pct, chips } = FP.dom;
+  const { h, money, pct, chips, measure, lastsTo } = FP.dom;
+  // The charts and table run to your end age (95 unless you change it).
+  const toEnd = (p) => ({ maxYears: p.assumptions.endAge - p.about.age });
+  // A figure y years ahead: to the pound for the next few years, then rounded.
+  const at = (n, y) => money(n, { approx: FP.dom.far(y) });
   const A = FP.assumptions;
 
   // Viewing preference only (not part of the plan), remembered on this device.
@@ -37,7 +41,7 @@
     };
 
     FP.dom.add(root,
-      FP.dom.pageHead('Future', 'Year by year', { edit: true }),
+      FP.dom.pageHead('Future', 'Year by year'),
       h('p', { class: 'lead' }, 'A year-by-year illustration of where your plan could go. It is not a forecast: real returns, prices and pay will differ.'),
       h('div', { class: 'view-toggle' }, FP.field.render(viewField, {
         value: view,
@@ -64,14 +68,14 @@
     if (FP.checklist.isEmpty(p)) return FP.checklist.emptyCard('your projection');
     const missing = FP.checklist.card(p);
     if (missing) return missing;
-    const r = FP.projection.project(p);
+    const r = FP.projection.project(p, toEnd(p));
     if (!r.ok) {
       return h('section', { class: 'card' }, h('p', null, r.message), h('a', { href: '#setup' }, 'Go to Your figures'));
     }
     const a = p.assumptions;
     const real = view === 'real';
     const rows = real ? r.rows.map(FP.projection.toReal) : r.rows;
-    const at = (row) => (row ? rows[row.y] : null);
+    const rowAt = (row) => (row ? rows[row.y] : null);
     const ev = r.events;
     const sl = ev.studentLoan;
     const idx = (row) => (row ? row.y : null);
@@ -98,18 +102,20 @@
       a.taxThresholds === 'inflation' ? 'Tax thresholds rise with inflation' : 'Tax thresholds frozen',
     ]);
 
-    const end = at(ev.end);
-    const retire = at(ev.retirement);
+    const end = rowAt(ev.end);
+    const retire = rowAt(ev.retirement);
+    // The same measure, from the same calculation, as Your plan's retirement card.
+    const need = FP.projection.retirementNeed(p);
+    const M = FP.dom.MEASURES;
     const tiles = [
-      retire ? tile(`Net worth at ${retire.age}`, money(retire.netWorth), 'at retirement') : null,
-      retire ? tile(`Pension pot at ${retire.age}`, money(retire.pension), 'at retirement') : null,
+      need ? tile(measure('moneyLastsTo'), lastsTo(need), `at ${money(need.goal)} a month`, !!need.lastsUntil) : null,
+      retire ? tile(measure('savingsPensions', retire.age), at(M.savingsPensions.of(retire), retire.y), 'when you retire') : null,
+      retire ? tile(measure('pensionPots', retire.age), at(M.pensionPots.of(retire), retire.y), 'when you retire') : null,
+      retire ? tile(measure('netWorth', retire.age), at(retire.netWorth, retire.y), 'when you retire') : null,
       ev.hasMortgage
         ? tile('Mortgage-free', ev.mortgageFree ? `Age ${ev.mortgageFree.age}` : 'Not yet', ev.mortgageFree ? String(ev.mortgageFree.year) : `still owing at ${end.age}`)
         : null,
       studentLoanTile(sl, rows, end),
-      ev.runsOut
-        ? tile('Money runs short', `Age ${ev.runsOut.age}`, String(ev.runsOut.year), true)
-        : tile(`Net worth at ${end.age}`, money(end.netWorth), String(end.year)),
     ].filter(Boolean);
 
     // Net worth if investment and pension returns are 2 points a year lower or higher.
@@ -117,7 +123,7 @@
       const q = JSON.parse(JSON.stringify(p));
       q.assumptions.investmentReturn += shift;
       q.assumptions.pensionGrowth += shift;
-      const rr = FP.projection.project(q);
+      const rr = FP.projection.project(q, toEnd(q));
       return (real ? rr.rows.map(FP.projection.toReal) : rr.rows).map((x) => x.netWorth);
     };
     const band = { label: 'Returns \u00b12 points', color: '--series-7', low: range(-2), high: range(2) };
@@ -134,7 +140,8 @@
       r.warnings.length ? h('ul', { class: 'notices' }, r.warnings.map((w) =>
         h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
       h('div', { class: 'stat-grid tiles' }, tiles),
-      h('p', { class: 'muted small' }, `Amounts ${moneyNote}. Projection runs ${r.years} years, to age ${end.age}.`),
+      h('p', { class: 'muted small' }, `Amounts ${moneyNote}; figures five or more years ahead are rounded. Projection runs ${r.years} years, to age ${end.age}. ${M.savingsPensions.label}: ${M.savingsPensions.includes}`),
+      FP.dom.cardFoot('#setup/assets'),
 
       h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
         h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
@@ -146,10 +153,10 @@
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
         }),
-        FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)} With returns 2 points lower it would be ${money(band.low[ev.retirement ? ev.retirement.y : rows.length - 1])}.`),
+        FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)} With returns 2 points lower it would be ${at(band.low[ev.retirement ? ev.retirement.y : rows.length - 1], ev.retirement ? ev.retirement.y : rows.length - 1)}.`),
         h('details', { class: 'advanced', id: 'nw-based-on' },
           h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
-          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${money(band.low[band.low.length - 1])} to ${money(band.high[band.high.length - 1])}). Real returns vary from year to year, so the actual path could fall outside it.`),
+          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${at(band.low[band.low.length - 1], end.y)} to ${at(band.high[band.high.length - 1], end.y)}). Real returns vary from year to year, so the actual path could fall outside it.`),
           keyAssumptions)),
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },
@@ -182,9 +189,9 @@
     if (sl.clearedRow) return tile('Student loan repaid', `Age ${sl.clearedRow.age}`, String(sl.clearedRow.year));
     if (sl.writtenOffRow) {
       const left = rows[sl.writtenOffRow.y].studentLoanWrittenOff;
-      return tile('Student loan written off', `Age ${sl.writtenOffAge}`, `${money(left)} left, April ${sl.writeOffYear}`);
+      return tile('Student loan written off', `Age ${sl.writtenOffAge}`, `${at(left, sl.writtenOffRow.y)} left, April ${sl.writeOffYear}`);
     }
-    return tile('Student loan', 'Still owing', `${money(rows[end.y].studentLoan)} at ${end.age}`);
+    return tile('Student loan', 'Still owing', `${at(rows[end.y].studentLoan, end.y)} at ${end.age}`);
   }
 
   function tile(label, value, sub, warn) {
@@ -202,14 +209,14 @@
       ['Left over', (x) => x.surplus, true],
       ['Cash', (x) => x.cash],
       ['Investments', (x) => x.isa + x.gia],
-      ['Pension', (x) => x.pension],
+      ['Pension pots', (x) => x.pension],
       ['Home equity', (x) => x.equity],
       ['Student loan', (x) => x.studentLoan],
       ['Other owed', (x) => x.debts + x.shortfall],
       ['Net worth', (x) => x.netWorth],
     ];
     return FP.dom.foldCard('year-table', 'Year-by-year table', 'Income, spending and balances for every year',
-      h('p', { class: 'muted small' }, `Amounts ${moneyNote}. Flows (income, spending, left over) are for the year; balances are at the end of it.`),
+      h('p', { class: 'muted small' }, `Amounts ${moneyNote}, rounded from five years ahead. Flows (income, spending, left over) are for the year; balances are at the end of it.`),
       h('div', { class: 'table-scroll tall', tabindex: '0', role: 'region', 'aria-label': 'Year-by-year table' }, h('table', { class: 'data-table year-table' },
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, 'Age'), h('th', { scope: 'col' }, 'Year'),
@@ -218,7 +225,7 @@
           h('th', { scope: 'row' }, String(x.age)), h('td', null, String(x.year)),
           cols.map(([, fn]) => {
             const v = fn(x);
-            return h('td', { class: `num${v < 0 ? ' negative' : ''}` }, x.today && v === undefined ? '—' : Number.isFinite(v) ? money(v) : '—');
+            return h('td', { class: `num${v < 0 ? ' negative' : ''}` }, x.today && v === undefined ? '—' : Number.isFinite(v) ? at(v, x.y) : '—');
           })))))));
   }
 
@@ -233,7 +240,7 @@
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
         h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before what\u2019s left over each month is shared out, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
         h('li', null, `Your emergency fund share goes to cash until your cash savings cover ${leftover.emergencyMonths} months of that year\u2019s spending, mortgage and debt payments. Extra debt payments clear the most expensive debt first. ${a.capOverpayments === 'none' ? 'Mortgage overpayments from leftover money have no limit.' : `Mortgage overpayments from leftover money stay within ${a.overpaymentLimitPct}% of the balance a year.`} When a choice can\u2019t take its share (the fund is full, a debt is paid off, or you\u2019ve retired), the share goes to your other choices in proportion. Leftover money you haven\u2019t chosen anything for isn\u2019t saved: it\u2019s treated as spent.`),
-        h('li', null, `\u201cYou could spend in retirement\u201d on Your plan is the most you could spend each month from retirement, in today\u2019s money, so that your money lasts to age ${a.endAge} (this runs past the 40-year limit of the charts). It doesn\u2019t sell your home, and your mortgage and debt payments are on top.`),
+        h('li', null, `\u201cCould spend in retirement\u201d on Your plan is the most you could spend each month from retirement, in today\u2019s money, so that your money lasts to age ${a.endAge} (the charts run to the same age). It doesn\u2019t sell your home, and your mortgage and debt payments are on top.`),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
         h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
   }

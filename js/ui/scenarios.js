@@ -2,15 +2,15 @@
 (function (FP) {
   'use strict';
 
-  const { h, money, pct } = FP.dom;
+  const { h, money, pct, measure, lastsTo } = FP.dom;
   const S = FP.scenarios;
   const COLORS = ['--series-1', '--series-2', '--series-3', '--series-4', '--series-5', '--series-6', '--series-7', '--series-8'];
 
   const METRICS = [
     { id: 'netWorth', label: 'Net worth', get: (r) => r.netWorth },
-    { id: 'pension', label: 'Pension pots', get: (r) => r.pension },
+    { id: 'savingsPensions', label: FP.dom.MEASURES.savingsPensions.label, get: FP.dom.MEASURES.savingsPensions.of },
+    { id: 'pension', label: FP.dom.MEASURES.pensionPots.label, get: FP.dom.MEASURES.pensionPots.of },
     { id: 'equity', label: 'Home equity', get: (r) => r.equity },
-    { id: 'savings', label: 'Cash & investments', get: (r) => r.cash + r.isa + r.gia },
   ];
 
   let metric = 'netWorth';
@@ -191,33 +191,53 @@
       return FP.checklist.card(ctx.profile(), { what: 'projections side by side' })
         || h('section', { class: 'card' }, h('p', null, 'Enter your age in Your figures to compare projections.'), h('a', { href: '#setup' }, 'Go to Your figures'));
     }
-    const commonAge = FP.compare.commonEndAge(sums.map((x) => x.s));
     const base = sums[0].s;
     const moneyNote = real ? 'today’s money' : 'future pounds';
+    // Each scenario run to its end age (for the chart and like-for-like ages),
+    // and how long its money lasts at its retirement goal.
+    sums.forEach((x) => {
+      if (!x.s.ok) return;
+      const p = x.sc.profile;
+      const full = FP.projection.project(p, { maxYears: p.assumptions.endAge - p.about.age });
+      x.rows = real ? full.rows.map(FP.projection.toReal) : full.rows;
+      x.need = FP.projection.retirementNeed(p);
+    });
+    const baseX = sums[0];
+    // Wealth is compared at one age for every scenario: the baseline's retirement age.
+    const fixedAge = base.ok ? base.retirementAge : null;
+    const rowAt = (x, age) => (x.rows ? x.rows.find((r) => r.age === age) || null : null);
+    // Rounded when the figure is five or more years ahead.
+    const fmtAt = (n, row) => money(n, { approx: !!row && FP.dom.far(row.y) });
+    const atRetire = (x) => (x.rows ? rowAt(x, x.s.retirementAge) : null);
 
-    const delta = (v, b) => {
+    const delta = (v, b, row) => {
       if (!Number.isFinite(v) || !Number.isFinite(b) || Math.abs(v - b) < 0.5) return null;
-      return h('small', { class: v > b ? 'positive' : 'negative' }, `${v > b ? '+' : '−'}${money(Math.abs(v - b))}`);
+      return h('small', { class: v > b ? 'positive' : 'negative' }, `${v > b ? '+' : '−'}${fmtAt(Math.abs(v - b), row)}`);
     };
     const ageText = (v, none) => (v === undefined ? 'No mortgage' : v == null ? none : `Age ${v}`);
+    const atFixed = (get) => (x) => {
+      const r = rowAt(x, fixedAge);
+      const b = rowAt(baseX, fixedAge);
+      return r ? [fmtAt(get(r), r), delta(get(r), b && get(b), r)] : '\u2014';
+    };
+    const M = FP.dom.MEASURES;
+    const spendCell = (x) => {
+      const rs = x.s.retirementSpend;
+      const b = base.retirementSpend;
+      const row = atRetire(x);
+      return rs ? [`${fmtAt(rs.monthly, row)} a month`, delta(rs.monthly, b && b.monthly, row)] : '\u2014';
+    };
     const rows = [
-      { label: 'Take-home pay (a month, now)', cell: (s) => [money(s.takeHomeMonthly), delta(s.takeHomeMonthly, base.takeHomeMonthly)] },
-      { label: 'Left over each month (now)', cell: (s) => [money(s.surplusMonthly), delta(s.surplusMonthly, base.surplusMonthly)] },
-      { label: 'Retirement age', cell: (s) => String(s.retirementAge) },
-      { label: 'Net worth at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.netWorth), delta(s.atRetirement.netWorth, base.atRetirement && base.atRetirement.netWorth)] : '—') },
-      { label: 'Pension pot at retirement', cell: (s) => (s.atRetirement ? [money(s.atRetirement.pension), delta(s.atRetirement.pension, base.atRetirement && base.atRetirement.pension)] : '—') },
-      { label: 'Could spend in retirement (a month, today\u2019s money)', cell: (s) => (s.retirementSpend ? [money(s.retirementSpend.monthly), delta(s.retirementSpend.monthly, base.retirementSpend && base.retirementSpend.monthly)] : '\u2014') },
-      { label: 'Mortgage-free', cell: (s) => ageText(s.mortgageFreeAge, 'Not in projection') },
-      { label: 'Student loan', cell: (s) => studentLoanText(s.studentLoan) },
-      { label: 'Money runs short', cell: (s) => (s.runsOutAge ? h('span', { class: 'negative' }, `Age ${s.runsOutAge}`) : 'No') },
-      commonAge ? {
-        label: `Net worth at ${commonAge}`,
-        cell: (s) => {
-          const r = FP.compare.rowAtAge(s, commonAge);
-          const b = FP.compare.rowAtAge(base, commonAge);
-          return r ? [money(r.netWorth), delta(r.netWorth, b && b.netWorth)] : '—';
-        },
-      } : null,
+      { label: measure('moneyLastsTo'), cell: (x) => (x.need ? h('span', { class: x.need.lastsUntil ? 'negative' : null }, lastsTo(x.need)) : '\u2014') },
+      { label: `${measure('couldSpend')} (today\u2019s money)`, cell: spendCell },
+      fixedAge != null ? { label: measure('netWorth', fixedAge), cell: atFixed(M.netWorth.of) } : null,
+      fixedAge != null ? { label: measure('savingsPensions', fixedAge), cell: atFixed(M.savingsPensions.of) } : null,
+      fixedAge != null ? { label: measure('pensionPots', fixedAge), cell: atFixed(M.pensionPots.of) } : null,
+      { label: 'Retirement age', cell: (x) => String(x.s.retirementAge) },
+      { label: 'Take-home pay (a month, now)', cell: (x) => [money(x.s.takeHomeMonthly), delta(x.s.takeHomeMonthly, base.takeHomeMonthly)] },
+      { label: 'Left over each month (now)', cell: (x) => [money(x.s.surplusMonthly), delta(x.s.surplusMonthly, base.surplusMonthly)] },
+      { label: 'Mortgage-free', cell: (x) => ageText(x.s.mortgageFreeAge, 'Not in projection') },
+      { label: 'Student loan', cell: (x) => studentLoanText(x.s.studentLoan) },
     ].filter(Boolean);
 
     const table = h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Scenario comparison table' }, h('table', { class: 'data-table compare-table' },
@@ -227,44 +247,58 @@
           h('span', { class: 'swatch', style: `background:var(${COLORS[i]})`, 'aria-hidden': 'true' }), sc.name)))),
       h('tbody', null, rows.map((row) => h('tr', null,
         h('th', { scope: 'row' }, row.label),
-        sums.map(({ s }) => h('td', { class: 'num' }, s.ok ? row.cell(s) : '—')))))));
+        sums.map((x) => h('td', { class: 'num' }, x.s.ok ? row.cell(x) : '—')))))));
 
     // First: how each scenario differs from the baseline, in a few key figures.
     const years = (n) => `${Math.abs(n)} ${Math.abs(n) === 1 ? 'year' : 'years'}`;
-    const moneyDelta = (v, b, unit) => {
+    const moneyDelta = (v, b, row, unit) => {
       if (!Number.isFinite(v) || !Number.isFinite(b)) return null;
       if (Math.abs(v - b) < 0.5) return h('span', { class: 'delta changed' }, 'Same');
-      return h('span', { class: `delta ${v > b ? 'better' : 'worse'}` }, `${v > b ? '+' : '\u2212'}${money(Math.abs(v - b))}${unit || ''}`);
+      return h('span', { class: `delta ${v > b ? 'better' : 'worse'}` }, `${v > b ? '+' : '\u2212'}${fmtAt(Math.abs(v - b), row)}${unit || ''}`);
     };
-    const deltaRows = (s) => [
-      ['Net worth at retirement', s.atRetirement && base.atRetirement ? moneyDelta(s.atRetirement.netWorth, base.atRetirement.netWorth) : null],
-      ['Could spend in retirement', s.retirementSpend && base.retirementSpend ? moneyDelta(s.retirementSpend.monthly, base.retirementSpend.monthly, ' a month') : null],
-      ['Retirement age', s.retirementAge === base.retirementAge ? h('span', { class: 'delta changed' }, 'Same')
-        : h('span', { class: 'delta changed' }, `${years(s.retirementAge - base.retirementAge)} ${s.retirementAge > base.retirementAge ? 'later' : 'earlier'}`)],
-      ['Mortgage-free', Number.isFinite(s.mortgageFreeAge) && Number.isFinite(base.mortgageFreeAge)
-        ? (s.mortgageFreeAge === base.mortgageFreeAge ? h('span', { class: 'delta changed' }, 'Same')
-          : h('span', { class: `delta ${s.mortgageFreeAge < base.mortgageFreeAge ? 'better' : 'worse'}` }, `${years(s.mortgageFreeAge - base.mortgageFreeAge)} ${s.mortgageFreeAge < base.mortgageFreeAge ? 'sooner' : 'later'}`))
-        : null],
-      ['Money runs short', s.runsOutAge && !base.runsOutAge ? h('span', { class: 'delta worse' }, `At ${s.runsOutAge}`)
-        : !s.runsOutAge && base.runsOutAge ? h('span', { class: 'delta better' }, 'No longer') : null],
-    ].filter((r) => r[1]);
+    // Later is better: lasting to the end of the plan counts as the latest.
+    const lastsDelta = (n, b) => {
+      if (!n || !b) return null;
+      const age = (x) => x.lastsUntil || Infinity;
+      if (age(n) === age(b)) return h('span', { class: 'delta changed' }, 'Same');
+      if (!n.lastsUntil) return h('span', { class: 'delta better' }, `Lasts to ${n.endAge}+`);
+      if (!b.lastsUntil) return h('span', { class: 'delta worse' }, `Runs short at ${n.lastsUntil}`);
+      return h('span', { class: `delta ${age(n) > age(b) ? 'better' : 'worse'}` }, `${years(age(n) - age(b))} ${age(n) > age(b) ? 'later' : 'sooner'}`);
+    };
+    const deltaRows = (x) => {
+      const s = x.s;
+      const r = rowAt(x, fixedAge);
+      const b = rowAt(baseX, fixedAge);
+      return [
+        [measure('moneyLastsTo'), lastsDelta(x.need, baseX.need)],
+        [measure('couldSpend'), s.retirementSpend && base.retirementSpend ? moneyDelta(s.retirementSpend.monthly, base.retirementSpend.monthly, atRetire(x), ' a month') : null],
+        [measure('netWorth', fixedAge), r && b ? moneyDelta(r.netWorth, b.netWorth, r) : null],
+        ['Retirement age', s.retirementAge === base.retirementAge ? h('span', { class: 'delta changed' }, 'Same')
+          : h('span', { class: 'delta changed' }, `${years(s.retirementAge - base.retirementAge)} ${s.retirementAge > base.retirementAge ? 'later' : 'earlier'}`)],
+        ['Mortgage-free', Number.isFinite(s.mortgageFreeAge) && Number.isFinite(base.mortgageFreeAge)
+          ? (s.mortgageFreeAge === base.mortgageFreeAge ? h('span', { class: 'delta changed' }, 'Same')
+            : h('span', { class: `delta ${s.mortgageFreeAge < base.mortgageFreeAge ? 'better' : 'worse'}` }, `${years(s.mortgageFreeAge - base.mortgageFreeAge)} ${s.mortgageFreeAge < base.mortgageFreeAge ? 'sooner' : 'later'}`))
+          : null],
+      ].filter((row) => row[1]);
+    };
     const others = sums.slice(1);
     const deltas = others.length
-      ? h('ul', { class: 'delta-list' }, others.map(({ sc, s }) => h('li', null,
-        h('p', { class: 'scenario-name' }, h('span', { class: 'swatch', style: `background:var(${COLORS[sums.findIndex((x) => x.sc === sc)]})`, 'aria-hidden': 'true' }), h('strong', null, sc.name)),
-        s.ok ? h('dl', { class: 'facts delta-facts' }, deltaRows(s).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v))))
+      ? h('ul', { class: 'delta-list' }, others.map((x) => h('li', null,
+        h('p', { class: 'scenario-name' }, h('span', { class: 'swatch', style: `background:var(${COLORS[sums.indexOf(x)]})`, 'aria-hidden': 'true' }), h('strong', null, x.sc.name)),
+        x.s.ok ? h('dl', { class: 'facts delta-facts' }, deltaRows(x).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v))))
           : h('p', { class: 'muted small' }, 'Not enough figures to project this scenario.'))))
       : h('p', { class: 'muted' }, 'Add a what-if above to see how it differs from your baseline.');
 
     // Overlay chart, aligned by age.
     const ages = [];
-    const minAge = Math.min(...ok.map((x) => x.s.rows[0].age));
-    const maxAge = Math.max(...ok.map((x) => x.s.end.age));
+    const okRows = sums.filter((x) => x.rows);
+    const minAge = Math.min(...okRows.map((x) => x.rows[0].age));
+    const maxAge = Math.max(...okRows.map((x) => x.rows[x.rows.length - 1].age));
     for (let a = minAge; a <= maxAge; a += 1) ages.push(a);
     const m = METRICS.find((x) => x.id === metric) || METRICS[0];
-    const series = sums.map(({ sc, s }, i) => ({
-      label: sc.name, color: COLORS[i], dashed: i >= 4,
-      values: ages.map((age) => { const r = s.ok ? FP.compare.rowAtAge(s, age) : null; return r ? m.get(r) : null; }),
+    const series = sums.map((x, i) => ({
+      label: x.sc.name, color: COLORS[i], dashed: i >= 4,
+      values: ages.map((age) => { const r = rowAt(x, age); return r ? m.get(r) : null; }),
     }));
     const metricSelect = h('select', { id: 'compare-metric' }, METRICS.map((x) => h('option', { value: x.id, selected: x.id === m.id }, x.label)));
     metricSelect.addEventListener('change', () => { metric = metricSelect.value; redraw(); });
@@ -272,7 +306,7 @@
     return [
       h('section', { class: 'card', 'aria-labelledby': 'cmp-h' },
         h('h2', { id: 'cmp-h' }, `Compared with ${sums[0].sc.name}`),
-        h('p', { class: 'muted small' }, `Differences from the baseline, in ${moneyNote}. Green is better, red is worse.`),
+        h('p', { class: 'muted small' }, `Differences from the baseline, in ${moneyNote}${fixedAge != null ? `, with net worth for everyone at ${fixedAge} (the baseline\u2019s retirement age)` : ''}. Green is better, red is worse.`),
         deltas,
         h('details', { class: 'table-toggle all-figures' },
           h('summary', null, 'Show all figures'),

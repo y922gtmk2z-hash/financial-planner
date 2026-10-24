@@ -63,9 +63,11 @@
           headline: `You could spend ${money(rs.monthly)} a month`,
           sub: `from age ${p.assumptions.retirementAge} to ${rs.endAge}, in today’s money`,
           metrics: [
-            { label: 'You could spend in retirement', value: rs.monthly, kind: 'money', per: 'a month', better: 'higher' },
+            // Named as on every screen (see the README glossary).
+            { label: 'Could spend in retirement', value: rs.monthly, kind: 'money', per: 'a month', better: 'higher' },
             { label: 'Your goal', value: goal, kind: 'money', per: 'a month', better: null },
-            ret ? { label: 'Pension pot when you retire', value: ret.pension, kind: 'money', better: 'higher' } : null,
+            ret ? { label: 'Savings and pensions when you retire', value: ret.cash + ret.isa + ret.gia + ret.pension, kind: 'money', better: 'higher' } : null,
+            ret ? { label: 'Pension pots when you retire', value: ret.pension, kind: 'money', better: 'higher' } : null,
           ].filter(Boolean),
           series: seriesOf(r, 'Net worth (today’s money)', (x) => x.netWorth, true),
         };
