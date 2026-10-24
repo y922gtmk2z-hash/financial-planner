@@ -231,7 +231,8 @@
       const pp = ctx.profile();
       FP.dom.fill(nav, h('ol', null, STEPS.map((st, i) => {
         const missing = stepMissing(st, pp);
-        const state = missing.length ? (visited.has(st.id) ? 'todo' : '') : visited.has(st.id) || !steps ? 'done' : '';
+        // Ticked once you've been to a section (and it has what the projection needs).
+        const state = !visited.has(st.id) ? '' : missing.length ? 'todo' : 'done';
         const target = groups[i].querySelector('h2').closest('section').id;
         return h('li', null, h('a', {
           href: `#setup/${target}`,
@@ -285,6 +286,12 @@
       timer = setTimeout(() => {
         if (!leftover.contains(e.target)) leftover.refresh();
         strip.refresh();
+        // Typing in a section counts as having been there.
+        const g = e.target.closest && e.target.closest('[data-step]');
+        if (g && e.type !== 'click') {
+          visited.add(g.dataset.step);
+          FP.store.pref('setupVisited', [...visited].join(','));
+        }
         // Step ticks and the "still needed" note follow what you've entered.
         if (!nav.contains(e.target) && !footer.contains(e.target)) draw();
       }, 200);
@@ -294,6 +301,26 @@
     root.addEventListener('click', refresh);
     root.appendChild(strip);
     draw();
+
+    // On the one-page view, a section counts as visited once you've scrolled to it.
+    if (typeof IntersectionObserver === 'function') {
+      const seen = new IntersectionObserver((entries) => {
+        if (mode !== 'all') return;
+        let changed = false;
+        entries.forEach((e) => {
+          const id = e.target.dataset.step;
+          if (e.isIntersecting && !visited.has(id)) {
+            visited.add(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          FP.store.pref('setupVisited', [...visited].join(','));
+          draw();
+        }
+      }, { rootMargin: '-45% 0px -45% 0px' }); // when it crosses the middle of the screen
+      groups.forEach((g) => seen.observe(g));
+    }
   }
 
   // Shows the result of what you've entered so far, pinned above the tabs.

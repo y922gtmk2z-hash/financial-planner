@@ -31,20 +31,59 @@
   const SPLIT_KEYS = ['emergency', 'debts', 'cash', 'invest', 'mortgage', 'pension'];
 
   /*
-   * The leftover split ({ emergency, debts, cash, invest, mortgage, pension } in
-   * %) as fractions. Under 100% in total: the rest is `unallocated` and isn't
-   * saved anywhere (it's treated as spent). Over 100%: scaled down proportionally.
+   * The leftover split can be entered as % of what's left (unit 'pct', the
+   * default) or as £ a month (unit 'gbp'). These give it as % of `left` (the
+   * money left over a month) either way, and set it back from percentages.
    */
-  function splitShares(split) {
+  function splitAsPct(split, left) {
     const src = split || {};
-    const raw = SPLIT_KEYS.map((k) => Math.max(0, src[k] || 0));
+    const out = {};
+    SPLIT_KEYS.forEach((k) => {
+      const v = Math.max(0, src[k] || 0);
+      out[k] = src.unit !== 'gbp' ? v : left > 0 ? (v / left) * 100 : (v > 0 ? Infinity : 0);
+    });
+    return out;
+  }
+
+  // Sets the split's values from percentages, in the split's own unit (whole
+  // pounds, or % to one decimal place), rounded so the parts add up to the
+  // same total as before.
+  function setSplitFromPct(split, pct, left) {
+    const step = split.unit === 'gbp' ? Math.max(0, left) / 100 : 1;
+    const unitSize = split.unit === 'gbp' ? 1 : 0.1;
+    const exact = SPLIT_KEYS.map((k) => (Math.max(0, pct[k] || 0) * step) / unitSize);
+    const floors = exact.map(Math.floor);
+    let spare = Math.round(sum(exact)) - sum(floors);
+    exact.map((v, i) => [v - floors[i], i]).sort((x, y) => y[0] - x[0]).forEach(([, i]) => {
+      if (spare > 0) { floors[i] += 1; spare -= 1; }
+    });
+    SPLIT_KEYS.forEach((k, i) => { split[k] = Math.round(floors[i] * unitSize * 10) / 10; });
+    return split;
+  }
+
+  /*
+   * The leftover split ({ emergency, debts, cash, invest, mortgage, pension })
+   * as fractions of what's left (`left` a month, needed when it's entered in £).
+   * Under 100% in total: the rest is `unallocated` and isn't saved anywhere
+   * (it's treated as spent). Over 100%: scaled down proportionally.
+   */
+  function splitShares(split, left) {
+    const pct = splitAsPct(split, left);
+    const raw = SPLIT_KEYS.map((k) => pct[k]);
+    if (raw.some((v) => v === Infinity)) raw.forEach((v, i) => { raw[i] = v === Infinity ? 100 : 0; });
+    // In £, within £1 of what's left counts as all of it (amounts are whole pounds).
+    const amounts = SPLIT_KEYS.reduce((t, k) => t + Math.max(0, (split || {})[k] || 0), 0);
+    if ((split || {}).unit === 'gbp' && left > 0 && amounts > 0 && Math.abs(amounts - left) < 1) {
+      const t = sum(raw);
+      raw.forEach((v, i) => { raw[i] = (v / t) * 100; });
+    }
     const total = sum(raw);
     const scale = total > 100 ? 1 / total : 1 / 100;
     const [emergency, debts, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
     const remainder = total < 100 ? (100 - total) / 100 : 0;
     return {
       emergency, debts, cash, invest, mortgage, pension, unallocated: remainder, total,
-      status: total === 100 ? 'ok' : total < 100 ? 'under' : 'over',
+      status: Math.abs(total - 100) < 0.05 ? 'ok' : total < 100 ? 'under' : 'over',
     };
   }
 
@@ -110,7 +149,10 @@
     const [clY, clM] = cfg.isa.cashLimitFrom.split('-').map(Number);
     const cashLimitFromIndex = clY * 12 + (clM - 1);
     const region = profile.income.region;
-    const shares = splitShares(profile.leftover);
+    // Entered in £: shared out of each year's leftover money, rising with prices.
+    const byAmount = profile.leftover.unit === 'gbp';
+    const leftToday = byAmount ? FP.summary.compute(profile, FP.tax.forProfile(profile, cfg).takeHomeMonthly).cashFlow.surplus : null;
+    const shares = splitShares(profile.leftover, leftToday);
     const warnings = [];
     const warnOnce = (key, text) => { if (!warnings.some((w) => w.key === key)) warnings.push({ key, level: 'warn', text }); };
 
@@ -331,7 +373,7 @@
           mortgage: a.capOverpayments === 'none' ? mBal : Math.min(mBal, Math.max(0, allowance - overpaid)),
           pension: working ? Infinity : 0,
         };
-        const share = allocate(s, shares, caps);
+        const share = allocate(s, byAmount ? splitShares(profile.leftover, s / 12 / priceFactor) : shares, caps);
         const toEmergency = share.emergency;
         const toCash = share.cash;
         const toPension = share.pension;
@@ -404,13 +446,15 @@
     }
 
     if (shares.status !== 'ok') {
+      const total = byAmount ? fmt(sum(SPLIT_KEYS, (k) => profile.leftover[k] || 0)) : `${Math.round(shares.total * 10) / 10}%`;
+      const rest = byAmount ? `${fmt(Math.max(0, leftToday) - sum(SPLIT_KEYS, (k) => profile.leftover[k] || 0))} a month` : `${Math.round((100 - shares.total) * 10) / 10}%`;
       warnings.push({
         key: 'split', level: 'info',
         text: shares.status === 'under'
           ? (shares.total === 0
             ? 'You haven\u2019t chosen what to do with your leftover money, so the projection doesn\u2019t save any of it (it\u2019s treated as spent).'
-            : `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% isn\u2019t saved (it\u2019s treated as spent).`)
-          : `What you do with your leftover money adds up to ${shares.total}%, so each share is scaled down to make 100%.`,
+            : `What you do with your leftover money adds up to ${total}${byAmount ? ' a month' : ''}. The other ${rest} isn\u2019t saved (it\u2019s treated as spent).`)
+          : `What you do with your leftover money adds up to ${total}${byAmount ? ' a month, more than is left over' : ''}, so each share is scaled down${byAmount ? ' to fit' : ' to make 100%'}.`,
       });
     }
 
@@ -521,5 +565,5 @@
     return out;
   }
 
-  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, splitShares, allocate, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});

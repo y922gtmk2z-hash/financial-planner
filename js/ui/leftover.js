@@ -22,14 +22,36 @@
     const suggested = h('div', { class: 'suggested-split' });
     const ideas = h('ul', { class: 'ideas' });
     const amounts = {};
+    const unitHolder = h('div', { class: 'leftover-unit' });
     const fundStatus = h('p', { class: 'help fund-status', role: 'status' });
 
     const changed = () => { if (opts.onChange) opts.onChange(); };
 
+    const leftNow = () => FP.summary.compute(ctx.profile(), FP.tax.forProfile(ctx.profile()).takeHomeMonthly).cashFlow.surplus;
+
     function drawFields() {
       const p = ctx.profile();
+      const unit = p.leftover.unit === 'gbp' ? 'gbp' : 'pct';
       const target = FP.profile.EMERGENCY_MONTHS_FIELD;
-      FP.dom.fill(rows, FP.profile.LEFTOVER_FIELDS.map((f) => {
+      // Enter the split as % of what's left or as £ a month; switching converts what you've entered.
+      FP.dom.fill(unitHolder, FP.field.render({
+        label: 'Enter it as', type: 'toggle',
+        options: [{ value: 'pct', label: '% of what\u2019s left' }, { value: 'gbp', label: '\u00a3 a month' }],
+      }, {
+        value: unit, compact: true,
+        onChange: (v) => {
+          const left = leftNow();
+          const pct = FP.projection.splitAsPct(p.leftover, left);
+          p.leftover.unit = v;
+          FP.projection.setSplitFromPct(p.leftover, pct, left);
+          ctx.changed();
+          drawFields();
+          refresh();
+          changed();
+        },
+      }));
+      FP.dom.fill(rows, FP.profile.LEFTOVER_FIELDS.map((base) => {
+        const f = FP.profile.leftoverField(base, unit);
         amounts[f.key] = h('span', { class: 'leftover-money' });
         return h('div', { class: `leftover-row${f.key === 'emergency' ? ' emergency' : ''}` },
           FP.field.render(f, {
@@ -68,8 +90,10 @@
       const p = ctx.profile();
       const r = FP.suggest.analyse(p);
       const cf = r.today.cashFlow;
-      const shares = FP.projection.splitShares(p.leftover);
+      const shares = FP.projection.splitShares(p.leftover, r.left);
       const left = Math.max(0, r.left || 0);
+      const byAmount = p.leftover.unit === 'gbp';
+      const pct = FP.projection.splitAsPct(p.leftover, left);
 
       FP.dom.fill(headline,
         h('span', { class: 'eyebrow' }, 'Left over each month'),
@@ -79,25 +103,28 @@
           cf.savingsMonthly > 0 ? ` − ${money(cf.savingsMonthly)} regular savings` : '',
           '. Bonus months add more.'));
 
+      // Each choice in the other unit, for reference.
       FP.profile.LEFTOVER_FIELDS.forEach((f) => {
-        const share = f.key === 'cash' ? shares.cash : shares[f.key];
-        if (amounts[f.key]) amounts[f.key].textContent = `= ${money(left * share)} a month`;
+        if (!amounts[f.key]) return;
+        amounts[f.key].textContent = byAmount
+          ? (left > 0 ? `= ${Math.round(pct[f.key])}% of what\u2019s left` : '')
+          : `= ${money(left * shares[f.key])} a month`;
       });
       drawFund(r, shares, left);
-      FP.screens.future.drawSplitStatus(status, p.leftover);
+      FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
 
       if (r.split) {
-        const same = FP.profile.LEFTOVER_FIELDS.every((f) => p.leftover[f.key] === r.split[f.key]);
+        const same = FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((pct[f.key] || 0) - r.split[f.key]) < 0.5);
         FP.dom.fill(suggested,
           h('p', null, h('strong', null, 'Suggested split: '),
-            FP.profile.LEFTOVER_FIELDS.filter((f) => r.split[f.key] > 0).map((f) => `${r.split[f.key]}% ${f.label.toLowerCase()}`).join(' · ')),
+            FP.profile.LEFTOVER_FIELDS.filter((f) => r.split[f.key] > 0).map((f) => `${r.split[f.key]}% ${f.label.toLowerCase()} (${money(left * r.split[f.key] / 100)})`).join(' · ')),
           h('p', { class: 'muted small' }, r.splitReason),
           same
             ? h('p', { class: 'small positive' }, '✓ You’re using this split.')
             : h('button', {
               type: 'button', class: 'secondary small',
               onclick: () => {
-                FP.profile.LEFTOVER_FIELDS.forEach((f) => { p.leftover[f.key] = r.split[f.key]; });
+                FP.projection.setSplitFromPct(p.leftover, r.split, left);
                 ctx.changed();
                 drawFields();
                 refresh();
@@ -142,7 +169,8 @@
       h('h2', { id: 'leftover-h' }, 'Your leftover money'),
       headline,
       h('h3', null, 'What do you want to do with it?'),
-      h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection. Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
+      h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection, as a share of what\u2019s left or as amounts a month (which rise with prices). Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
+      unitHolder,
       rows,
       status,
       suggested,
