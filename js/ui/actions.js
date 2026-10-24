@@ -208,5 +208,11 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.actions = { title: 'Actions', render, openActions };
+  // An idea's name: as it's suggested now, or its usual name.
+  function nameOf(id, p) {
+    const x = actionsFor(p).find((a) => a.id === id);
+    return x ? x.title : NAMES[id] || id;
+  }
+
+  FP.screens.actions = { title: 'Actions', render, openActions, nameOf, figureText };
 })(globalThis.FP = globalThis.FP || {});

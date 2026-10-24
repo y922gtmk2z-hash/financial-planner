@@ -962,3 +962,34 @@ a.button { text-decoration: none; }
 .to-hand-list { margin: 8px 0 0; padding-left: 1.2em; }
 .to-hand-list li + li { margin-top: 6px; }
 .detail-meter a, .to-hand-list a { color: var(--accent); font-weight: 600; }
+.notice.prompt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notice.prompt > span:nth-child(2) { flex: 1; min-width: 12em; }
+.notice.prompt a { color: var(--accent); font-weight: 600; }
+
+/* ---------- Print: a one- or two-page summary of Your plan ---------- */
+.print-summary { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) { color-scheme: light only !important; }
+  html, body { background: #fff !important; }
+  body { color: #000 !important; padding: 0 !important; display: block !important; font-size: 10pt; line-height: 1.35; }
+  /* No header, tabs, banners or toasts on paper. */
+  body > :not(main), .tabbar, .toast, .app-header, .app-footer { display: none !important; }
+  main { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  /* On Your plan, only the summary (other screens print as they are). */
+  main:has(> .print-summary) > :not(.print-summary) { display: none !important; }
+  .print-summary { display: block !important; color: #000; }
+  .print-summary h1 { font-size: 16pt; margin: 0 0 2pt; }
+  .print-summary h2 { font-size: 11pt; margin: 10pt 0 4pt; }
+  .print-meta { margin: 0 0 6pt; color: #333; }
+  .print-verdicts, .print-actions { margin: 0; padding-left: 1.2em; }
+  .print-verdicts li, .print-actions li { margin: 0 0 3pt; }
+  .print-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16pt; }
+  .print-table { width: 100%; border-collapse: collapse; margin: 10pt 0 0; break-inside: avoid; }
+  .print-table caption { text-align: left; font-weight: 700; font-size: 11pt; padding-bottom: 3pt; }
+  .print-table th, .print-table td { text-align: left; padding: 2pt 0; border-bottom: 0.5pt solid #bbb; vertical-align: top; font-weight: 400; }
+  .print-table td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; padding-left: 8pt; white-space: nowrap; }
+  .print-table th small { display: block; color: #444; font-size: 8.5pt; }
+  .print-note { margin: 10pt 0 0; font-size: 9pt; color: #222; break-inside: avoid; }
+  a { color: #000; text-decoration: none; }
+}

@@ -265,7 +265,8 @@
           c.setAttribute('visibility', v == null ? 'hidden' : 'visible');
         });
         // Points are a year apart from today, so from the fifth on they're estimates: rounded.
-        const fmt = (v) => FP.dom.money(v, { approx: FP.dom.far(active) });
+        // (opts.approxFrom: the first point to round; Infinity for figures that are all actual.)
+        const fmt = (v) => FP.dom.money(v, { approx: active >= (opts.approxFrom == null ? FP.dom.APPROX_YEARS : opts.approxFrom) });
         const items = opts.series.map((ser) => ({ ser, v: ser.values[active] }))
           .filter((it) => opts.type !== 'area' || Math.abs(it.v || 0) > 0.5);
         const ordered = opts.type === 'area' ? items.slice().reverse() : items;

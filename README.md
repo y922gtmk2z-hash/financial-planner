@@ -349,6 +349,36 @@ then 10% to keep it topped up, with 70% to paying off expensive debts if you hav
 **Use this split** applies it (the same change as the action). This used to be the "surplus split" in Assumptions;
 existing saved splits carry over.
 
+## Check-ins and Progress
+
+Every month or so, **Check in** (`#checkin`, from Next steps on Your plan): today's
+balances are filled in from your plan (cash savings, ISAs, other investments,
+pension pots, the mortgage and each debt), with what you entered last time under
+each. Confirm or change each one and save; it takes about two minutes. The new
+balances go into every scenario (they're facts, not what-ifs), and a snapshot is
+kept: the date, your balances, net worth, savings and pensions, the actions you'd
+applied, and what your plan expected for that date at the previous check-in. Every
+snapshot is kept for 24 months, then one per quarter. They're in your exports and
+come back when you import one.
+
+**Progress** (`#progress`, also from Next steps) shows **Since last time** (change
+in net worth, debts paid down, actions applied, and how far ahead of or behind your
+plan your savings and pensions are), a chart of what you had against what your plan
+expected, and a table of every check-in.
+
+Your plan prompts you to **update your balances** once your last check-in is 30
+days old, and says when a **new tax year** has started (on or after 6 April) but the
+tax rules are still last year's. "Not now" puts either off for 30 days.
+
+## Printing
+
+**Print or save as PDF** (under Next steps on Your plan) prints a one- or two-page
+summary: the verdicts, the monthly picture, debt-free ages, retirement figures, the
+top three actions, the key assumptions with the dates they were set, and the
+not-advice notice. The browser's own Print gives the same summary. No header, tabs or
+buttons, and always black on white, even in dark mode. The sample household fits on
+two A4 pages.
+
 ## Regular savings
 
 Under **Regular savings** in Your figures, add monthly amounts into **cash savings**, a
@@ -535,7 +565,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-262 tests cover:
+269 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -562,6 +592,11 @@ npm test   # Node 18+, no dependencies to install
   the biggest gain), the two figures on each card, the Applied mark (and saves from
   version 3 loading), making a scenario your plan, and the calendar file (dates,
   escaping, 75-octet lines).
+- **Check-ins:** balances prefilled and put into every scenario, what the plan
+  expected (from the previous check-in, between yearly points), a second check-in
+  in a day replacing the first, since last time (net worth, debts paid down,
+  actions applied), keeping 24 months then one a quarter, export and import, and
+  version 4 saves loading.
 - **Money formatting:** today's figures to the pound, figures five or more years
   ahead to three significant figures (£1.20m, £292k, £3,800), and the shared measure
   names used by the detail panels.

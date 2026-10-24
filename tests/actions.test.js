@@ -97,7 +97,7 @@ test('an idea can be marked applied, and older saves still load', () => {
   assert.equal(up.from, 3);
   assert.equal(up.newer, false);
   assert.equal(up.workspace.scenarios[0].profile.about.age, 38);
-  assert.equal(FP.migrate.upgrade({ schemaVersion: 5, workspace: { scenarios: [] } }).newer, true);
+  assert.equal(FP.migrate.upgrade({ schemaVersion: FP.migrate.CURRENT + 1, workspace: { scenarios: [] } }).newer, true);
 });
 
 test('make this my plan: the scenario becomes Baseline and the old one is kept', () => {

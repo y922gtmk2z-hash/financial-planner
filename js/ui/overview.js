@@ -43,6 +43,7 @@
       FP.dom.pageHead('Your plan', rough && ready ? 'A first look, from your quick answers' : 'Four questions, answered'),
       FP.checklist.card(p),
       noticeList(notices),
+      prompts(ctx, ready && !rough),
       rough ? null : FP.backup.nudge(ctx),
       monthCard(p, today, pay, ideas, panel, rough),
       ready && proj.ok ? debtCard(p, proj, ideas, panel) : null,
@@ -50,7 +51,8 @@
       ready && rough ? moreCard(p) : null,
       ready && !rough ? FP.checklist.note(p) : null,
       proj.ok && !rough ? chartCard(proj, today, a, p) : null,
-      rough ? null : nextCard(p, a, ctx));
+      rough ? null : nextCard(p, a, ctx, root),
+      rough ? null : FP.print.attach(ctx, root));
   }
 
   // After the quick start: one clear next move.
@@ -218,7 +220,7 @@
     return Math.round(n / step) * step;
   }
 
-  function nextCard(p, a, ctx) {
+  function nextCard(p, a, ctx, root) {
     // The same list as the Actions screen, including the suggested split.
     const n = FP.screens.actions.openActions(p).length;
     return h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
@@ -226,11 +228,49 @@
       FP.checklist.meter(p),
       h('ul', null,
         n ? link('#actions', `${n} ${n === 1 ? 'action' : 'actions'} to look at`, 'Apply them, try them as a scenario, or set a reminder \u2014 general rules of thumb, not advice') : null,
+        checkinLink(ctx),
+        link('#progress', 'Your progress', 'What you have against what your plan expected'),
         link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
         link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`)),
       h('div', { class: 'button-row backup-row' },
         h('button', { type: 'button', class: 'secondary', onclick: () => FP.backup.exportFile(ctx) }, 'Export a backup'),
+        FP.print.button(ctx, root),
         h('span', { class: 'muted small' }, 'Your figures live only in this browser.')));
+  }
+
+  function checkinLink(ctx) {
+    const last = FP.checkins.latest(ctx.workspace());
+    return link('#checkin', 'Check in', last ? `Update your balances: last time ${FP.dom.date(last.date)}` : 'Update your balances, about two minutes, to start tracking your progress');
+  }
+
+  /*
+   * Prompts, each put off for 30 days by "Not now": update your balances once
+   * your last check-in is 30 or more days old, and a new tax year once it has
+   * started (on or after 6 April) and the tax rules are from an earlier year.
+   */
+  const DAY = 24 * 60 * 60 * 1000;
+  function taxYearStale(cfg, now) {
+    const y = now.getFullYear();
+    const current = now >= new Date(y, 3, 6) ? y : y - 1;
+    return Number(cfg.yearStart.slice(0, 4)) < current;
+  }
+  function prompts(ctx, full) {
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const snoozed = (id) => Date.now() < Number(FP.store.pref(`snooze.${id}`) || 0);
+    const days = FP.checkins.daysSince(ctx.workspace(), todayIso);
+    const list = [
+      full && days != null && days >= 30 ? { id: 'checkin', text: `It\u2019s ${days} days since your last check-in.`, link: ['#checkin', 'Update your balances'] } : null,
+      taxYearStale(FP.taxConfig, now) ? { id: 'taxYear', text: `New tax year: figures use ${FP.taxConfig.taxYear} rules until updated.`, link: null } : null,
+    ].filter((x) => x && !snoozed(x.id));
+    if (!list.length) return null;
+    return h('ul', { class: 'notices prompts' }, list.map((x) => h('li', { class: 'notice info prompt' },
+      h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
+      h('span', null, x.text, x.link ? [' ', h('a', { href: x.link[0] }, x.link[1])] : null),
+      h('button', {
+        type: 'button', class: 'link', 'aria-label': `Not now: hide \u201c${x.text}\u201d for 30 days`,
+        onclick: () => { FP.store.pref(`snooze.${x.id}`, String(Date.now() + 30 * DAY)); ctx.rerender(); },
+      }, 'Not now'))));
   }
 
   // The first notice in full; any others behind "N more".
@@ -290,5 +330,5 @@
 
 
   FP.screens = FP.screens || {};
-  FP.screens.overview = { title: 'Your plan', render, netWorthSoWhat };
+  FP.screens.overview = { title: 'Your plan', render, netWorthSoWhat, taxYearStale };
 })(globalThis.FP = globalThis.FP || {});

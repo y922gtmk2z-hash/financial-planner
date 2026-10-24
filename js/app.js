@@ -3,7 +3,7 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'actions', 'assumptions', 'data', 'settings'];
+  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'actions', 'checkin', 'progress', 'assumptions', 'data', 'settings'];
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 

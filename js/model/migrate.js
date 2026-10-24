@@ -10,6 +10,7 @@
  *      hold older shapes inside a profile, so step 2 → 3 looks for each one.
  *   3  { workspace }, every profile in today's shape.
  *   4  Ideas can also be marked 'applied' (made to your plan from Actions).
+ *   5  The workspace keeps your check-ins (snapshots of your balances).
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -81,6 +82,14 @@
       from: 3, to: 4,
       // A new mark, 'applied', for ideas. Nothing saved before it needs changing.
       up: (data) => data,
+    },
+    {
+      from: 4, to: 5,
+      // Check-ins started: older workspaces have none yet.
+      up(data) {
+        if (isObj(data.workspace) && !isObj(data.workspace.checkins)) data.workspace.checkins = { snapshots: [], projection: null };
+        return data;
+      },
     },
   ];
 
