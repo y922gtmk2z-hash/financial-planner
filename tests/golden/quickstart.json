@@ -2555,25 +2555,167 @@
         "id": "emergency",
         "tone": "warn",
         "title": "Build your emergency fund",
-        "text": "Your cash covers about 0.0 months of essential outgoings; your target is 3 (£9,600). A common aim is 3–6 months (£9,600–£19,200). Putting 80% of what’s left (£1,260 a month) into your emergency fund gets you there in 8 months, or 7 months with all of it."
+        "text": "Your cash covers about 0.0 months of essential outgoings; your target is 3 (£9,600). A common aim is 3–6 months (£9,600–£19,200). Putting 80% of what’s left (£1,260 a month) into your emergency fund gets you there in 8 months, or 7 months with all of it.",
+        "patch": [
+          {
+            "path": "leftover.unit",
+            "op": "set",
+            "value": "pct"
+          },
+          {
+            "path": "leftover.emergency",
+            "op": "set",
+            "value": 80
+          },
+          {
+            "path": "leftover.debts",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "leftover.cash",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "leftover.invest",
+            "op": "set",
+            "value": 10
+          },
+          {
+            "path": "leftover.mortgage",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "leftover.pension",
+            "op": "set",
+            "value": 10
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 1575.62,
+            "retirementSpend": 1243.11,
+            "atRetirement": 188948.7,
+            "lastsTo": 65,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "after": {
+            "leftover": 1575.62,
+            "retirementSpend": 2812.74,
+            "atRetirement": 708896.69,
+            "lastsTo": 91,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "change": {
+            "leftover": 0,
+            "retirementSpend": 1569.63,
+            "atRetirement": 519948,
+            "lastsTo": 26,
+            "debtFreeAge": 0,
+            "interest": 0
+          }
+        },
+        "howTo": []
       },
       {
         "id": "relief",
         "tone": "tip",
         "title": "Higher-rate pension relief",
-        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance."
+        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.",
+        "patch": [
+          {
+            "path": "assumptions.employeePensionPct",
+            "op": "add",
+            "value": 3
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 1575.62,
+            "retirementSpend": 1243.11,
+            "atRetirement": 188948.7,
+            "lastsTo": 65,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "after": {
+            "leftover": 1448.12,
+            "retirementSpend": 1435.29,
+            "atRetirement": 259804.5,
+            "lastsTo": 67,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "change": {
+            "leftover": -127.5,
+            "retirementSpend": 192.17,
+            "atRetirement": 70855.8,
+            "lastsTo": 2,
+            "debtFreeAge": 0,
+            "interest": 0
+          }
+        },
+        "howTo": []
       },
       {
         "id": "match",
         "tone": "tip",
         "title": "Check for employer matching",
-        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available."
+        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       },
       {
         "id": "isa",
         "tone": "tip",
         "title": "Use your ISA allowance",
-        "text": "You have about £20,000 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value."
+        "text": "You have about £20,000 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.",
+        "patch": [
+          {
+            "path": "savings",
+            "op": "set",
+            "value": [
+              {
+                "id": "idea-isa",
+                "type": "ssIsa",
+                "monthly": 1570,
+                "grows": "fixed"
+              }
+            ]
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 1575.62,
+            "retirementSpend": 1243.11,
+            "atRetirement": 188948.7,
+            "lastsTo": 65,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "after": {
+            "leftover": 5.62,
+            "retirementSpend": 2636.67,
+            "atRetirement": 590921.65,
+            "lastsTo": 87,
+            "debtFreeAge": 38,
+            "interest": 0
+          },
+          "change": {
+            "leftover": -1570,
+            "retirementSpend": 1393.55,
+            "atRetirement": 401972.95,
+            "lastsTo": 22,
+            "debtFreeAge": 0,
+            "interest": 0
+          }
+        },
+        "howTo": []
       }
     ],
     "split": {
