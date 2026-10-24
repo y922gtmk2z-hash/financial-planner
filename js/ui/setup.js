@@ -278,14 +278,14 @@
           : o.itemised < o.estimate ? `${money(o.itemised)} itemised below. The other ${money(o.rest)} of your estimate counts as other spending until you itemise it.`
             : o.itemised === o.estimate ? 'Your estimate is all itemised below.'
               : `What you’ve itemised below (${money(o.itemised)}) is more than your estimate, so that’s what’s used.`;
-      // A payment counts once its debt has a balance (under Debts).
+      // A payment counts straight away; with what's left to pay (under Debts) the plan knows when it ends.
       const unpaid = [p.mortgage.monthlyPayment > 0 && !(p.mortgage.balance > 0) ? { name: 'your mortgage', path: 'mortgage.balance' } : null]
         .concat(p.debts.map((d, i) => (d.monthlyPayment > 0 && !(d.balance > 0) ? { name: d.name || `debt ${i + 1}`, path: `debts.${i}.balance` } : null)))
         .filter(Boolean);
       unpaidNote.hidden = !unpaid.length;
       if (unpaid.length) {
         FP.dom.fill(unpaidNote,
-          `Add what’s left to pay on ${unpaid.map((u) => u.name).join(' and ')} under Debts, so ${unpaid.length === 1 ? 'its payment counts' : 'their payments count'}${o.estimate == null ? '' : ' (until then, your estimate covers it)'}. `,
+          `Your plan assumes the payment${unpaid.length === 1 ? '' : 's'} on ${unpaid.map((u) => u.name).join(' and ')} carr${unpaid.length === 1 ? 'ies' : 'y'} on. Add what’s left to pay under Debts to see when ${unpaid.length === 1 ? 'it ends' : 'they end'}. `,
           h('button', { type: 'button', class: 'link', onclick: () => links.toDebts(unpaid[0].path) }, 'Go to Debts'));
       }
       showWorked(pays, FP.loan.forMortgage(p), { payment: 'mortgage.monthlyPayment' });

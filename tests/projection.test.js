@@ -445,3 +445,16 @@ test('retirement need: nothing needed when the State Pension covers the goal', (
   assert.equal(n.needed, 0);
   assert.equal(n.lastsUntil, null);
 });
+
+test('projection: payments given without a balance carry on unchanged', () => {
+  const p = FP.profile.blank();
+  p.about.age = 40;
+  p.income.grossSalary = 40000;
+  p.mortgage.monthlyPayment = 900;
+  p.debts = [{ id: 'd', name: 'Car', balance: 0, rate: null, monthlyPayment: 200 }];
+  const r = FP.projection.project(p).rows;
+  close(r[1].mortgagePaid, 10800);
+  close(r[1].debtPaid, 2400);
+  close(r[10].mortgagePaid, 10800);
+  assert.equal(r[1].mortgage, 0);
+});

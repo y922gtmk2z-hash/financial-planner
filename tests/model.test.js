@@ -177,14 +177,16 @@ test('outgoings: an estimate of everything going out; what isn’t itemised coun
   assert.equal(o.itemised, 350);
   assert.equal(o.rest, 2150);
   assert.equal(FP.summary.compute(p).cashFlow.outgoings, 2500);
-  // A payment with no balance yet doesn't count, so the estimate still covers it.
+  // A payment counts straight away, before its balance is given.
   p.debts.push({ ...FP.profile.newDebt(), name: 'Card', monthlyPayment: 50 });
+  p.mortgage.monthlyPayment = 900;
   FP.summary.syncOutgoings(p);
-  assert.equal(FP.summary.outgoings(p).rest, 2150);
+  assert.equal(FP.summary.outgoings(p).itemised, 1300);
+  assert.equal(FP.summary.outgoings(p).rest, 1200);
   // Itemising more than the estimate: what's itemised is used.
   p.spending[1].monthly = 3000;
   FP.summary.syncOutgoings(p);
-  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 3200);
+  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 4150);
   // Kept through a save.
   const back = FP.profile.normalise(JSON.parse(JSON.stringify(p)));
   assert.equal(back.outgoings.estimate, 2500);

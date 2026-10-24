@@ -43,13 +43,13 @@ test('summary warns about overpayments above the limit and debts that never shri
   assert.equal(s.home.ltvPct, 50);
 });
 
-test('summary: mortgage with no term asks for one; debts with no balance cost nothing', () => {
+test('summary: mortgage with no term asks for one; a payment with no balance still goes out', () => {
   const p = FP.profile.blank();
   p.mortgage.balance = 50000;
   p.debts = [{ id: 'd', name: 'Old loan', balance: 0, rate: null, monthlyPayment: 200 }];
   const s = FP.summary.compute(p, null);
   assert.ok(s.warnings.some((w) => /time left on your mortgage/.test(w.text)));
-  assert.equal(s.cashFlow.debtMonthly, 0);
+  assert.equal(s.cashFlow.debtMonthly, 200);
   assert.ok(s.warnings.some((w) => /no home value/.test(w.text)));
 });
 

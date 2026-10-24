@@ -116,10 +116,11 @@
     }
 
     const spendingMonthly = profile.spending.reduce((s, r) => s + num(r.monthly), 0);
-    const mortgageMonthly = mortgage ? mortgage.payment + mortgage.overpayment : 0;
+    // A payment with no balance yet still goes out: it's taken to carry on, as when it ends isn't known.
+    const mortgageMonthly = mortgage ? mortgage.payment + mortgage.overpayment : num(m.monthlyPayment);
     // Extra student loan payments (only while there's a balance) count with your debt payments.
     const studentLoanExtraMonthly = FP.studentLoan.tracked(profile) ? num(profile.income.studentLoanOverpayment) : 0;
-    const debtMonthly = debts.reduce((s, d) => s + (d.balance > 0 ? d.payment : 0), 0) + studentLoanExtraMonthly;
+    const debtMonthly = debts.reduce((s, d) => s + num(d.payment), 0) + studentLoanExtraMonthly;
     const outgoings = spendingMonthly + mortgageMonthly + debtMonthly;
     // Regular savings come out of what's left after spending and debts.
     const saving = FP.savings.monthlyTotals(profile.savings);
@@ -198,8 +199,7 @@
 
   /*
    * Your outgoings against your estimate of everything going out. itemised:
-   * bills, other spending, mortgage and debt payments you've entered (a
-   * payment counts once its debt has a balance); rest: what's left of the
+   * bills, other spending, mortgage and debt payments you've entered; rest: what's left of the
    * estimate. Returns { estimate (or null), itemised, rest, total }.
    */
   function outgoings(profile) {

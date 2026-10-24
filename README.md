@@ -101,8 +101,9 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
      each other debt's name and payment, which show under Debts too) and
      **Other**. Whatever of your estimate isn't itemised yet counts as other
      spending ("Rest of your estimate"); if you itemise more than your estimate,
-     what you've itemised is used. A debt payment counts once its debt has a
-     balance under Debts. Then what you save each month, then **money left over each month**: a
+     what you've itemised is used. A debt payment counts as soon as you enter
+     it; until you add what's left to pay under Debts, the plan assumes it
+     carries on unchanged. Then what you save each month, then **money left over each month**: a
      suggested split to use in one tap, with your own split and ideas folded away.
    - **Assets:** what you own today.
    - **Debts:** your mortgage and other debts. For each, give the **balance** and

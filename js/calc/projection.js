@@ -178,6 +178,9 @@
       const loan = FP.loan.forDebt(d, a);
       return { bal: d.balance || 0, rate: loan.rate, monthly: FP.loan.monthlyRate(loan.rate, 'apr'), pay: loan.payment };
     });
+    // Payments given without a balance (under Outgoings) carry on unchanged, as when they end isn't known.
+    const openMortgage = mBal > 0 ? 0 : profile.mortgage.monthlyPayment || 0;
+    const openDebts = sum(profile.debts.filter((d) => !(d.balance > 0)), (d) => d.monthlyPayment || 0);
     // Student loan: tracked only when there's a plan and a balance. Otherwise
     // repayments simply continue while working.
     const slPlan = profile.income.studentLoanPlan;
@@ -316,7 +319,7 @@
 
       // 3. Mortgage, month by month
       const mStart = mBal;
-      let mortgagePaid = 0;
+      let mortgagePaid = openMortgage * 12;
       let overpaid = 0;
       if (a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null && g === a.mortgageRateChangeYear && mBal > 0) {
         mRate = a.mortgageRateAfterChange;
@@ -334,7 +337,7 @@
       }
       if (mBal <= 0.005) mBal = 0;
 
-      let debtPaid = 0;
+      let debtPaid = openDebts * 12;
       debts.forEach((d) => {
         for (let m = 0; m < 12 && d.bal > 0.005; m += 1) {
           const due = d.bal * (1 + d.monthly);
