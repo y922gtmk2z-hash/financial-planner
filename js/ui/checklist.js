@@ -47,7 +47,7 @@
   function emptyCard(what) {
     return h('section', { class: 'card empty-plan' },
       h('h2', null, `Add your figures to see ${what}`),
-      h('p', { class: 'muted' }, 'It takes about five minutes in Setup, and a rough figure is fine for anything you\u2019re not sure of.'),
+      h('p', { class: 'muted' }, 'It takes about five minutes in Your figures, and a rough figure is fine for anything you\u2019re not sure of.'),
       h('a', { class: 'button', href: '#setup' }, 'Get started'));
   }
 

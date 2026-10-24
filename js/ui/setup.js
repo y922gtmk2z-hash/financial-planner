@@ -86,6 +86,17 @@
           sec.fields.filter((f) => f.group === 'otherIncome').map(make))));
   }
 
+  // How projections show amounts: a viewing choice, kept with your figures so it's easy to find.
+  function projectionsCard() {
+    return h('section', { class: 'card', id: 'projections', 'aria-labelledby': 'sec-projections' },
+      h('h2', { id: 'sec-projections' }, 'Projections'),
+      FP.field.render({
+        label: 'Show amounts in', type: 'toggle',
+        help: 'Today\u2019s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Future and Scenarios.',
+        options: [{ value: 'real', label: 'Today\u2019s money' }, { value: 'nominal', label: 'Future money' }],
+      }, { value: FP.screens.future.getView(), onChange: (v) => FP.screens.future.setView(v) }));
+  }
+
   // What you spend and save: one spending question (split it up if you like),
   // then regular savings; your leftover money follows as its own card.
   function spendCard(ctx) {
@@ -197,12 +208,12 @@
 
     const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
     const groups = [
-      [aboutCard(ctx)],
+      [aboutCard(ctx), projectionsCard()],
       [spendCard(ctx), leftover],
       [assetsCard(ctx)],
       [debtsCard(ctx)],
     ].map((cards, i) => h('div', { class: 'setup-step', 'data-step': STEPS[i].id }, cards));
-    const nav = h('nav', { class: 'step-nav', 'aria-label': 'Setup sections' });
+    const nav = h('nav', { class: 'step-nav', 'aria-label': 'Your figures sections' });
     const intro = h('div', { class: 'setup-intro' });
     const footer = h('div', { class: 'step-footer' });
     const calc = calculateCard(ctx, root);
@@ -276,7 +287,7 @@
     }
 
     const quick = FP.summary.checklist(p).ready ? null : FP.welcome.quickStart(ctx, root);
-    FP.dom.add(root, h('h1', null, 'Setup'), quick, intro, nav, groups, footer, calc);
+    FP.dom.add(root, h('h1', null, 'Your figures'), quick, intro, nav, groups, footer, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {
@@ -362,9 +373,9 @@
   function calculateCard(ctx, root) {
     return h('section', { class: 'card calculate', 'aria-label': 'See my plan' },
       h('button', { type: 'button', class: 'calculate-btn', onclick: () => calculate(ctx, root) }, 'See my plan'),
-      h('p', { class: 'help' }, 'Your figures save as you type. You can come back to Setup at any time from the top of the screen.'));
+      h('p', { class: 'help' }, 'Your figures save as you type. You can come back to Your figures at any time from the top of the screen.'));
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.setup = { title: 'Setup', render };
+  FP.screens.setup = { title: 'Your figures', render };
 })(globalThis.FP = globalThis.FP || {});

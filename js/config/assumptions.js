@@ -67,7 +67,7 @@
     {
       key: 'mortgageRate', group: 'borrowing', label: 'Mortgage interest rate', unit: 'pct',
       default: 4.5, min: 0, max: 25, setOn: SET_ON,
-      help: 'The rate on your mortgage today. Entered in Setup.',
+      help: 'The rate on your mortgage today. Entered in Your figures.',
     },
     {
       key: 'mortgageRateChangeYear', group: 'borrowing', label: 'Rate changes after (years)', unit: 'year',
@@ -82,7 +82,7 @@
     {
       key: 'otherDebtRate', group: 'borrowing', label: 'Default rate for other debts', unit: 'pct',
       default: 7.0, min: 0, max: 100, setOn: SET_ON,
-      help: 'Used for any debt in Setup where you leave the rate blank.',
+      help: 'Used for any debt in Your figures where you leave the rate blank.',
     },
     {
       key: 'overpaymentLimitPct', group: 'borrowing', label: 'Overpayment warning level', unit: 'pctOfBalance',
@@ -96,17 +96,17 @@
         { value: 'limit', label: 'Stay within the overpayment limit' },
         { value: 'none', label: 'No limit' },
       ],
-      help: 'With the limit, the mortgage share of your leftover money stops at the overpayment warning level each year, and the rest goes to your other choices. Your fixed monthly overpayment in Setup isn\u2019t limited.',
+      help: 'With the limit, the mortgage share of your leftover money stops at the overpayment warning level each year, and the rest goes to your other choices. Your fixed monthly overpayment in Your figures isn\u2019t limited.',
     },
     {
       key: 'employeePensionPct', group: 'pension', label: 'Your pension contribution', unit: 'pctOfPay',
       default: 5, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share of gross salary you pay into your pension. Entered in Setup.',
+      help: 'Share of gross salary you pay into your pension. Entered in Your figures.',
     },
     {
       key: 'employerPensionPct', group: 'pension', label: 'Employer pension contribution', unit: 'pctOfPay',
       default: 3, min: 0, max: 100, setOn: SET_ON,
-      help: 'Share of gross salary your employer adds. Entered in Setup.',
+      help: 'Share of gross salary your employer adds. Entered in Your figures.',
     },
     {
       key: 'retirementAge', group: 'pension', label: 'Retirement age', unit: 'age',
@@ -139,7 +139,7 @@
         { value: 'current', label: 'Stay at current rates' },
         { value: 'inflation', label: 'Follow inflation (as RPI) plus the plan\u2019s margin' },
       ],
-      help: 'Current rates are those published for September 2026 to August 2027 (RPI 4.1%; Plan 2 and postgraduate capped at 6%). Following inflation uses your inflation assumption as RPI from September 2027, with no cap. Your own rate in Setup overrides both.',
+      help: 'Current rates are those published for September 2026 to August 2027 (RPI 4.1%; Plan 2 and postgraduate capped at 6%). Following inflation uses your inflation assumption as RPI from September 2027, with no cap. Your own rate in Your figures overrides both.',
     },
     {
       key: 'statePension', group: 'tax', label: 'State Pension (today\u2019s money)', unit: 'money',

@@ -89,6 +89,7 @@ test('navigation: every route has a screen; Setup is in the header, views are ta
   assert.deepEqual(tabRoutes, ['overview', 'now', 'future', 'scenarios']);
   assert.match(header, /href="#assumptions"/);
   assert.match(header, /href="#data"/);
+  assert.match(header, /href="#settings"/);
   tabRoutes.forEach((r) => assert.ok(routes.includes(r)));
 });
 

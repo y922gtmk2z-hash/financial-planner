@@ -160,7 +160,7 @@
           h('div', { class: 'field' }, h('label', { for: 'new-sc-name' }, 'Name'), h('div', { class: 'input-wrap' }, nameInput)),
           h('div', { class: 'field' }, h('label', { for: 'new-sc-from' }, 'Start from a copy of'), h('div', { class: 'input-wrap' }, from)),
           h('button', { type: 'button', onclick: create }, 'Create and edit'),
-          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it in Setup and Assumptions while it\u2019s selected \u2014 or tap any figure on Your plan, try changes there and save them as a scenario.'),
+          h('p', { class: 'help' }, 'The copy includes every input and assumption. Change it in Your figures and Assumptions while it\u2019s selected \u2014 or tap any figure on Your plan, try changes there and save them as a scenario.'),
         ]);
   }
 
@@ -179,7 +179,7 @@
     if (!ok.length) {
       if (FP.checklist.isEmpty(ctx.profile())) return FP.checklist.emptyCard('projections side by side');
       return FP.checklist.card(ctx.profile(), { what: 'projections side by side' })
-        || h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
+        || h('section', { class: 'card' }, h('p', null, 'Enter your age in Your figures to compare projections.'), h('a', { href: '#setup' }, 'Go to Your figures'));
     }
     const commonAge = FP.compare.commonEndAge(sums.map((x) => x.s));
     const base = sums[0].s;

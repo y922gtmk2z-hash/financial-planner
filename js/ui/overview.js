@@ -36,7 +36,7 @@
       FP.dom.pageHead('Your plan', 'Four questions, answered', { edit: true }),
       ready && FP.welcome.isRough(p) ? h('p', { class: 'notice info rough-plan' },
         h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
-        h('span', null, h('strong', null, 'Based on 4 answers: '), 'add more detail (savings, pensions, debts) to sharpen this. ', h('a', { href: '#setup' }, 'Continue Setup'))) : null,
+        h('span', null, h('strong', null, 'Based on 4 answers: '), 'add more detail (savings, pensions, debts) to sharpen this. ', h('a', { href: '#setup' }, 'Add more figures'))) : null,
       FP.checklist.card(p),
       noticeList(notices),
       FP.backup.nudge(ctx),

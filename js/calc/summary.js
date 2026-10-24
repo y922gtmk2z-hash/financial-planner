@@ -100,7 +100,7 @@
       ltvPct: homeValue > 0 ? (mBalance / homeValue) * 100 : null,
     };
     if (homeValue === 0 && mBalance > 0) {
-      warnings.push({ level: 'info', text: 'You have a mortgage balance but no home value. Add your home value in Setup to see your equity.' });
+      warnings.push({ level: 'info', text: 'You have a mortgage balance but no home value. Add your home value in Your figures to see your equity.' });
     }
 
     const spendingMonthly = profile.spending.reduce((s, r) => s + num(r.monthly), 0);
@@ -156,7 +156,7 @@
   /*
    * What's still missing from the profile. Blocking items stop the projection
    * being shown (without them it would be badly wrong); the others are worth
-   * adding but can genuinely be zero. `target` is where to enter it in Setup.
+   * adding but can genuinely be zero. `target` is where to enter it in Your figures.
    */
   function checklist(profile) {
     const a = profile.assumptions;

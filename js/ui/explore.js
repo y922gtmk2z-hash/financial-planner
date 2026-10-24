@@ -123,14 +123,14 @@
         h('p', { class: 'help' }, 'Change anything here to see the effect. Your plan stays as it is until you apply the changes.'),
         fields.slice(0, MAIN_DRIVERS),
         fields.length > MAIN_DRIVERS ? h('details', { class: 'advanced' }, h('summary', null, `More (${fields.length - MAIN_DRIVERS})`), fields.slice(MAIN_DRIVERS)) : null,
-        h('p', { class: 'small' }, h('a', { href: `#setup/${o.drivers(work)[0]}`, onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'See everything in Setup')));
+        h('p', { class: 'small' }, h('a', { href: `#setup/${o.drivers(work)[0]}`, onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'See everything in Your figures')));
     }
 
     function draw() {
       const after = o.evaluate(work);
       const isChanged = changed();
       if (!after.ok) {
-        FP.dom.fill(result, h('p', null, 'Add your age and spending in Setup to see this.'));
+        FP.dom.fill(result, h('p', null, 'Add your age and spending in Your figures to see this.'));
       } else {
         const diffs = isChanged ? O.compare(before, after) : [];
         FP.dom.fill(result,
@@ -214,7 +214,7 @@
             onclick: () => { FP.projection.setSplitFromPct(work.leftover, r.split, r.left); drawDrivers(); draw(); },
           }, 'Use this split'),
         ],
-        h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'Change the split in Setup')));
+        h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'Change the split in Your figures')));
     }
 
     function schedule() {
