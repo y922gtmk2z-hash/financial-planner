@@ -82,6 +82,7 @@
     // When you last changed something (for the backup reminder).
     if (ok && changedSinceLoad) {
       FP.store.pref('lastChange', new Date().toISOString());
+      FP.store.pref('editsSinceExport', (Number(FP.store.pref('editsSinceExport')) || 0) + 1);
       changedSinceLoad = false;
     }
     status.textContent = ok ? 'Saved on this device' : 'Not saved — browser storage unavailable';

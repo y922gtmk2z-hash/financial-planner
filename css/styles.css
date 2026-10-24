@@ -817,3 +817,26 @@ li.row-card .field:last-of-type { margin-bottom: 4px; }
 .welcome-steps { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
 .empty-plan .button { display: inline-block; text-decoration: none; }
 @media (min-width: 640px) { .welcome-answers { grid-template-columns: 1fr 1fr; } }
+.quick-start .quick-go { width: 100%; margin-top: 8px; }
+.alloc { margin: 12px 0; }
+.alloc-total { margin: 0 0 6px; font-variant-numeric: tabular-nums; }
+.alloc-bar { display: flex; gap: 2px; height: 16px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; background: var(--surface); }
+.alloc-seg { min-width: 2px; flex-basis: 0; }
+.alloc-rest {
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 4px, var(--border) 4px 8px);
+  box-shadow: inset 0 0 0 1px var(--text-3);
+}
+.alloc-notice { margin-top: 8px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.page-head h1 { margin-bottom: 0; }
+.page-sub { margin: 2px 0 0; color: var(--text-2); }
+.edit-figures { min-height: 44px; padding: 0 14px; font-size: 0.9rem; text-decoration: none; }
+.so-what { margin: 8px 0 4px; }
+.delta-list { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 10px; }
+.delta-list > li { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.delta-list .scenario-name { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+.delta-facts { margin: 0; }
+.backup-row { align-items: center; margin-top: 12px; }
+.clear-confirm { display: block; margin-top: 8px; }
+.clear-confirm .input-wrap { max-width: 14rem; }
+a.button { text-decoration: none; }

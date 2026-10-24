@@ -44,7 +44,8 @@
           h('label', { for: 'import-file', class: 'button secondary', tabindex: '0',
             onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } } }, 'Import a file'),
           fileInput),
-        h('p', { class: 'muted' }, 'Exports are plain JSON files containing your figures for every scenario. Keep them somewhere private.')),
+        h('p', { class: 'muted' }, 'Exports are plain JSON files containing your figures for every scenario. Keep them somewhere private.'),
+        h('p', { class: 'muted small' }, 'If you use this planner on a github.io address, its browser storage is shared with other sites under the same github.io account name. Another site there could read your saved figures, so export a backup and clear your data on shared or unfamiliar setups.')),
       h('section', { class: 'card' },
         h('h2', null, 'Start again'),
         h('div', { class: 'button-row' },
@@ -57,16 +58,42 @@
             },
           }, 'Load sample data'),
           h('button', {
-            type: 'button', class: 'danger',
-            onclick: () => {
-              if (!confirm('Delete all your data from this browser? This can’t be undone. Export a file first if you want a backup.')) return;
-              FP.store.clear();
-              FP.theme.apply();
-              ctx.replaceWorkspace(FP.scenarios.fromProfile(FP.profile.blank()));
-              ctx.toast('All data cleared');
+            type: 'button', class: 'danger', 'aria-expanded': 'false', 'aria-controls': 'clear-confirm',
+            onclick: (e) => {
+              const box = document.getElementById('clear-confirm');
+              box.hidden = !box.hidden;
+              e.currentTarget.setAttribute('aria-expanded', String(!box.hidden));
+              if (!box.hidden) box.querySelector('input').focus();
             },
           }, 'Clear all data')),
+        clearConfirm(ctx),
         h('p', { class: 'muted' }, '“Clear all data” removes everything this planner saved in your browser and leaves you with an empty form.')));
+  }
+
+  // Second step for "Clear all data": say what goes, and ask for DELETE to be typed.
+  function clearConfirm(ctx) {
+    const ws = ctx.workspace();
+    const n = ws.scenarios.length;
+    const input = h('input', { type: 'text', id: 'clear-word', autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters', 'aria-describedby': 'clear-what' });
+    const go = h('button', {
+      type: 'button', class: 'danger', disabled: true,
+      onclick: () => {
+        if (input.value.trim() !== 'DELETE') return;
+        FP.store.clear();
+        FP.theme.apply();
+        ctx.replaceWorkspace(FP.scenarios.fromProfile(FP.profile.blank()));
+        ctx.toast('All data cleared');
+      },
+    }, 'Delete everything');
+    input.addEventListener('input', () => { go.disabled = input.value.trim() !== 'DELETE'; });
+    return h('div', { class: 'clear-confirm notice warn', id: 'clear-confirm', hidden: true },
+      h('div', null,
+        h('p', { id: 'clear-what' }, h('strong', null, 'This removes from this browser: '),
+          `your figures in ${n === 1 ? 'your plan' : `all ${n} scenarios`}, your assumptions, ideas you\u2019ve ticked off, and settings such as theme and backup reminders. It can\u2019t be undone. `,
+          h('a', { href: '#data', onclick: (e) => { e.preventDefault(); exportFile(ctx); } }, 'Export a backup first'), ' if you might want them back.'),
+        h('div', { class: 'field compact' }, h('label', { for: 'clear-word' }, 'Type DELETE to confirm'), h('div', { class: 'input-wrap' }, input)),
+        h('div', { class: 'button-row' }, go,
+          h('button', { type: 'button', class: 'secondary', onclick: () => { document.getElementById('clear-confirm').hidden = true; } }, 'Cancel'))));
   }
 
   function backupStatus() {
@@ -86,6 +113,7 @@
     a.remove();
     FP.store.pref('lastExport', new Date().toISOString());
     FP.store.pref('backupNudgeUntil', null);
+    FP.store.pref('editsSinceExport', null);
     ctx.rerender();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -94,15 +122,18 @@
 
   /*
    * Whether a backup is due: you've changed something since your last export
-   * (or never exported), and that export is over 30 days old.
+   * (or never exported), and that export is over 30 days old or you've made
+   * a good number of edits since.
    */
+  const MANY_EDITS = 15;
   function status(now) {
     now = now || Date.now();
     const lastExport = FP.store.pref('lastExport');
     const lastChange = FP.store.pref('lastChange');
     const changedSince = !!lastChange && (!lastExport || lastChange > lastExport);
     const old = !lastExport || now - Date.parse(lastExport) > 30 * DAY;
-    return { lastExport, lastChange, changedSince, due: changedSince && old };
+    const many = Number(FP.store.pref('editsSinceExport')) >= MANY_EDITS;
+    return { lastExport, lastChange, changedSince, due: changedSince && (old || many) };
   }
 
   // A gentle reminder on Your plan, which you can put off for 30 days.
@@ -120,7 +151,7 @@
     return el;
   }
 
-  FP.backup = { status, nudge };
+  FP.backup = { status, nudge, exportFile };
   FP.screens = FP.screens || {};
   FP.screens.data = { title: 'Data', render };
 })(globalThis.FP = globalThis.FP || {});

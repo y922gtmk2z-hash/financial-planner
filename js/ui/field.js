@@ -8,6 +8,24 @@
   const { h } = FP.dom;
   let uid = 0;
 
+  // "Where do I find this?" for figures people often have to look up.
+  const P11D = 'Your P11D form from your employer (usually given after April), or your payslip if benefits are taxed through pay. Ask payroll if you don\u2019t have one.';
+  const WHERE = {
+    'income.taxCode': 'On your payslip, your P60, or in the HMRC app or your personal tax account.',
+    'income.studentLoanPlan': 'On your payslip (next to the student loan deduction), or sign in to your Student Loans Company account.',
+    'assumptions.statePension': () => ['Get your forecast on ', h('a', { href: 'https://www.gov.uk/check-state-pension', rel: 'noopener noreferrer', target: '_blank' }, 'Check your State Pension forecast'), ' (GOV.UK).'],
+    carValue: P11D,
+    yearly: P11D,
+  };
+  // Key figures where a blank box is worth pointing out (it still counts as £0).
+  const KEY_FIELDS = ['income.grossSalary', 'spending.0.monthly'];
+
+  const whereFor = (field) => {
+    const w = WHERE[field.path] || (field.key === 'carValue' ? WHERE.carValue : null)
+      || (field.key === 'yearly' && FP.profile.BENEFIT_FIELDS.includes(field) ? WHERE.yearly : null);
+    return typeof w === 'function' ? w() : w;
+  };
+
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
    * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared) }
@@ -53,15 +71,24 @@
         maxlength: numeric ? 16 : 60,
       });
       input.addEventListener('input', () => commit(input.value));
+      // Money shows thousands separators, except while you're typing in it.
+      input.addEventListener('focus', () => {
+        if (field.type === 'money' && input.value.includes(',')) input.value = input.value.replace(/,/g, '');
+      });
       input.addEventListener('blur', () => {
         const r = FP.profile.parseValue(field, input.value);
         if (r.ok && field.type === 'money') input.value = FP.dom.inputText(field, r.value);
       });
     }
 
+    const blank = KEY_FIELDS.includes(field.path) && !opts.compact
+      ? h('p', { class: 'help blank-note', hidden: opts.value > 0 }, 'Not entered yet: counts as \u00a30.')
+      : null;
+
     function commit(raw) {
       const r = FP.profile.parseValue(field, raw);
       if (r.ok) {
+        if (blank) blank.hidden = r.value > 0;
         err.hidden = true;
         err.textContent = '';
         input.removeAttribute('aria-invalid');
@@ -76,10 +103,14 @@
     const prefix = field.type === 'money' ? h('span', { class: 'affix', 'aria-hidden': 'true' }, '£') : null;
     const suffix = field.suffix ? h('span', { class: 'affix', 'aria-hidden': 'true' }, field.suffix) : null;
 
+    const where = opts.compact ? null : whereFor(field);
     return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}`, 'data-path': field.path || null },
       h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
       h('div', { class: 'input-wrap' }, prefix, input, suffix),
-      field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : h('span', { id: helpId, hidden: true }),
+      field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
+        : where ? h('p', { class: 'help', id: helpId }, h('strong', null, 'Where do I find this? '), where)
+          : h('span', { id: helpId, hidden: true }),
+      blank,
       err,
       opts.extra || null);
   }

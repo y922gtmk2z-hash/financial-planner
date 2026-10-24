@@ -275,7 +275,8 @@
       }
     }
 
-    FP.dom.add(root, h('h1', null, 'Setup'), intro, nav, groups, footer, calc);
+    const quick = FP.summary.checklist(p).ready ? null : FP.welcome.quickStart(ctx, root);
+    FP.dom.add(root, h('h1', null, 'Setup'), quick, intro, nav, groups, footer, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {

@@ -61,7 +61,7 @@
           add('cashIsa', '+ Cash ISA'),
           add('ssIsa', '+ Stocks & shares ISA')),
         totals,
-        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). What\u2019s left after these is up to you, under \u201cYour leftover money\u201d below.'));
+        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). What\u2019s left after these is up to you, under \u201cMoney left over each month\u201d below.'));
       drawTotals();
     };
     draw();
