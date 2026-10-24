@@ -118,6 +118,7 @@ p { margin: 0 0 10px; }
   border-radius: 999px; background: var(--accent); color: var(--accent-ink);
   font-weight: 700; font-size: 0.9rem; text-decoration: none; white-space: nowrap;
 }
+.header-setup .icon { width: 16px; height: 16px; flex: none; }
 .header-setup[aria-current="page"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 .disclaimer { margin-top: 8px !important; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
@@ -159,23 +160,25 @@ main:focus, main:focus-visible { outline: none; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface); border-top: 1px solid var(--border);
 }
 .tabbar a {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  color: var(--text-2); text-decoration: none; font-size: 0.7rem; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--text-2); text-decoration: none; font-size: 0.75rem; font-weight: 600; letter-spacing: -0.01em;
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.tabbar .tab-icon { font-size: 1.15rem; line-height: 1; }
+.tabbar .tab-icon { display: block; line-height: 0; }
+.tabbar .tab-icon svg { width: 22px; height: 22px; }
 .tabbar a[aria-current="page"] { color: var(--accent); }
 
 @media (min-width: 792px) {
   /* Wider screens: same bottom tabs, centred, with labels beside the icons. */
   .tabbar { padding-left: calc((100% - 760px) / 2); padding-right: calc((100% - 760px) / 2); }
   .tabbar a { flex-direction: row; gap: 6px; font-size: 0.88rem; }
+  .tabbar .tab-icon svg { width: 20px; height: 20px; }
   .tabbar a[aria-current="page"] { background: var(--accent-soft); }
   .toast { bottom: calc(var(--tabbar-h) + 16px); }
 }
@@ -481,7 +484,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .compare-table td { white-space: nowrap; }
 .compare-table td small { display: block; font-size: 0.75rem; font-weight: 600; }
 .compare-table th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
-@media (max-width: 420px) { .tabbar a { font-size: 0.64rem; letter-spacing: -0.02em; } }
 .brand { white-space: nowrap; }
 @media (max-width: 420px) {
   .save-status { font-size: 0.72rem; max-width: 7.5rem; line-height: 1.2; }
@@ -489,12 +491,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .table-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
 fieldset.row-card { min-width: 0; }
-.tab-short { display: none; }
 @media (max-width: 360px) {
-  /* Very narrow phones: shorter tab labels (full name kept for screen readers) and a quieter header. */
-  .tab-full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .tab-short { display: inline; }
-  .tabbar a { font-size: 0.62rem; }
+  /* Very narrow phones: a quieter header. */
   .save-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 .sl-outcome { margin-top: 12px; font-weight: 600; }

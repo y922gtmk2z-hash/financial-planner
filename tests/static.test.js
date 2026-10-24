@@ -91,3 +91,21 @@ test('navigation: every route has a screen; Setup is in the header, views are ta
   assert.match(header, /href="#data"/);
   tabRoutes.forEach((r) => assert.ok(routes.includes(r)));
 });
+
+test('tab bar: one column per tab, each tab named by visible text with a hidden SVG icon', () => {
+  const html = read('index.html');
+  const start = html.indexOf('<nav class="tabbar"');
+  const tabs = html.slice(start, html.indexOf('</nav>', start));
+  const links = [...tabs.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)].map((m) => m[1]);
+  const css = read('css/styles.css');
+  const rule = css.match(/\.tabbar\s*\{([^}]*)\}/)[1];
+  const fixed = rule.match(/grid-template-columns:\s*repeat\((\d+)/);
+  if (fixed) assert.equal(Number(fixed[1]), links.length, 'tab bar column count matches the tabs');
+  else assert.match(rule, /grid-auto-flow:\s*column/);
+  links.forEach((inner) => {
+    assert.match(inner, /<span class="tab-icon" aria-hidden="true"><svg\b/, 'icon is a hidden SVG');
+    const text = inner.replace(/<span class="tab-icon"[\s\S]*?<\/span>/, '').replace(/<[^>]+>/g, '').trim();
+    assert.ok(/\w/.test(text), 'tab has a visible label');
+    assert.ok(!/[←-⟿]/.test(inner), 'no Unicode glyph icons');
+  });
+});

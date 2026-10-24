@@ -197,6 +197,11 @@
   const disclaimer = document.getElementById('disclaimer');
   disclaimer.open = !FP.store.pref('seenDisclaimer');
   FP.store.pref('seenDisclaimer', '1');
+  document.getElementById('show-disclaimer').addEventListener('click', () => {
+    disclaimer.open = true;
+    disclaimer.scrollIntoView({ block: 'start' });
+    disclaimer.querySelector('summary').focus();
+  });
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : '';
   if (loaded.error) toast(loaded.error);
