@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "isSample": true,
+  "about": {
+    "age": 38,
+    "riskAppetite": ""
+  },
+  "assets": {
+    "homeValue": 325000,
+    "cashSavings": 14000,
+    "isa": 22000,
+    "gia": 3500,
+    "pension": 61000,
+    "other": 6000
+  },
+  "mortgage": {
+    "balance": 198000,
+    "remainingTermYears": 23,
+    "monthlyPayment": null,
+    "monthlyOverpayment": 150
+  },
+  "debts": [
+    {
+      "id": "sample-car",
+      "name": "Car finance (sample)",
+      "balance": 7800,
+      "monthlyPayment": 245,
+      "termMonths": null,
+      "rate": 6.9
+    },
+    {
+      "id": "sample-card",
+      "name": "Credit card (sample)",
+      "balance": 1200,
+      "monthlyPayment": 100,
+      "termMonths": null,
+      "rate": null
+    }
+  ],
+  "income": {
+    "grossSalary": 56000,
+    "bonuses": [
+      {
+        "id": "sample-b1",
+        "amount": 2000,
+        "month": "mar"
+      },
+      {
+        "id": "sample-b2",
+        "amount": 500,
+        "month": "dec"
+      }
+    ],
+    "sacrifices": [],
+    "benefits": [],
+    "otherIncome": 0,
+    "taxFreeIncome": 0,
+    "otherIncomeAfterRetirement": "no",
+    "studentLoanPlan": "plan2",
+    "studentLoanBalance": 41000,
+    "studentLoanStartYear": 2017,
+    "studentLoanRate": null,
+    "studentLoanOverpayment": 0,
+    "taxCode": "",
+    "benefitsTaxed": "payroll",
+    "region": "rUK",
+    "pensionMethod": "netPay"
+  },
+  "savings": [
+    {
+      "id": "sample-sv1",
+      "type": "ssIsa",
+      "monthly": 75,
+      "grows": "salary"
+    }
+  ],
+  "leftover": {
+    "unit": "pct",
+    "emergency": 10,
+    "debts": 0,
+    "cash": 20,
+    "invest": 50,
+    "mortgage": 10,
+    "pension": 10,
+    "emergencyMonths": 3
+  },
+  "goals": {
+    "retirementIncome": null
+  },
+  "outgoings": {
+    "estimate": null
+  },
+  "ideas": {},
+  "spending": [
+    {
+      "id": "sample-s1",
+      "category": "Bills & utilities",
+      "monthly": 260,
+      "group": "bills"
+    },
+    {
+      "id": "sample-s2",
+      "category": "Council tax",
+      "monthly": 175,
+      "group": "bills"
+    },
+    {
+      "id": "sample-s3",
+      "category": "Groceries",
+      "monthly": 420,
+      "group": "other"
+    },
+    {
+      "id": "sample-s4",
+      "category": "Transport",
+      "monthly": 140,
+      "group": "other"
+    },
+    {
+      "id": "sample-s5",
+      "category": "Childcare",
+      "monthly": 0,
+      "group": "other"
+    },
+    {
+      "id": "sample-s6",
+      "category": "Insurance",
+      "monthly": 65,
+      "group": "bills"
+    },
+    {
+      "id": "sample-s7",
+      "category": "Eating out & leisure",
+      "monthly": 180,
+      "group": "other"
+    },
+    {
+      "id": "sample-s8",
+      "category": "Holidays",
+      "monthly": 120,
+      "group": "other"
+    },
+    {
+      "id": "sample-s9",
+      "category": "Other",
+      "monthly": 120,
+      "group": "other"
+    }
+  ],
+  "assumptions": {
+    "inflation": 2.5,
+    "salaryGrowth": 3,
+    "spendingGrowth": 2.5,
+    "housePriceGrowth": 3,
+    "savingsRate": 3.5,
+    "investmentReturn": 5,
+    "investmentFees": 0.4,
+    "pensionGrowth": 5,
+    "pensionFees": 0.5,
+    "mortgageRate": 4.5,
+    "mortgageRateChangeYear": null,
+    "mortgageRateAfterChange": null,
+    "otherDebtRate": 7,
+    "overpaymentLimitPct": 10,
+    "capOverpayments": "limit",
+    "employeePensionPct": 5,
+    "employerPensionPct": 3,
+    "retirementAge": 67,
+    "lifeExpectancy": 86,
+    "endAge": 95,
+    "pensionAccessAge": 57,
+    "taxThresholds": "frozen",
+    "studentLoanInterest": "current",
+    "statePension": 12547.6,
+    "statePensionAge": 67,
+    "isaAllowance": 20000,
+    "cashIsaLimit": 12000
+  }
+}

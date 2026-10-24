@@ -1,0 +1,8 @@
+{
+  "about": { "age": 38 },
+  "income": { "grossSalary": 85000 },
+  "outgoings": { "estimate": 3200 },
+  "spending": [{ "id": "qs-rest", "category": "Rest of your estimate", "monthly": 0, "group": "other", "rest": true }],
+  "goals": { "retirementIncome": 3000 },
+  "assumptions": { "retirementAge": 60 }
+}

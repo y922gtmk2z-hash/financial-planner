@@ -1,0 +1,17 @@
+{
+  "about": { "age": 31 },
+  "income": { "grossSalary": 26000 },
+  "assets": { "cashSavings": 300 },
+  "debts": [
+    { "id": "st-car", "name": "Car loan", "balance": 6500, "rate": 9.9, "monthlyPayment": 210, "termMonths": null },
+    { "id": "st-loan", "name": "Personal loan", "balance": 3000, "rate": 14.9, "monthlyPayment": 120, "termMonths": null },
+    { "id": "st-card", "name": "Credit card", "balance": 2800, "rate": 24.9, "monthlyPayment": 90, "termMonths": null }
+  ],
+  "spending": [
+    { "id": "st-s1", "category": "Rent", "monthly": 950, "group": "bills" },
+    { "id": "st-s2", "category": "Bills & utilities", "monthly": 280, "group": "bills" },
+    { "id": "st-s3", "category": "Groceries", "monthly": 350, "group": "other" },
+    { "id": "st-s4", "category": "Transport", "monthly": 150, "group": "other" },
+    { "id": "st-s5", "category": "Other", "monthly": 100, "group": "other" }
+  ]
+}
