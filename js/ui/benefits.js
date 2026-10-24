@@ -53,7 +53,15 @@
         })),
         h('div', { class: 'button-row' },
           add('medical', '+ Private medical insurance'),
-          add('other', '+ Other benefit')));
+          add('other', '+ Other benefit')),
+        // Taxed through your pay, or collected by a lower tax code? (Not both.)
+        list.length ? FP.field.render({
+          path: 'income.benefitsTaxed', label: 'How is the tax on them collected?', type: 'toggle',
+          options: [{ value: 'payroll', label: 'Through my pay' }, { value: 'code', label: 'Through my tax code' }],
+          help: p.income.taxCode
+            ? 'If the benefit shows on your payslip, it\u2019s through your pay. If not, HMRC has usually lowered your tax code to collect it, so your tax code already allows for it.'
+            : 'If the benefit shows on your payslip, it\u2019s through your pay. If it\u2019s collected through your tax code, enter your tax code above so it\u2019s only counted once.',
+        }, { value: p.income.benefitsTaxed, onChange: (v) => { ctx.update('income.benefitsTaxed', v); } }) : null);
     };
     draw();
     return wrap;

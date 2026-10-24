@@ -51,6 +51,8 @@
           help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
         { path: 'income.grossSalary', label: 'Gross salary', type: 'money', suffix: 'a year',
           help: 'Your yearly salary before tax and deductions.' },
+        { path: 'income.taxCode', label: 'Tax code (optional)', type: 'taxcode', placeholder: 'e.g. 1257L',
+          help: 'On your payslip, P60 or the HMRC app. Leave blank for the standard allowance. A code starting with S uses Scottish rates.' },
         { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS, group: 'pay',
           help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
         { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pay',
@@ -228,7 +230,7 @@
       debts: [],
       income: {
         grossSalary: 0, bonuses: [], sacrifices: [], benefits: [], otherIncome: 0, taxFreeIncome: 0, otherIncomeAfterRetirement: 'no', studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
-        studentLoanRate: null, studentLoanOverpayment: 0, region: 'rUK', pensionMethod: 'netPay',
+        studentLoanRate: null, studentLoanOverpayment: 0, taxCode: '', benefitsTaxed: 'payroll', region: 'rUK', pensionMethod: 'netPay',
       },
       savings: [],
       leftover: { ...LEFTOVER_DEFAULT },
@@ -278,6 +280,11 @@
    * (or "not set" for nullable fields). Returns { ok, value, error }.
    */
   function parseValue(field, raw) {
+    if (field.type === 'taxcode') {
+      const c = FP.tax.parseTaxCode(raw);
+      if (c.empty) return { ok: true, value: '' };
+      return c.ok ? { ok: true, value: c.code } : { ok: false, error: c.error };
+    }
     if (field.type === 'text') {
       return { ok: true, value: String(raw == null ? '' : raw).trim().slice(0, 60) };
     }
@@ -348,6 +355,7 @@
       p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
         .map((x) => normaliseRow(x, SACRIFICE_FIELDS, 'ss'));
     }
+    if (srcIncome.benefitsTaxed === 'code') p.income.benefitsTaxed = 'code';
     if (Array.isArray(srcIncome.benefits)) {
       p.income.benefits = srcIncome.benefits.filter((x) => x && typeof x === 'object').slice(0, MAX_BENEFITS)
         .map((x) => normaliseRow(x, BENEFIT_FIELDS, 'bk'));

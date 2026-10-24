@@ -27,11 +27,18 @@
   const section = (id) => P.SECTIONS.find((sec) => sec.id === id);
 
   function maker(ctx) {
-    return (f) => FP.field.render(f, {
-      value: P.get(ctx.profile(), f.path),
-      nullPlaceholder: f.nullPlaceholder,
-      onChange: (v) => ctx.update(f.path, v),
-    });
+    return (f) => {
+      // The tax code says what it means as you type.
+      const note = f.type === 'taxcode' ? h('p', { class: 'help tax-code-note', role: 'status' }) : null;
+      const explain = () => { if (note) note.textContent = FP.tax.describeTaxCode(P.get(ctx.profile(), f.path)); };
+      explain();
+      return FP.field.render(f, {
+        value: P.get(ctx.profile(), f.path),
+        nullPlaceholder: f.nullPlaceholder,
+        onChange: (v) => { ctx.update(f.path, v); explain(); },
+        extra: note,
+      });
+    };
   }
 
   // A group's fields under its heading, with any `more` fields folded under "More".

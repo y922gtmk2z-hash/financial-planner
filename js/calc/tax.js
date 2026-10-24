@@ -39,6 +39,66 @@
     return { total, byBand };
   }
 
+  // Flat-rate codes: every pound of pay taxed at one rate, no allowance.
+  const FLAT_RATES = {
+    rUK: { BR: 20, D0: 40, D1: 45 },
+    scotland: { BR: 20, D0: 21, D1: 42, D2: 45, D3: 48 },
+  };
+
+  /*
+   * A PAYE tax code, e.g. 1257L, S1257L, K475, BR, D0, 0T, NT, 1257L W1.
+   * Returns { ok, code, region ('scotland' | 'rUK' | null), kind, allowance,
+   * flat, emergency, error }:
+   *   kind 'allowance': `allowance` tax-free (negative for K codes: added to pay)
+   *   kind 'zero' (0T): no allowance, normal bands
+   *   kind 'flat' (BR, D0...): all pay taxed at `flat`%
+   *   kind 'none' (NT): no tax
+   * The S prefix means Scottish rates, C Welsh (the same as England). W1, M1
+   * and X (emergency, non-cumulative) are accepted but don't change a year's figures.
+   */
+  function parseTaxCode(raw) {
+    const text = String(raw == null ? '' : raw).toUpperCase().replace(/\s+/g, '');
+    if (!text) return { ok: false, empty: true };
+    const m = text.match(/^(S|C)?(K\d{1,4}|\d{1,4}[LMNT]|BR|D[0-3]|0T|NT)(W1|M1|X)?$/);
+    const bad = { ok: false, error: 'That doesn\u2019t look like a tax code. Examples: 1257L, S1257L, K475, BR, D0, 0T or NT.' };
+    if (!m) return bad;
+    const [, prefix, body, suffix] = m;
+    const region = prefix === 'S' ? 'scotland' : prefix === 'C' ? 'rUK' : null;
+    const base = { ok: true, code: `${prefix || ''}${body}${suffix ? ` ${suffix}` : ''}`, region, emergency: !!suffix };
+    if (body === 'NT') return { ...base, kind: 'none' };
+    if (body === '0T') return { ...base, kind: 'zero', allowance: 0 };
+    if (body === 'BR' || body[0] === 'D') {
+      const rates = FLAT_RATES[region || 'rUK'];
+      if (rates[body] == null) return { ok: false, error: `${body} is only used in Scotland (with an S in front).` };
+      return { ...base, kind: 'flat', flat: rates[body] };
+    }
+    if (body[0] === 'K') return { ...base, kind: 'allowance', allowance: -Number(body.slice(1)) * 10, k: true };
+    return { ...base, kind: 'allowance', allowance: Number(body.slice(0, -1)) * 10, letter: body.slice(-1) };
+  }
+
+  // What a tax code means, in a sentence.
+  function describeTaxCode(raw, cfg) {
+    cfg = cfg || FP.taxConfig;
+    const c = parseTaxCode(raw);
+    if (!c.ok) return c.empty ? `Standard: ${money(cfg.personalAllowance)} tax-free (1257L).` : c.error;
+    const where = c.region === 'scotland' ? ' Scottish rates.' : '';
+    const emergency = c.emergency ? ' (An emergency code: it usually changes once HMRC has your details.)' : '';
+    let text;
+    if (c.kind === 'none') text = 'No tax taken from this pay.';
+    else if (c.kind === 'zero') text = 'No tax-free allowance: all your pay is taxed at the usual rates.';
+    else if (c.kind === 'flat') text = `All your pay is taxed at ${c.flat}%, with no tax-free allowance. Usually for a second job.`;
+    else if (c.k) text = `${money(-c.allowance)} is added to your taxable pay (a K code, usually for benefits or tax owed). Tax taken is capped at half your pay.`;
+    else {
+      const diff = c.allowance - cfg.personalAllowance;
+      text = `${money(c.allowance)} tax-free${diff === 0 ? ', the standard allowance.' : diff < 0 ? `, ${money(-diff)} less than standard (often for benefits, tax owed or the \u00a3100k taper).` : `, ${money(diff)} more than standard (e.g. Marriage Allowance or expenses).`}`;
+    }
+    return text + where + emergency;
+  }
+
+  function money(n) {
+    return `\u00a3${Math.round(n).toLocaleString('en-GB')}`;
+  }
+
   function nationalInsurance(niablePay, ni) {
     const main = Math.max(0, Math.min(niablePay, ni.upperEarningsLimit) - ni.primaryThreshold);
     const upper = Math.max(0, niablePay - ni.upperEarningsLimit);
@@ -63,7 +123,11 @@
     const bonus = Math.max(0, input.bonus || 0);
     const gross = salary + bonus;
     const method = input.pensionMethod || 'netPay';
-    const bands = cfg.bands[input.region === 'scotland' ? 'scotland' : 'rUK'];
+    // A tax code (if given) sets your allowance, or a flat rate, and S means Scottish rates.
+    const code = input.taxCode ? parseTaxCode(input.taxCode) : null;
+    const tc = code && code.ok ? code : null;
+    const region = tc && tc.region ? tc.region : input.region === 'scotland' ? 'scotland' : 'rUK';
+    const bands = cfg.bands[region];
 
     // Your contribution, before any tax relief, capped at your pay.
     const pensionGross = Math.min(gross, salary * Math.max(0, input.employeePensionPct || 0) / 100);
@@ -95,7 +159,8 @@
     // Pension contributions stay based on full salary.
     const sacrificedPension = method === 'salarySacrifice' ? pensionGross : 0;
     const otherSacrifice = Math.min(Math.max(0, input.otherSacrifice || 0), Math.max(0, gross - sacrificedPension));
-    const benefitInKind = Math.max(0, input.benefitInKind || 0);
+    // Benefits already allowed for in your tax code aren't added to your pay as well.
+    const benefitInKind = tc && input.benefitsInCode ? 0 : Math.max(0, input.benefitInKind || 0);
     payForTax += benefitInKind - otherSacrifice;
     payForNi -= otherSacrifice;
     adjustedNetIncome += benefitInKind - otherSacrifice;
@@ -104,9 +169,31 @@
     payForTax += otherIncome;
     adjustedNetIncome += otherIncome;
 
-    const allowance = personalAllowance(adjustedNetIncome, cfg);
+    // With a tax code, its allowance replaces the standard one (and its taper:
+    // HMRC builds that into your code). It moves with the standard allowance in
+    // future years, so a code £1,000 below standard stays £1,000 below.
+    let allowance;
+    let tax;
+    if (tc && (tc.kind === 'flat' || tc.kind === 'none')) {
+      allowance = 0;
+      const rate = tc.kind === 'none' ? 0 : tc.flat;
+      const pay = Math.max(0, payForTax);
+      let placed = false;
+      const byBand = bands.map((b) => {
+        const here = !placed && b.rate === rate;
+        if (here) placed = true;
+        return { name: b.name, rate: b.rate, grossLabel: b.grossLabel, amount: here ? pay : 0, tax: here ? pay * rate / 100 : 0 };
+      });
+      tax = { total: pay * rate / 100, byBand };
+    } else {
+      allowance = tc ? tc.allowance + (cfg.personalAllowance - FP.taxConfig.personalAllowance) : personalAllowance(adjustedNetIncome, cfg);
+      if (tc && tc.kind === 'zero') allowance = 0;
+      tax = incomeTax(Math.max(0, payForTax - allowance), bands, bandExtension, cfg.reliefAtSourceRate);
+      // K codes: tax taken can't be more than half your pay.
+      if (tc && tc.k) tax = { ...tax, total: Math.min(tax.total, Math.max(0, payForTax) * 0.5) };
+    }
+    // Taxed income (with a K code, more than your pay).
     const taxable = Math.max(0, payForTax - allowance);
-    const tax = incomeTax(taxable, bands, bandExtension, cfg.reliefAtSourceRate);
     const ni = nationalInsurance(payForNi, cfg.nationalInsurance);
     // Student loan is based on pay after salary sacrifice, but before other pension.
     const sl = studentLoan(payForNi, input.studentLoanPlan, cfg);
@@ -115,7 +202,8 @@
 
     return {
       taxYear: cfg.taxYear,
-      region: input.region === 'scotland' ? 'scotland' : 'rUK',
+      region,
+      taxCode: tc ? tc.code : null,
       pensionMethod: method,
       salary,
       bonus,
@@ -270,6 +358,8 @@
         return { otherSacrifice: ss.sacrifice, benefitInKind: ss.benefitInKind + benefitsTotal(inc.benefits) };
       })(),
       otherIncome: inc.otherIncome || 0,
+      taxCode: inc.taxCode || '',
+      benefitsInCode: inc.benefitsTaxed === 'code',
       taxFreeIncome: inc.taxFreeIncome || 0,
       employeePensionPct: profile.assumptions.employeePensionPct,
       employerPensionPct: profile.assumptions.employerPensionPct,
@@ -284,7 +374,7 @@
   }
 
   FP.tax = {
-    personalAllowance, incomeTax, nationalInsurance, studentLoan,
+    personalAllowance, incomeTax, nationalInsurance, studentLoan, parseTaxCode, describeTaxCode,
     MONTHS, bonusList, sacrificeForYear, benefitsTotal, takeHome, keepOfNext, inputFromProfile, forProfile,
   };
 })(globalThis.FP = globalThis.FP || {});

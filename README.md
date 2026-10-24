@@ -46,7 +46,7 @@ Your data).
 
 1. **Setup**, in four sections (section by section the first time, then on one page):
    - **About you:** your age, when you'd like to retire, what you'd like to spend in
-     retirement, and your salary. **More about your pay** (folded away) has your
+     retirement, your salary and (optionally) your **tax code**. **More about your pay** (folded away) has your
      pension, bonuses, salary sacrifice, **workplace benefits** (private medical
      insurance or another taxable benefit) and **other income**.
    - **What you spend and save:** one question on what you spend in a month (split it
@@ -214,6 +214,28 @@ pay. They:
 Anything left over after regular savings is shared out as you choose under **Your
 leftover money**.
 
+## Tax code
+
+Enter your tax code in **About you** (from your payslip, P60 or the HMRC app), or leave
+it blank for the standard allowance (1257L). As you type, it says what the code means.
+
+- **Number codes** (1257L, 1100M, 1357T...): that many tens of pounds tax-free. A lower
+  code means more tax; it replaces the standard allowance and the £100k taper, which
+  HMRC builds into your code.
+- **K codes** (K475): that amount is added to your taxable pay; tax taken is capped at
+  half your pay.
+- **BR, D0, D1** (and Scottish SD0–SD3): all pay taxed at one rate, no allowance.
+  **0T**: no allowance, normal bands. **NT**: no tax.
+- **S** in front means Scottish rates (overriding where you said you pay tax); **C** is
+  Wales (the same as England). Emergency suffixes (W1, M1, X) are accepted.
+
+In the projection the code applies to your pay every year you work, and keeps the same
+gap from the standard allowance as thresholds change. In retirement, State Pension and
+pension income use the standard allowance. If you have workplace benefits, choose
+whether their tax is collected **through your pay** or **through your tax code**, so
+they're only counted once. Pay and tax shows the code you're using, and the take-home
+panel lets you try another.
+
 ## Workplace benefits and other income
 
 Under **About you → More about your pay**:
@@ -349,11 +371,15 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-152 tests cover:
+160 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Tax codes:** parsing (number, K, BR/D, 0T, NT, S and C prefixes, emergency
+  suffixes, invalid codes), 1257L matching the standard calculation, lower codes, K
+  codes and their 50% cap, flat-rate codes, S codes using Scottish rates, codes
+  replacing the taper, benefits not counted twice, and the code in the projection.
 - **Workplace benefits and other income:** medical insurance taxed with no NI, other
   income taxed with your salary (into the higher rate), tax-free income, bonus months
   still adding up, carrying on after retirement only when chosen, and import checks.

@@ -147,7 +147,7 @@
       id: 'takeHome',
       title: 'Take-home pay',
       drivers: () => [
-        'income.grossSalary', 'income.region', 'assumptions.employeePensionPct', 'income.pensionMethod', 'income.studentLoanPlan',
+        'income.grossSalary', 'income.taxCode', 'income.region', 'assumptions.employeePensionPct', 'income.pensionMethod', 'income.studentLoanPlan',
       ],
       ideas: ['taper', 'relief', 'match'],
       evaluate(p) {

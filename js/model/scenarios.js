@@ -126,6 +126,7 @@
       const x = FP.profile.get(a, f.path);
       const y = FP.profile.get(b, f.path);
       if (f.options) push(f.label, optionLabel(f.options, x), optionLabel(f.options, y), 'text');
+      else if (f.type === 'taxcode') push(f.label, x || 'Standard', y || 'Standard', 'text');
       else push(f.label, x, y, f.type === 'money' ? 'money' : 'number');
     }));
 
