@@ -617,7 +617,9 @@ fieldset.row-card { min-width: 0; }
 .setup-intro { margin-bottom: 12px; }
 .step-nav { position: sticky; top: 0; z-index: 15; transition: top 0.22s ease; margin: 0 calc(-1 * var(--gutter)) 12px; padding: 8px var(--gutter); background: var(--bg); }
 .app-header:not(.is-hidden) ~ main .step-nav { top: var(--header-h, 56px); }
-.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.step-nav li { display: flex; }
+.step-nav .step-chip { flex: 1; justify-content: flex-start; text-align: center; line-height: 1.2; }
 .step-chip {
   display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px;
   border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
