@@ -140,3 +140,12 @@ test('a new plan starts with one spending category', () => {
   assert.equal(p.spending.length, 1);
   assert.equal(p.spending[0].monthly, 0);
 });
+
+test('a first visit starts empty, not with sample data', () => {
+  const r = FP.store.load(); // no browser storage in Node
+  const p = r.workspace.scenarios[0].profile;
+  assert.equal(r.source, 'new');
+  assert.equal(p.isSample, false);
+  assert.equal(p.about.age, null);
+  assert.equal(p.income.grossSalary, 0);
+});

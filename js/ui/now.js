@@ -48,6 +48,10 @@
         view === 'pay' ? [I.taxYearNotice(), I.resultsView(p), I.yourPayCard(p)] : null);
     }
 
+    if (FP.checklist.isEmpty(p)) {
+      FP.dom.add(root, h('h1', null, 'Now'), FP.checklist.emptyCard('where you stand today'));
+      return;
+    }
     FP.dom.add(root,
       h('h1', null, 'Now'),
       s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>

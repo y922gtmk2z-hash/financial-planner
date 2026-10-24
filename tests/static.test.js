@@ -30,7 +30,7 @@ test('the only URLs in the code are official sources shown as links', () => {
 
 test('every script is loaded by index.html, and the tests load the same calc files in the same order', () => {
   const html = read('index.html');
-  const tags = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+  const tags = [...html.matchAll(/<script src="([^"?]+)(?:\?[^"]*)?"/g)].map((m) => m[1]);
   jsFiles('js').map((f) => f.split(path.sep).join('/')).forEach((f) => assert.ok(tags.includes(f), `${f} missing from index.html`));
   const loader = read('tests/load.js');
   const loaded = [...loader.matchAll(/'(js\/[^']+)'/g)].map((m) => m[1]);
@@ -47,7 +47,7 @@ test('exported data files are git-ignored', () => {
 
 test('GitHub Pages: every local path in index.html is relative and exists', () => {
   const html = read('index.html');
-  const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1])
+  const refs = [...html.matchAll(/(?:src|href)="([^"?]+)(?:\?[^"]*)?"/g)].map((m) => m[1])
     .filter((u) => !u.startsWith('#') && !u.startsWith('data:') && !/^https?:/.test(u));
   assert.ok(refs.length > 10);
   refs.forEach((u) => {
@@ -56,6 +56,15 @@ test('GitHub Pages: every local path in index.html is relative and exists', () =
   });
   assert.ok(!/<base\b/i.test(html), 'no <base> tag');
   assert.ok(fs.existsSync(path.join(root, '.nojekyll')), '.nojekyll serves files as-is');
+});
+
+test('GitHub Pages: every script and the stylesheet carry the same version, so updates aren\u2019t hidden by the browser cache', () => {
+  const html = read('index.html');
+  const assets = [...html.matchAll(/(?:<script src|<link rel="stylesheet" href)="((?:js|css)\/[^"]+)"/g)].map((m) => m[1]);
+  assert.ok(assets.length > 10);
+  const versions = new Set(assets.map((u) => (u.match(/\?v=([\w.-]+)$/) || [])[1]));
+  assert.equal(versions.size, 1, `assets have different versions: ${[...versions].join(', ')}`);
+  assert.ok(!versions.has(undefined), 'every asset has ?v=');
 });
 
 test('GitHub Pages: no code builds absolute paths', () => {

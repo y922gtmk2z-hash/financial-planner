@@ -198,7 +198,7 @@
   disclaimer.open = !FP.store.pref('seenDisclaimer');
   FP.store.pref('seenDisclaimer', '1');
 
-  status.textContent = loaded.source === 'saved' ? 'Saved on this device' : 'Sample data';
+  status.textContent = loaded.source === 'saved' ? 'Saved on this device' : '';
   if (loaded.error) toast(loaded.error);
   const firstTarget = route();
   if (firstTarget) goToTarget(firstTarget);

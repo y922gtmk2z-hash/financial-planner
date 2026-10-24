@@ -17,6 +17,10 @@
 
   function render(root, ctx) {
     const ws = ctx.workspace();
+    if (ws.scenarios.length === 1 && FP.checklist.isEmpty(ctx.profile())) {
+      FP.dom.add(root, h('h1', null, 'Scenarios'), FP.checklist.emptyCard('and compare what-ifs'));
+      return;
+    }
     const results = h('div');
     let view = FP.screens.future.getView();
     const draw = () => FP.dom.fill(results, compareView(ctx, view, draw));
@@ -168,6 +172,7 @@
     const sums = ws.scenarios.map((sc) => ({ sc, s: FP.compare.summarise(sc.profile, real) }));
     const ok = sums.filter((x) => x.s.ok);
     if (!ok.length) {
+      if (FP.checklist.isEmpty(ctx.profile())) return FP.checklist.emptyCard('projections side by side');
       return FP.checklist.card(ctx.profile(), { what: 'projections side by side' })
         || h('section', { class: 'card' }, h('p', null, 'Enter your age in Setup to compare projections.'), h('a', { href: '#setup' }, 'Go to Setup'));
     }

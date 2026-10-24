@@ -736,3 +736,17 @@ html.sheet-open { overflow: hidden; }
 .benefit-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
 li.row-card { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 li.row-card .field:last-of-type { margin-bottom: 4px; }
+
+/* ---------- Welcome (first visit) ---------- */
+.welcome { padding: 8px 0 16px; }
+.welcome h1 { font-size: 1.8rem; line-height: 1.2; margin-bottom: 8px; }
+.welcome-answers { list-style: none; margin: 12px 0 20px; padding: 0; display: grid; gap: 10px; }
+.welcome-answers li {
+  display: flex; flex-direction: column; padding: 12px 14px; border: 1px solid var(--border);
+  border-left: 4px solid var(--accent); border-radius: 10px; background: var(--surface);
+}
+.welcome-answers span { color: var(--text-2); font-size: 0.92rem; }
+.welcome-start { display: block; width: 100%; min-height: 52px; font-size: 1.05rem; text-align: center; line-height: 52px; padding: 0; text-decoration: none; }
+.welcome-steps { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
+.empty-plan .button { display: inline-block; text-decoration: none; }
+@media (min-width: 640px) { .welcome-answers { grid-template-columns: 1fr 1fr; } }
