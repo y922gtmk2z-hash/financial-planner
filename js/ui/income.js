@@ -26,12 +26,20 @@
     const method = (FP.profile.PENSION_METHODS.find((m) => m.value === inc.pensionMethod) || {}).label;
     const bonuses = inc.bonuses.filter((b) => b.amount > 0);
     const rows = [
-      ['Where you pay income tax', inc.region === 'scotland' ? 'Scotland' : 'England, Wales or NI', 'income.region'],
+      ['Where you pay income tax', (() => {
+        const c = FP.tax.parseTaxCode(inc.taxCode);
+        const fromCode = c.ok && c.region;
+        const region = fromCode || inc.region;
+        return `${region === 'scotland' ? 'Scotland' : 'England, Wales or NI'}${fromCode ? ' (from your tax code)' : ''}`;
+      })(), 'income.region'],
+      ['Tax code', inc.taxCode || 'Standard (1257L)', 'income.taxCode'],
       ['Gross salary', inc.grossSalary > 0 ? `${money(inc.grossSalary)} a year` : 'Not entered', 'income.grossSalary'],
       ['Your pension', `${pct(a.employeePensionPct, 1)} of salary${method ? ` \u00b7 ${method}` : ''}`, 'assumptions.employeePensionPct'],
       ['Employer pension', `${pct(a.employerPensionPct, 1)} of salary`, 'assumptions.employerPensionPct'],
       ['Bonuses', bonuses.length ? `${money(total(bonuses, 'amount'))} a year (${bonuses.map((b) => monthName(b.month)).join(', ')})` : 'None', 'bonuses'],
       ['Salary sacrifice', inc.sacrifices.length ? `${money(total(inc.sacrifices, 'monthly'))} a month` : 'None', 'sacrifices'],
+      ['Workplace benefits', inc.benefits && inc.benefits.length ? `${money(total(inc.benefits, 'yearly'))} a year, taxed` : 'None', 'benefits'],
+      ['Other income', (inc.otherIncome || 0) + (inc.taxFreeIncome || 0) > 0 ? `${money((inc.otherIncome || 0) + (inc.taxFreeIncome || 0))} a year` : 'None', 'income.otherIncome'],
       ['Student loan', inc.studentLoanPlan !== 'none'
         ? `${PLAN_LABELS[inc.studentLoanPlan]}${inc.studentLoanBalance > 0 ? ` \u00b7 ${money(inc.studentLoanBalance)} owed` : ''}`
         : 'None', 'income.studentLoanPlan'],
@@ -102,6 +110,7 @@
           h('div', null, h('span', null, 'Of your next £100 pay rise'), h('strong', null, `you keep ${money(keep)}`))),
         chips([
           `Tax year ${r.taxYear}`,
+          r.taxCode ? `Tax code ${r.taxCode}` : 'Standard tax code',
           r.region === 'scotland' ? 'Scottish income tax' : 'Rest-of-UK income tax',
           `Pension ${pct(input.employeePensionPct, 1)} of salary`,
           input.studentLoanPlan !== 'none' ? `Student loan ${PLAN_LABELS[input.studentLoanPlan]}` : 'No student loan',
@@ -149,13 +158,14 @@
         h('tbody', null,
           row('Salary', [r.salary, ...months.map(() => r.salary / 12)]),
           r.bonus > 0 ? row('Bonus', [r.bonus, r.bonusSpread / 12, ...bps.map((b) => b.amount + r.bonusSpread / 12)]) : null,
+          r.otherIncome > 0 ? row('Other income', [r.otherIncome, ...each('otherIncome')]) : null,
           r.salarySacrifice > 0 ? row('\u2212 Salary sacrifice (car, cycle\u2026)', [r.salarySacrifice, ...each('salarySacrifice')], 'minus') : null,
           r.pensionFromPay > 0 ? row(`\u2212 Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, [r.pensionFromPay, ...each('pensionFromPay')], 'minus') : null,
           row('\u2212 Income tax', [r.incomeTax, ...each('incomeTax')], 'minus'),
           row('\u2212 National Insurance', [r.nationalInsurance, ...each('nationalInsurance')], 'minus'),
           r.studentLoan > 0 ? row('\u2212 Student loan', [r.studentLoan, ...each('studentLoan')], 'minus') : null,
           row('Take-home pay', [r.takeHome, ...each('takeHome')], 'result'),
-          r.benefitInKind > 0 ? row('Car benefit in kind (taxed, not paid)', [r.benefitInKind, ...months.map(() => r.benefitInKind / 12)], 'aside') : null,
+          r.benefitInKind > 0 ? row('Benefits in kind (taxed, not paid)', [r.benefitInKind, ...months.map(() => r.benefitInKind / 12)], 'aside') : null,
           r.employerPension > 0 ? row('Employer adds to your pension', [r.employerPension, ...months.map(() => r.employerPension / 12)], 'aside') : null,
           r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
       lumpy ? h('p', { class: 'muted small' },
@@ -222,11 +232,14 @@
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, 'Band'), h('th', { scope: 'col', class: 'num' }, 'Income'), h('th', { scope: 'col', class: 'num' }, 'Tax'))),
         h('tbody', null,
-          h('tr', null, h('td', null, 'Personal allowance (0%)'), h('td', { class: 'num' }, money(r.personalAllowance)), h('td', { class: 'num' }, money(0))),
+          r.personalAllowance >= 0
+            ? h('tr', null, h('td', null, `${r.taxCode ? `Tax-free (tax code ${r.taxCode})` : 'Personal allowance'} (0%)`), h('td', { class: 'num' }, money(r.personalAllowance)), h('td', { class: 'num' }, money(0)))
+            : null,
           used.map((b) => h('tr', null,
             h('td', null, `${b.name} (${b.rate}%)`), h('td', { class: 'num' }, money(b.amount)), h('td', { class: 'num' }, money(b.tax)))),
-          h('tr', { class: 'total' }, h('th', { scope: 'row' }, 'Total'), h('td', { class: 'num' }, money(r.personalAllowance + r.taxable)), h('td', { class: 'num' }, money(r.incomeTax))))),
-      r.personalAllowance < FP.taxConfig.personalAllowance
+          h('tr', { class: 'total' }, h('th', { scope: 'row' }, 'Total'), h('td', { class: 'num' }, money(Math.max(0, r.personalAllowance) + r.taxable)), h('td', { class: 'num' }, money(r.incomeTax))))),
+      r.taxCode ? h('p', { class: 'muted small' }, `Tax code ${r.taxCode}: ${FP.tax.describeTaxCode(r.taxCode)}`) : null,
+      !r.taxCode && r.personalAllowance < FP.taxConfig.personalAllowance
         ? h('p', { class: 'notice warn' }, `Your personal allowance is reduced to ${money(r.personalAllowance)} because your income is over ${money(FP.taxConfig.taperThreshold)}. Pension contributions can bring it back down.`)
         : null);
   }

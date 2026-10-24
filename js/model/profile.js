@@ -34,10 +34,13 @@
 
   // Setup screen fields. `path` is where the value lives in the profile.
   // Fields under `assumptions.` are the same values shown in the Assumptions panel.
+  // Setup screen fields, in four sections. `path` is where the value lives in
+  // the profile. Fields under `assumptions.` are the same values shown in the
+  // Assumptions panel. Fields with a `group` sit under that group's heading;
+  // `more` groups are folded away until you open them.
   const SECTIONS = [
     {
-      id: 'about', title: 'About you and your goal',
-      intro: 'Your age, and what you\u2019re aiming for in retirement.',
+      id: 'about', title: 'About you',
       fields: [
         { path: 'about.age', label: 'Your age', type: 'int', min: 16, max: 100, suffix: 'years', nullable: true,
           help: 'Your age today, in whole years.' },
@@ -46,11 +49,30 @@
         { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
           nullPlaceholder: 'Same as now',
           help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
+        { path: 'income.grossSalary', label: 'Gross salary', type: 'money', suffix: 'a year',
+          help: 'Your yearly salary before tax and deductions.' },
+        { path: 'income.taxCode', label: 'Tax code (optional)', type: 'taxcode', placeholder: 'e.g. 1257L',
+          help: 'On your payslip, P60 or the HMRC app. Leave blank for the standard allowance. A code starting with S uses Scottish rates.' },
+        { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS, group: 'pay',
+          help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
+        { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pay',
+          help: 'Shared with the Assumptions panel.', shared: true },
+        { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pay',
+          help: 'Shared with the Assumptions panel.', shared: true },
+        { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, group: 'pay',
+          help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
+        { path: 'income.otherIncome', label: 'Other taxable income', type: 'money', suffix: 'a year', group: 'otherIncome',
+          help: 'Before tax: for example rental profit, self-employment or a second job paid gross. Income tax is worked out on it with your salary; National Insurance and student loan on it aren\u2019t modelled.' },
+        { path: 'income.taxFreeIncome', label: 'Tax-free income', type: 'money', suffix: 'a year', group: 'otherIncome',
+          help: 'Income you don\u2019t pay tax on, for example some benefits or tax-free allowances you receive regularly.' },
+        { path: 'income.otherIncomeAfterRetirement', label: 'Does it carry on after you retire?', type: 'toggle', group: 'otherIncome',
+          options: [{ value: 'no', label: 'No, it stops' }, { value: 'yes', label: 'Yes' }],
+          help: 'Both amounts rise with inflation in your projection.' },
       ],
     },
     {
-      id: 'assets', title: 'What you own',
-      intro: 'Today’s values. Leave anything that doesn’t apply blank.',
+      id: 'assets', title: 'Assets',
+      intro: 'What you own today. Leave anything that doesn\u2019t apply blank.',
       fields: [
         { path: 'assets.homeValue', label: 'Home value', type: 'money',
           help: 'Roughly what your home would sell for today. Leave blank if you rent.' },
@@ -67,49 +89,38 @@
       ],
     },
     {
-      id: 'mortgage', title: 'Mortgage',
-      intro: 'Leave the balance blank if you don’t have a mortgage.',
+      id: 'debts', title: 'Debts',
+      intro: 'What you owe. Leave anything that doesn\u2019t apply blank.',
       fields: [
-        { path: 'mortgage.balance', label: 'Mortgage balance', type: 'money',
+        { path: 'mortgage.balance', label: 'Mortgage balance', type: 'money', group: 'mortgage',
           help: 'How much you still owe, from your latest statement.' },
-        { path: 'assumptions.mortgageRate', label: 'Interest rate', type: 'pct', min: 0, max: 25, suffix: '% a year',
+        { path: 'assumptions.mortgageRate', label: 'Interest rate', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage',
           help: 'Your current rate. Shared with the Assumptions panel.', shared: true },
-        { path: 'mortgage.remainingTermYears', label: 'Years left on the mortgage', type: 'years', min: 0, max: 40, suffix: 'years',
+        { path: 'mortgage.remainingTermYears', label: 'Years left on the mortgage', type: 'years', min: 0, max: 40, suffix: 'years', group: 'mortgage',
           help: 'Remaining term, for example 22 or 22.5.' },
-        { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', advanced: true,
+        { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true,
           help: 'Extra paid on top of your normal payment each month. Most lenders allow up to 10% of the balance a year without a charge.' },
-      ],
-    },
-    {
-      id: 'income', title: 'Income',
-      intro: 'Used to work out your take-home pay. The Income screen shows the full breakdown.',
-      fields: [
-        { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS,
-          help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
-        { path: 'income.grossSalary', label: 'Gross salary', type: 'money', suffix: 'a year',
-          help: 'Your yearly salary before tax and deductions.' },
-        { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
-          help: 'Shared with the Assumptions panel.', shared: true },
         { path: 'income.studentLoanPlan', label: 'Your plan', type: 'select', options: STUDENT_LOAN_PLANS, group: 'studentLoan',
           help: 'Your Student Loans Company account and payslip show it. As a guide: England or Wales courses from 1998 to 2011 are Plan 1, from 2012 to July 2023 Plan 2, from August 2023 Plan 5; Scotland Plan 4; Northern Ireland Plan 1.' },
         { path: 'income.studentLoanBalance', label: 'Balance', type: 'money', group: 'studentLoan',
           help: 'What you owe today, from your Student Loans Company online account. Leave blank and repayments simply carry on until you retire.' },
         { path: 'income.studentLoanStartYear', label: 'Year you were first due to repay', type: 'int', min: 1990, max: 2040, nullable: true, placeholder: 'e.g. 2016', group: 'studentLoan',
           help: 'The April after you left your course. Used to work out when any balance left is written off.' },
-        { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan',
+        { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan', more: true,
           help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
-        { path: 'income.studentLoanOverpayment', label: 'Extra payments (optional)', type: 'money', suffix: 'a month', group: 'studentLoan',
+        { path: 'income.studentLoanOverpayment', label: 'Extra payments (optional)', type: 'money', suffix: 'a month', group: 'studentLoan', more: true,
           help: 'Voluntary payments on top of what comes out of your pay, from your take-home pay. They stop when the loan is repaid or written off. If it\u2019s likely to be written off, extra payments may be money you\u2019d never have had to pay.' },
-        { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
-          help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
-        { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
-          help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
       ],
     },
   ];
 
-  // Fields with a `group` are shown together under a heading.
+  // Headings for groups of fields.
   const FIELD_GROUPS = {
+    pay: { title: 'More about your pay', more: true,
+      intro: 'Your pension, bonuses, salary sacrifice and workplace benefits. Leave this closed if you only want to give your salary.' },
+    otherIncome: { title: 'Other income', more: true,
+      intro: 'Income on top of your salary.' },
+    mortgage: { title: 'Mortgage', intro: 'Leave the balance blank if you don\u2019t have one.' },
     studentLoan: {
       title: 'Student loan',
       intro: 'Repayments come out of your pay. Add your balance to see when the loan will be repaid or written off.',
@@ -122,6 +133,18 @@
     { key: 'rate', label: 'Interest rate', type: 'pct', min: 0, max: 100, nullable: true, suffix: '%',
       help: 'Leave blank to use the default rate in Assumptions.' },
     { key: 'monthlyPayment', label: 'Monthly payment', type: 'money' },
+  ];
+
+  // Taxable workplace benefits (benefits in kind): taxed as income, no employee NI.
+  const BENEFIT_TYPES = [
+    { value: 'medical', label: 'Private medical insurance' },
+    { value: 'other', label: 'Other taxable benefit' },
+  ];
+  const MAX_BENEFITS = 6;
+  const BENEFIT_FIELDS = [
+    { key: 'type', label: 'Benefit', type: 'select', options: BENEFIT_TYPES },
+    { key: 'yearly', label: 'Taxable value', type: 'money', suffix: 'a year',
+      help: 'The cash equivalent on your P11D or payslip. For medical cover it\u2019s usually what your employer pays for it.' },
   ];
 
   const SACRIFICE_TYPES = [
@@ -154,7 +177,8 @@
     { key: 'mortgage', label: 'Mortgage overpayments', help: 'Paid off the mortgage as a yearly lump sum, within your lender\u2019s overpayment limit (see Assumptions). Anything over the limit, or once the mortgage is cleared, goes to your other choices.' },
     { key: 'pension', label: 'Extra pension contributions', help: 'With 20% basic-rate tax relief added. Once you retire, this share goes to your other choices.' },
   ].map((f) => ({ ...f, type: 'pct', min: 0, max: 100, suffix: '% of what\u2019s left' }));
-  const LEFTOVER_DEFAULT = { emergency: 10, debts: 0, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 };
+  // Nothing is saved until you choose: unchosen leftover money is treated as spent.
+  const LEFTOVER_DEFAULT = { emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 };
   // How many months of essential outgoings (spending, mortgage and debts) the emergency fund aims to cover.
   const EMERGENCY_MONTHS_FIELD = {
     key: 'emergencyMonths', label: 'Emergency fund target', type: 'int', min: 1, max: 24, suffix: 'months of outgoings',
@@ -205,8 +229,8 @@
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
       income: {
-        grossSalary: 0, bonuses: [], sacrifices: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
-        studentLoanRate: null, studentLoanOverpayment: 0, region: 'rUK', pensionMethod: 'netPay',
+        grossSalary: 0, bonuses: [], sacrifices: [], benefits: [], otherIncome: 0, taxFreeIncome: 0, otherIncomeAfterRetirement: 'no', studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
+        studentLoanRate: null, studentLoanOverpayment: 0, taxCode: '', benefitsTaxed: 'payroll', region: 'rUK', pensionMethod: 'netPay',
       },
       savings: [],
       leftover: { ...LEFTOVER_DEFAULT },
@@ -256,6 +280,11 @@
    * (or "not set" for nullable fields). Returns { ok, value, error }.
    */
   function parseValue(field, raw) {
+    if (field.type === 'taxcode') {
+      const c = FP.tax.parseTaxCode(raw);
+      if (c.empty) return { ok: true, value: '' };
+      return c.ok ? { ok: true, value: c.code } : { ok: false, error: c.error };
+    }
     if (field.type === 'text') {
       return { ok: true, value: String(raw == null ? '' : raw).trim().slice(0, 60) };
     }
@@ -326,6 +355,11 @@
       p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
         .map((x) => normaliseRow(x, SACRIFICE_FIELDS, 'ss'));
     }
+    if (srcIncome.benefitsTaxed === 'code') p.income.benefitsTaxed = 'code';
+    if (Array.isArray(srcIncome.benefits)) {
+      p.income.benefits = srcIncome.benefits.filter((x) => x && typeof x === 'object').slice(0, MAX_BENEFITS)
+        .map((x) => normaliseRow(x, BENEFIT_FIELDS, 'bk'));
+    }
     // The leftover split used to be four assumptions (splitCash, ...).
     const oldA = src.assumptions && typeof src.assumptions === 'object' ? src.assumptions : {};
     const leftoverSrc = src.leftover && typeof src.leftover === 'object'
@@ -368,6 +402,10 @@
     return { id: newId('d'), name: '', balance: 0, rate: null, monthlyPayment: 0 };
   }
 
+  function newBenefit(type) {
+    return { id: newId('bk'), type: type || 'medical', yearly: 0 };
+  }
+
   function newSacrifice(type) {
     const t = type || 'cycle';
     return {
@@ -389,7 +427,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newSacrifice, newSaving, newSpending,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD,
+    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

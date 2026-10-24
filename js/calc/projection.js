@@ -32,8 +32,8 @@
 
   /*
    * The leftover split ({ emergency, debts, cash, invest, mortgage, pension } in
-   * %) as fractions. Under 100% in total: the rest goes to cash. Over 100%:
-   * scaled down proportionally.
+   * %) as fractions. Under 100% in total: the rest is `unallocated` and isn't
+   * saved anywhere (it's treated as spent). Over 100%: scaled down proportionally.
    */
   function splitShares(split) {
     const src = split || {};
@@ -43,7 +43,7 @@
     const [emergency, debts, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
     const remainder = total < 100 ? (100 - total) / 100 : 0;
     return {
-      emergency, debts, cash: cash + remainder, invest, mortgage, pension, total,
+      emergency, debts, cash, invest, mortgage, pension, unallocated: remainder, total,
       status: total === 100 ? 'ok' : total < 100 ? 'under' : 'over',
     };
   }
@@ -51,14 +51,16 @@
   /*
    * Shares out `total` by `shares`, where each choice can take at most caps[key]
    * (for example the mortgage once it's cleared, or the emergency fund once it's
-   * full). Whatever a choice can't take goes to the others in proportion; if
-   * none can take it, it goes to cash.
+   * full). Whatever a choice can't take goes to the others you chose, in
+   * proportion. The unallocated share, and anything none of your choices can
+   * take, is returned as `unallocated`: it isn't saved.
    */
   function allocate(total, shares, caps) {
     const out = {};
     SPLIT_KEYS.forEach((k) => { out[k] = 0; });
     let open = SPLIT_KEYS.filter((k) => shares[k] > 0);
-    let left = total;
+    const kept = total * (shares.unallocated || 0);
+    let left = total - kept;
     while (left > 1e-9 && open.length) {
       const w = sum(open, (k) => shares[k]);
       const want = {};
@@ -72,7 +74,7 @@
       full.forEach((k) => { left -= caps[k] - out[k]; out[k] = caps[k]; });
       open = open.filter((k) => !full.includes(k));
     }
-    out.cash += Math.max(0, left);
+    out.unallocated = kept + Math.max(0, left);
     return out;
   }
 
@@ -179,7 +181,10 @@
         // Salary sacrifice (car, cycle...) only while each arrangement lasts.
         const ss = FP.tax.sacrificeForYear(profile.income.sacrifices, g);
         input.otherSacrifice = ss.sacrifice;
-        input.benefitInKind = ss.benefitInKind;
+        // Benefits in kind and other income rise with prices.
+        input.benefitInKind = ss.benefitInKind + FP.tax.benefitsTotal(profile.income.benefits) * priceFactor;
+        input.otherIncome = (profile.income.otherIncome || 0) * priceFactor;
+        input.taxFreeIncome = (profile.income.taxFreeIncome || 0) * priceFactor;
         const th = FP.tax.takeHome(input, cfgY);
         salary = th.salary;
         salarySacrifice = th.salarySacrifice;
@@ -230,8 +235,13 @@
         takeHome += slDue - (slRepaid - slExtra);
       }
       const statePension = startAge >= a.statePensionAge ? (a.statePension || 0) * priceFactor : 0;
-      const statePensionTax = FP.tax.incomeTaxOnly(statePension, region, cfgY);
-      const netIncome = takeHome + statePension - statePensionTax;
+      // Other income you've said carries on after you retire (it's in take-home while you work).
+      const keepsOther = !working && profile.income.otherIncomeAfterRetirement === 'yes';
+      const otherTaxable = keepsOther ? (profile.income.otherIncome || 0) * priceFactor : 0;
+      const otherTaxFree = keepsOther ? (profile.income.taxFreeIncome || 0) * priceFactor : 0;
+      const retiredTaxable = statePension + otherTaxable;
+      const statePensionTax = FP.tax.incomeTaxOnly(retiredTaxable, region, cfgY);
+      const netIncome = takeHome + retiredTaxable + otherTaxFree - statePensionTax;
 
       // 2. Growth on opening balances
       home = FP.growth.compound(home, a.housePriceGrowth, 1);
@@ -301,7 +311,7 @@
       // 6. Allocate a surplus or fund a deficit
       // The emergency fund aims to cover this much of the year's essential outgoings.
       const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
-      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, notSaved: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
       const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
       if (surplus >= 0) {
         let s = surplus;
@@ -345,7 +355,7 @@
         const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
         pension += grossPension;
         cash += toEmergency + toCash;
-        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension });
+        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension, notSaved: share.unallocated });
       }
       // (Not in the year it's paid off, when the limit on a small balance means little.)
       if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
@@ -357,8 +367,8 @@
         let need = -surplus;
         const canDrawPension = !working && startAge >= a.pensionAccessAge;
         if (canDrawPension && pension > 0) {
-          const gross = Math.min(pension, grossUpPension(need, statePension, region, cfgY));
-          const tax = FP.tax.incomeTaxOnly(statePension + gross * 0.75, region, cfgY) - statePensionTax;
+          const gross = Math.min(pension, grossUpPension(need, retiredTaxable, region, cfgY));
+          const tax = FP.tax.incomeTaxOnly(retiredTaxable + gross * 0.75, region, cfgY) - statePensionTax;
           pension -= gross;
           need = Math.max(0, need - (gross - tax));
           flow.fromPension = gross;
@@ -387,6 +397,7 @@
 
       rows.push(snapshot(y, {
         working, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
+        otherIncomeRetired: otherTaxable + otherTaxFree,
         studentLoanRepaid: slRepaid, studentLoanExtra: slExtra, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
         netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
       }));
@@ -396,7 +407,9 @@
       warnings.push({
         key: 'split', level: 'info',
         text: shares.status === 'under'
-          ? `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% goes to cash savings.`
+          ? (shares.total === 0
+            ? 'You haven\u2019t chosen what to do with your leftover money, so the projection doesn\u2019t save any of it (it\u2019s treated as spent).'
+            : `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% isn\u2019t saved (it\u2019s treated as spent).`)
           : `What you do with your leftover money adds up to ${shares.total}%, so each share is scaled down to make 100%.`,
       });
     }
@@ -449,9 +462,9 @@
   const MONEY_KEYS = [
     'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'studentLoan', 'shortfall', 'assets',
     'studentLoanRepaid', 'studentLoanExtra', 'studentLoanInterest', 'studentLoanWrittenOff',
-    'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
+    'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax', 'otherIncomeRetired',
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
-    'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
+    'toPension', 'notSaved', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
   /*
    * How much you could spend in retirement without running short before the

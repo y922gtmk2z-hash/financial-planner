@@ -39,7 +39,7 @@
         field.options.map((o) => h('option', { value: o.value, selected: o.value === opts.value }, o.label)));
       input.addEventListener('change', () => commit(input.value));
     } else {
-      const numeric = field.type !== 'text';
+      const numeric = field.type !== 'text' && field.type !== 'taxcode';
       input = h('input', {
         id,
         type: 'text',

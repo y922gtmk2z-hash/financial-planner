@@ -80,7 +80,9 @@
       ? { tone: 'info', text: 'Add your pay and spending to see your month.' }
       : left < 0
         ? { tone: 'warn', text: `You\u2019re ${money(-left)} short each month.` }
-        : { tone: 'ok', text: `${money(left)} left over each month${cf.savingsMonthly > 0 ? `, after saving ${money(cf.savingsMonthly)}` : ''}.` };
+        : FP.projection.splitShares(p.leftover).total === 0 && left > 0
+          ? { tone: 'info', text: `${money(left)} left over each month, but you haven\u2019t chosen what to do with it, so your plan doesn\u2019t save any of it.` }
+          : { tone: 'ok', text: `${money(left)} left over each month${cf.savingsMonthly > 0 ? `, after saving ${money(cf.savingsMonthly)}` : ''}.` };
     return outcomeCard('month', 'Each month', verdict, [
       { label: 'Take-home pay', value: money(pay.takeHomeMonthly), sub: 'a month', open: panel('takeHome') },
       { label: left < 0 ? 'Short each month' : 'Left over each month', value: money(Math.abs(left)), sub: 'after spending, debts and saving', warn: left < 0, open: panel('leftover') },

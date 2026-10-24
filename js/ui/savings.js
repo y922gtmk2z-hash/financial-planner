@@ -7,8 +7,10 @@
 
   const { h, money } = FP.dom;
 
-  function render(ctx) {
-    const card = h('section', { class: 'card', id: 'savings', 'aria-labelledby': 'sec-savings' });
+  // opts.embedded: a part of another card (with an h3) rather than its own card.
+  function render(ctx, opts) {
+    const embedded = !!(opts && opts.embedded);
+    const card = h(embedded ? 'div' : 'section', { class: embedded ? 'savings-part' : 'card', id: 'savings', 'aria-labelledby': 'sec-savings' });
     const totals = h('div', { class: 'savings-totals', role: 'status' });
 
     const drawTotals = () => {
@@ -40,8 +42,10 @@
       }, label);
       const fields = FP.profile.SAVING_FIELDS;
       FP.dom.fill(card,
-        h('h2', { id: 'sec-savings' }, 'Regular savings'),
-        h('p', { class: 'muted' }, 'Money you put aside every month. It comes out of what’s left after spending and debts, and builds up your cash savings or ISA in the projection until you retire.'),
+        h(embedded ? 'h3' : 'h2', { id: 'sec-savings' }, embedded ? 'What you save' : 'Regular savings'),
+        h('p', { class: embedded ? 'help' : 'muted' }, embedded
+          ? 'Do you put money aside every month? Add each regular saving here. It comes out of what\u2019s left after spending and debts, and builds up your cash or ISA in the projection until you retire.'
+          : 'Money you put aside every month. It comes out of what’s left after spending and debts, and builds up your cash savings or ISA in the projection until you retire.'),
         list.length ? null : h('p', { class: 'empty' }, 'No regular savings added.'),
         h('ul', { class: 'saving-list' }, list.map((sv, i) => h('li', { class: 'saving-row' },
           fields.map((f) => FP.field.render(f, {
@@ -57,7 +61,7 @@
           add('cashIsa', '+ Cash ISA'),
           add('ssIsa', '+ Stocks & shares ISA')),
         totals,
-        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). Anything left over after these is shared out as you choose under \u201cYour leftover money\u201d below.'));
+        h('p', { class: 'help' }, 'Cash and cash ISAs earn the savings rate; stocks & shares ISAs grow at the investment return after fees (see Assumptions). What\u2019s left after these is up to you, under \u201cYour leftover money\u201d below.'));
       drawTotals();
     };
     draw();
