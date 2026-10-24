@@ -414,6 +414,28 @@ test('retirement need: what you’d need, what you’re on course for and how lo
   assert.ok(lower.lastsUntil == null || lower.lastsUntil > n.lastsUntil);
 });
 
+test('pot needed: pays for retirement to life expectancy, so less than to the end age', () => {
+  const p = FP.profile.blank();
+  p.about.age = 35;
+  p.spending[0].monthly = 2000;
+  assert.equal(p.assumptions.lifeExpectancy, 86);
+  const toAverage = FP.projection.potNeeded(p);
+  const toEnd = FP.projection.retirementNeed(p);
+  assert.equal(toAverage.endAge, 86);
+  assert.ok(toAverage.needed > 0 && toAverage.needed < toEnd.needed);
+  // It doesn't depend on what you earn or save before you retire.
+  p.income.grossSalary = 80000;
+  p.assets.pension = 50000;
+  assert.equal(FP.projection.potNeeded(p).needed, toAverage.needed);
+  // Drawn from a pension it's taxed, so it needs more than tax-free savings would.
+  p.assumptions.pensionAccessAge = 68;
+  assert.ok(FP.projection.potNeeded(p).needed < toAverage.needed);
+  p.assumptions.pensionAccessAge = 57;
+  // Retiring after life expectancy: nothing to work out.
+  p.assumptions.lifeExpectancy = 66;
+  assert.equal(FP.projection.potNeeded(p), null);
+});
+
 test('retirement need: nothing needed when the State Pension covers the goal', () => {
   const p = FP.profile.blank();
   p.about.age = 60;

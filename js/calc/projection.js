@@ -294,7 +294,8 @@
       if (opts.retirementBoost && !working && !boosted) {
         boosted = true;
         const boost = opts.retirementBoost * priceFactor;
-        if (boost > 0) isa += boost;
+        if (boost > 0 && opts.retirementBoostTo === 'pension') pension += boost;
+        else if (boost > 0) isa += boost;
         else {
           // Taken from cash, then investments, then the pension.
           let take = -boost;
@@ -593,16 +594,16 @@
    */
   const needCache = new Map();
 
-  function retirementNeed(profile) {
-    const key = JSON.stringify([profile, new Date().getFullYear(), new Date().getMonth()]);
+  function retirementNeed(profile, into) {
+    const key = JSON.stringify([profile, into, new Date().getFullYear(), new Date().getMonth()]);
     if (needCache.has(key)) return needCache.get(key);
-    const result = solveRetirementNeed(profile);
+    const result = solveRetirementNeed(profile, into);
     needCache.set(key, result);
     if (needCache.size > 30) needCache.delete(needCache.keys().next().value);
     return result;
   }
 
-  function solveRetirementNeed(profile) {
+  function solveRetirementNeed(profile, into) {
     const opts = { maxYears: 100 };
     const base = project(profile, opts);
     if (!base.ok || !base.events.retirement || base.events.retirement.y >= base.rows.length - 1) return null;
@@ -614,7 +615,7 @@
     const ret = base.events.retirement;
     // Spending in retirement scaled so its first year is your goal (in today's money).
     const factor = goal / (now * FP.growth.compound(1, a.spendingGrowth, ret.y) / ret.inflationFactor);
-    const run = (boost) => project(profile, { ...opts, retirementSpending: factor, retirementBoost: boost });
+    const run = (boost) => project(profile, { ...opts, retirementSpending: factor, retirementBoost: boost, retirementBoostTo: into });
     // The first retirement year your savings can't cover.
     const shortRow = (r) => r.rows.find((row) => row.working === false && row.unfunded > 0.5) || null;
     const funded = (boost) => !shortRow(run(boost));
@@ -652,11 +653,28 @@
     };
   }
 
+  /*
+   * The first look: the pension pot you'd need when you retire to spend your
+   * goal until your life expectancy (or toAge), on its own (nothing you'd save
+   * before then counts). Savings instead if you retire before you can draw a pension.
+   */
+  function potNeeded(profile, toAge) {
+    const a = profile.assumptions;
+    const p = {
+      ...profile,
+      income: { ...profile.income, grossSalary: 0, bonuses: [], sacrifices: [] },
+      assets: Object.fromEntries(Object.keys(profile.assets).map((k) => [k, 0])),
+      savings: [],
+      assumptions: { ...a, endAge: toAge || a.lifeExpectancy },
+    };
+    return retirementNeed(p, a.retirementAge >= a.pensionAccessAge ? 'pension' : 'isa');
+  }
+
   function toReal(row) {
     const out = { ...row };
     MONEY_KEYS.forEach((k) => { if (typeof row[k] === 'number') out[k] = row[k] / row.inflationFactor; });
     return out;
   }
 
-  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, retirementNeed, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, retirementNeed, potNeeded, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});

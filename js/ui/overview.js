@@ -29,7 +29,8 @@
     // Only the quick-start answers so far: a first look, kept short. Ideas,
     // next steps and the chart wait until there's more to go on.
     const rough = FP.welcome.isRough(p);
-    const warnings = today.warnings.concat(proj.ok ? proj.warnings : []);
+    // The projection's warnings rest on what you'd save, so they wait for more detail too.
+    const warnings = today.warnings.concat(proj.ok && !rough ? proj.warnings : []);
     const seen = new Set();
     // The split notice repeats what the Each month card says.
     const notices = warnings.filter((w) => w.key !== 'split' && !seen.has(w.text) && seen.add(w.text) && (!rough || w.level === 'warn'));
@@ -145,7 +146,41 @@
    * at your goal, rather than a verdict: with only the quick answers it's too
    * early to say you're on track.
    */
+  /*
+   * The first look: how big a pot you'd need, not what you'd have, which
+   * would rest on guessing what you'll save. It pays for retirement to
+   * average life expectancy (or to the end of the plan, once you're past it).
+   */
+  function potCard(p) {
+    const a = p.assumptions;
+    const toAverage = !(p.about.age >= a.lifeExpectancy);
+    const need = toAverage ? FP.projection.potNeeded(p) : FP.projection.retirementNeed(p);
+    const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';
+    const lasts = toAverage ? `${a.lifeExpectancy}, about average life expectancy in the UK` : need && String(need.endAge);
+    let text;
+    let more = null;
+    if (!need) text = toAverage && a.retirementAge >= a.lifeExpectancy
+      ? `Retiring at ${a.retirementAge} is after average life expectancy (${a.lifeExpectancy}).`
+      : `Retiring at ${a.retirementAge} is beyond the projection.`;
+    else if (need.needed <= 0) {
+      text = `Your State Pension would cover spending ${goalText} from ${a.retirementAge}.`;
+      more = `To age ${lasts}, assuming the full State Pension (check your forecast on GOV.UK). In today\u2019s money.`;
+    } else {
+      // Before you can draw a pension, it has to be savings you can reach.
+      const pot = toAverage && a.retirementAge < a.pensionAccessAge ? 'savings and pensions' : 'a pension pot';
+      text = `To spend ${goalText} from ${a.retirementAge}, you\u2019d need ${pot} of about ${money(roundTo(need.needed))} by then.`;
+      const longer = toAverage && a.endAge > a.lifeExpectancy ? FP.projection.potNeeded(p, a.endAge) : null;
+      more = [`That lasts to ${lasts}. It counts the full State Pension from ${a.statePensionAge}, growth on the pot and income tax on what you draw, in today\u2019s money.`,
+        longer && longer.needed > need.needed ? ` Many people live longer: to last to ${longer.endAge}, you\u2019d need about ${money(roundTo(longer.needed))}.` : ''];
+    }
+    return h('section', { class: 'card outcome', 'aria-labelledby': 'oc-retirement' },
+      h('h2', { id: 'oc-retirement' }, 'Retirement'),
+      h('p', { class: 'verdict info' }, h('span', { class: 'verdict-icon', 'aria-hidden': 'true' }, '\u2022'), text),
+      more ? h('p', { class: 'small' }, more) : null);
+  }
+
   function retirementCard(p, proj, ideas, panel, rough) {
+    if (rough) return potCard(p);
     const a = p.assumptions;
     const need = FP.projection.retirementNeed(p);
     const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';
