@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//UK finance planner//Reminder//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:20261024T213451Z-mfxrjh0m@uk-finance-planner
+DTSTAMP:20261024T213451Z
+DTSTART;VALUE=DATE:20261114
+DTEND;VALUE=DATE:20261115
+SUMMARY:Overpaying the mortgage beats cash savings
+DESCRIPTION:Your mortgage costs 4.5% and cash earns 3.5%\, so overpaying is
+  a guaranteed saving once your emergency fund is in place.\n1. Check your 
+ lender’s yearly overpayment limit first (often 10% of the balance)\, so 
+ you don’t pay an early repayment charge.\n2. Ask whether overpaying shor
+ tens your term or lowers your monthly payment.\n3. Set it up with your len
+ der as a regular monthly amount or a lump sum.
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
