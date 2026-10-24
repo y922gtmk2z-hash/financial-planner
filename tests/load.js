@@ -6,6 +6,7 @@ const FILES = [
   'js/config/tax-2026-27.js',
   'js/model/profile.js',
   'js/model/scenarios.js',
+  'js/model/checkins.js',
   'js/model/sample.js',
   'js/model/migrate.js',
   'js/model/store.js',

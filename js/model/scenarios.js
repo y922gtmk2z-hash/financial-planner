@@ -25,7 +25,7 @@
 
   function fromProfile(profile, name) {
     const id = newId();
-    return { activeId: id, scenarios: [{ id, name: cleanName(name, 'Baseline'), profile }] };
+    return { activeId: id, scenarios: [{ id, name: cleanName(name, 'Baseline'), profile }], checkins: FP.checkins.normalise(null) };
   }
 
   // Anything → valid workspace. Older saves are upgraded first, by FP.migrate.
@@ -44,7 +44,8 @@
       });
     if (!scenarios.length) return fromProfile(FP.profile.blank());
     const activeId = scenarios.some((s) => s.id === src.activeId) ? src.activeId : scenarios[0].id;
-    return { activeId, scenarios };
+    // Your check-in history belongs to the workspace, not to one scenario.
+    return { activeId, scenarios, checkins: FP.checkins.normalise(src.checkins) };
   }
 
   function find(ws, id) {
