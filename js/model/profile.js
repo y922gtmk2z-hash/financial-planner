@@ -178,7 +178,11 @@
     { key: 'pension', label: 'Extra pension contributions', help: 'With 20% basic-rate tax relief added. Once you retire, this share goes to your other choices.' },
   ].map((f) => ({ ...f, type: 'pct', min: 0, max: 100, suffix: '% of what\u2019s left' }));
   // Nothing is saved until you choose: unchosen leftover money is treated as spent.
-  const LEFTOVER_DEFAULT = { emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 };
+  const LEFTOVER_DEFAULT = { unit: 'pct', emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 };
+  // A leftover choice as % of what's left (unit 'pct') or £ a month (unit 'gbp').
+  function leftoverField(f, unit) {
+    return unit === 'gbp' ? { ...f, type: 'money', min: 0, max: undefined, suffix: 'a month' } : f;
+  }
   // How many months of essential outgoings (spending, mortgage and debts) the emergency fund aims to cover.
   const EMERGENCY_MONTHS_FIELD = {
     key: 'emergencyMonths', label: 'Emergency fund target', type: 'int', min: 1, max: 24, suffix: 'months of outgoings',
@@ -366,8 +370,9 @@
       ? src.leftover
       : { cash: oldA.splitCash, invest: oldA.splitInvest, mortgage: oldA.splitMortgage, pension: oldA.splitPension };
     const hasSplit = LEFTOVER_FIELDS.some((f) => leftoverSrc[f.key] !== undefined);
+    p.leftover.unit = leftoverSrc.unit === 'gbp' ? 'gbp' : 'pct';
     LEFTOVER_FIELDS.forEach((f) => {
-      if (leftoverSrc[f.key] !== undefined) p.leftover[f.key] = coerce(f, leftoverSrc[f.key], LEFTOVER_DEFAULT[f.key]);
+      if (leftoverSrc[f.key] !== undefined) p.leftover[f.key] = coerce(leftoverField(f, p.leftover.unit), leftoverSrc[f.key], LEFTOVER_DEFAULT[f.key]);
     });
     // Splits saved before the emergency fund share existed keep adding up as they did.
     if (hasSplit && leftoverSrc.emergency === undefined) p.leftover.emergency = 0;
@@ -427,7 +432,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});

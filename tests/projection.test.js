@@ -116,12 +116,12 @@ test('leftover money isn\u2019t saved until you choose what to do with it', () =
 
 test('older saves keep their split (it used to be four assumptions)', () => {
   const p = FP.profile.normalise({ assumptions: { splitCash: 10, splitInvest: 60, splitMortgage: 0, splitPension: 30 } });
-  assert.deepEqual(p.leftover, { emergency: 0, debts: 0, cash: 10, invest: 60, mortgage: 0, pension: 30, emergencyMonths: 3 });
+  assert.deepEqual(p.leftover, { unit: 'pct', emergency: 0, debts: 0, cash: 10, invest: 60, mortgage: 0, pension: 30, emergencyMonths: 3 });
   assert.equal(p.assumptions.splitCash, undefined);
   // Saved before the emergency fund share: it starts at 0 so the split still adds up.
   const q = FP.profile.normalise({ leftover: { cash: 30, invest: 50, mortgage: 10, pension: 10 } });
   assert.equal(q.leftover.emergency, 0);
-  assert.deepEqual(FP.profile.blank().leftover, { emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 });
+  assert.deepEqual(FP.profile.blank().leftover, { unit: 'pct', emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 });
   assert.equal(FP.profile.normalise({ leftover: { emergencyMonths: 99 } }).leftover.emergencyMonths, 3);
 });
 
@@ -334,4 +334,47 @@ test('retirement spending: the most you could spend so the money lasts to the en
   // No retirement in view, or no spending: nothing to say.
   p.about.age = 96;
   assert.equal(FP.projection.retirementSpend(p), null);
+});
+
+test('leftover split in £ a month: fixed amounts rising with prices, the rest not saved', () => {
+  const p = profile();
+  p.income.grossSalary = 50000;
+  p.spending = [{ id: 's', category: 'All', monthly: 1000 }];
+  Object.assign(p.leftover, { unit: 'gbp', emergency: 0, invest: 300, pension: 100 });
+  const rows = FP.projection.project(p).rows;
+  const r1 = rows[1];
+  close(r1.toInvest, 3600);
+  close(r1.toPension, 1200 / 0.8); // with 20% relief added
+  close(r1.notSaved, r1.surplus - 4800);
+  // Year 3: amounts have risen with prices.
+  const f = FP.growth.inflationFactor(p.assumptions.inflation, 2);
+  close(rows[3].toInvest, 3600 * f, 0.5);
+  // More than is left: scaled down to fit, nothing left unsaved.
+  Object.assign(p.leftover, { invest: 100000, pension: 0 });
+  const big = FP.projection.project(p).rows[1];
+  close(big.toInvest, big.surplus);
+  close(big.notSaved, 0);
+});
+
+test('switching the split between % and £ keeps the same money', () => {
+  const split = { unit: 'pct', emergency: 10, debts: 0, cash: 20, invest: 50, mortgage: 10, pension: 10 };
+  const pct = FP.projection.splitAsPct(split, 2000);
+  split.unit = 'gbp';
+  FP.projection.setSplitFromPct(split, pct, 2000);
+  assert.deepEqual([split.emergency, split.cash, split.invest, split.pension], [200, 400, 1000, 200]);
+  close(FP.projection.splitAsPct(split, 2000).invest, 50);
+  const shares = FP.projection.splitShares(split, 2000);
+  assert.equal(shares.status, 'ok');
+  // Imports keep £ values (not capped at 100) and the unit.
+  const p = FP.profile.normalise({ leftover: { unit: 'gbp', invest: '£1,500' } });
+  assert.equal(p.leftover.unit, 'gbp');
+  assert.equal(p.leftover.invest, 1500);
+  assert.equal(FP.profile.normalise({ leftover: { unit: 'euros', invest: 500 } }).leftover.invest, 0); // % unit: 500 is out of range
+});
+
+test('£ split within £1 of what’s left counts as all of it', () => {
+  const sh = FP.projection.splitShares({ unit: 'gbp', invest: 30, pension: 14 }, 44.3);
+  assert.equal(sh.status, 'ok');
+  close(sh.invest + sh.pension, 1);
+  close(sh.invest / sh.pension, 30 / 14);
 });

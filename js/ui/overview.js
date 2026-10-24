@@ -82,7 +82,7 @@
       ? { tone: 'info', text: 'Add your pay and spending to see your month.' }
       : left < 0
         ? { tone: 'warn', text: `You\u2019re ${money(-left)} short each month.` }
-        : FP.projection.splitShares(p.leftover).total === 0 && left > 0
+        : FP.projection.splitShares(p.leftover, left).total === 0 && left > 0
           ? { tone: 'info', text: `${money(left)} left over each month, but you haven\u2019t chosen what to do with it, so your plan doesn\u2019t save any of it.` }
           : { tone: 'ok', text: `${money(left)} left over each month${cf.savingsMonthly > 0 ? `, after saving ${money(cf.savingsMonthly)}` : ''}.` };
     return outcomeCard('month', 'Each month', verdict, [

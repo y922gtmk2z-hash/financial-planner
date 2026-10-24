@@ -137,7 +137,13 @@
     push('Bonuses (a year)', total(a.income.bonuses, 'amount'), total(b.income.bonuses, 'amount'), 'money');
     const savingsOf = (p, type) => (p.savings || []).filter((x) => x.type === type).reduce((t, x) => t + (x.monthly || 0), 0);
     FP.profile.SAVING_TYPES.forEach((t) => push(`Regular saving: ${t.label} (a month)`, savingsOf(a, t.value), savingsOf(b, t.value), 'money'));
-    FP.profile.LEFTOVER_FIELDS.forEach((f) => push(`Leftover money: ${f.label}`, (a.leftover || {})[f.key], (b.leftover || {})[f.key], 'pct'));
+    // The split, in the unit each scenario uses (if they differ, that's the difference shown).
+    const unit = (p) => ((p.leftover || {}).unit === 'gbp' ? 'gbp' : 'pct');
+    if (unit(a) !== unit(b)) {
+      push('Leftover money entered as', unit(a) === 'gbp' ? '\u00a3 a month' : '% of what\u2019s left', unit(b) === 'gbp' ? '\u00a3 a month' : '% of what\u2019s left', 'text');
+    } else {
+      FP.profile.LEFTOVER_FIELDS.forEach((f) => push(`Leftover money: ${f.label}${unit(a) === 'gbp' ? ' (a month)' : ''}`, (a.leftover || {})[f.key], (b.leftover || {})[f.key], unit(a) === 'gbp' ? 'money' : 'pct'));
+    }
     push('Emergency fund target (months)', (a.leftover || {}).emergencyMonths, (b.leftover || {}).emergencyMonths, 'number');
     push('Salary sacrifice (a month)', total(a.income.sacrifices, 'monthly'), total(b.income.sacrifices, 'monthly'), 'money');
     const timing = (p) => p.income.bonuses.filter((x) => x.amount > 0).map((x) => x.month).sort().join(',');

@@ -33,7 +33,7 @@
     }
     if (parts[0] === 'leftover') {
       if (parts[1] === 'emergencyMonths') return { ...P.EMERGENCY_MONTHS_FIELD, path };
-      const f = P.LEFTOVER_FIELDS.find((x) => x.key === parts[1]);
+      const f = P.leftoverField(P.LEFTOVER_FIELDS.find((x) => x.key === parts[1]), p.leftover.unit);
       return { ...f, path, label: `Leftover money to ${f.label.toLowerCase()}` };
     }
     const setup = P.fieldFor(path);
@@ -199,17 +199,19 @@
     function drawSplit(after) {
       const r = FP.suggest.analyse(work);
       if (!after.ok || !r.split) { FP.dom.fill(extra); return; }
-      const using = P.LEFTOVER_FIELDS.every((f) => work.leftover[f.key] === r.split[f.key]);
+      // Shown as % and £ whichever you entered it in.
+      const mine = FP.projection.splitAsPct(work.leftover, r.left);
+      const using = P.LEFTOVER_FIELDS.every((f) => Math.abs((mine[f.key] || 0) - r.split[f.key]) < 0.5);
       const parts = (split) => P.LEFTOVER_FIELDS.filter((f) => split[f.key] > 0)
-        .map((f) => `${split[f.key]}% ${f.label.toLowerCase()} (${money(r.left * split[f.key] / 100)})`).join(' \u00b7 ');
+        .map((f) => `${Math.round(split[f.key])}% ${f.label.toLowerCase()} (${money(r.left * split[f.key] / 100)})`).join(' \u00b7 ');
       FP.dom.fill(extra,
         h('h3', null, 'What you do with it'),
-        h('p', null, parts(work.leftover) || 'Nothing chosen yet, so none of it is saved in your projection \u2014 it\u2019s treated as spent.'),
+        h('p', null, parts(mine) || 'Nothing chosen yet, so none of it is saved in your projection \u2014 it\u2019s treated as spent.'),
         using ? h('p', { class: 'small positive' }, '\u2713 That\u2019s the suggested split.') : [
           h('p', { class: 'suggested-split' }, h('strong', null, 'Suggested: '), parts(r.split), h('br'), h('span', { class: 'muted small' }, r.splitReason)),
           h('button', {
             type: 'button', class: 'secondary small',
-            onclick: () => { P.LEFTOVER_FIELDS.forEach((f) => { work.leftover[f.key] = r.split[f.key]; }); draw(); },
+            onclick: () => { FP.projection.setSplitFromPct(work.leftover, r.split, r.left); drawDrivers(); draw(); },
           }, 'Use this split'),
         ],
         h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'Change the split in Setup')));

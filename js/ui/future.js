@@ -227,17 +227,30 @@
   }
 
   // Shows whether the leftover split adds up to 100% (used by the leftover card).
-  function drawSplitStatus(el, split) {
-    const sh = FP.projection.splitShares(split);
+  function drawSplitStatus(el, split, left) {
+    const sh = FP.projection.splitShares(split, left);
+    const money = FP.dom.money;
+    const byAmount = split.unit === 'gbp';
+    const chosen = FP.projection.SPLIT_KEYS.reduce((t, k) => t + (split[k] || 0), 0);
+    const round = (n) => Math.round(n * 10) / 10;
     el.className = `split-status ${sh.status === 'ok' ? 'ok' : 'off'}`;
-    el.textContent = sh.status === 'ok'
-      ? 'Adds up to 100%.'
-      : sh.status === 'under'
-        ? (sh.total === 0
-          ? 'Nothing chosen yet, so none of it is saved \u2014 it\u2019s treated as spent. Choose below, or use the suggested split.'
-          : `Adds up to ${sh.total}% \u2014 the other ${100 - sh.total}% isn\u2019t saved (it\u2019s treated as spent).`)
-        : `Adds up to ${sh.total}% \u2014 each share is scaled down to make 100%.`;
+    if (sh.total === 0) {
+      el.textContent = 'Nothing chosen yet, so none of it is saved \u2014 it\u2019s treated as spent. Choose below, or use the suggested split.';
+    } else if (byAmount) {
+      el.textContent = sh.status === 'ok'
+        ? `${money(chosen)} a month: all of what\u2019s left.`
+        : sh.status === 'under'
+          ? `${money(chosen)} a month chosen \u2014 the other ${money(Math.max(0, left) - chosen)} isn\u2019t saved (it\u2019s treated as spent).`
+          : `${money(chosen)} a month chosen, more than the ${money(Math.max(0, left))} left over \u2014 each is scaled down to fit.`;
+    } else {
+      el.textContent = sh.status === 'ok'
+        ? 'Adds up to 100%.'
+        : sh.status === 'under'
+          ? `Adds up to ${round(sh.total)}% \u2014 the other ${round(100 - sh.total)}% isn\u2019t saved (it\u2019s treated as spent).`
+          : `Adds up to ${round(sh.total)}% \u2014 each share is scaled down to make 100%.`;
+    }
   }
+
 
   FP.screens = FP.screens || {};
   FP.screens.future = { title: 'Future', render, drawSplitStatus, getView, setView };

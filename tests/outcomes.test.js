@@ -78,3 +78,15 @@ test('moving a share takes from money you haven’t chosen anything for first', 
   assert.equal(p.leftover.pension, 10);
   assert.equal(p.leftover.cash, 0);
 });
+
+test('levers move leftover money in the unit you entered it in', () => {
+  const p = sample();
+  const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
+  const pct = FP.projection.splitAsPct(p.leftover, left);
+  p.leftover.unit = 'gbp';
+  FP.projection.setSplitFromPct(p.leftover, pct, left);
+  const before = p.leftover.pension;
+  FP.outcomes.moveShare(p, 'pension', 10);
+  assert.equal(p.leftover.unit, 'gbp');
+  assert.ok(Math.abs(p.leftover.pension - before - left * 0.1) <= 1);
+});

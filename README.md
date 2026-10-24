@@ -166,7 +166,10 @@ more. You then choose what to do with it: your **emergency fund**, **paying off 
 faster** (most expensive first), **cash savings**, **investments** (ISA first),
 **mortgage overpayments** or **extra pension contributions**. Each choice shows what it
 comes to in £ a month, and the projection shares out each year's leftover money the
-same way. **Nothing is saved until you choose:** a new plan starts with nothing chosen,
+same way. Enter your choices as **% of what's left** or as **£ a month**: switching
+converts what you've entered, each choice shows the other unit alongside, and £ amounts
+rise with prices in the projection (if they add up to more than is left in a year,
+they're scaled down to fit). **Nothing is saved until you choose:** a new plan starts with nothing chosen,
 and any part you don't allocate is treated as spent, not put into savings. Your plan
 says when you haven't chosen yet, and the suggested split is one tap away.
 
@@ -378,7 +381,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-162 tests cover:
+166 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,

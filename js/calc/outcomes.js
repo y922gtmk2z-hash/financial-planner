@@ -73,7 +73,7 @@
       levers: [
         { label: 'Retire 1 year later', applies: (p) => p.assumptions.retirementAge < p.assumptions.endAge - 1, apply: (p) => { p.assumptions.retirementAge += 1; } },
         { label: 'Pay 1% more of your salary into your pension', applies: (p) => (p.income.grossSalary || 0) > 0, apply: (p) => { p.assumptions.employeePensionPct += 1; } },
-        { label: 'Put 10% more of your leftover money into your pension', applies: (p) => cashFlow(p).surplus > 0 && (p.leftover.pension || 0) <= 90, apply: (p) => moveShare(p, 'pension', 10) },
+        { label: 'Put 10% more of your leftover money into your pension', applies: (p) => cashFlow(p).surplus > 0 && splitPct(p).pension <= 90, apply: (p) => moveShare(p, 'pension', 10) },
       ],
     },
     {
@@ -105,7 +105,7 @@
       },
       levers: [
         { label: 'Overpay £100 a month more', applies: (p) => (p.mortgage.balance || 0) > 0, apply: (p) => { p.mortgage.monthlyOverpayment = (p.mortgage.monthlyOverpayment || 0) + 100; } },
-        { label: 'Put 10% more of your leftover money into overpayments', applies: (p) => (p.mortgage.balance || 0) > 0 && cashFlow(p).surplus > 0 && (p.leftover.mortgage || 0) <= 90, apply: (p) => moveShare(p, 'mortgage', 10) },
+        { label: 'Put 10% more of your leftover money into overpayments', applies: (p) => (p.mortgage.balance || 0) > 0 && cashFlow(p).surplus > 0 && splitPct(p).mortgage <= 90, apply: (p) => moveShare(p, 'mortgage', 10) },
       ],
     },
     {
@@ -201,7 +201,7 @@
         const r = FP.suggest.analyse(p);
         const e = r.emergency;
         if (!(r.essentials > 0)) return { ok: false };
-        const shares = FP.projection.splitShares(p.leftover);
+        const shares = FP.projection.splitShares(p.leftover, r.left);
         const fill = e.monthsToFill(shares.emergency);
         return {
           ok: true,
@@ -215,7 +215,7 @@
         };
       },
       levers: [
-        { label: 'Put 20% more of your leftover money into it', applies: (p) => cashFlow(p).surplus > 0 && (p.leftover.emergency || 0) <= 80, apply: (p) => moveShare(p, 'emergency', 20) },
+        { label: 'Put 20% more of your leftover money into it', applies: (p) => cashFlow(p).surplus > 0 && splitPct(p).emergency <= 80, apply: (p) => moveShare(p, 'emergency', 20) },
       ],
     },
   ];
@@ -226,20 +226,29 @@
     return g > 0 ? g : sum(p.spending, (x) => x.monthly || 0);
   }
 
-  // Move `points` of the leftover split into `key`: from money you haven't
-  // chosen anything for first, then from your other choices in proportion.
+  // Your leftover split as % of what's left, whether you entered % or £.
+  function splitPct(p) {
+    return FP.projection.splitAsPct(p.leftover, cashFlow(p).surplus);
+  }
+
+  // Move `points` (% of what's left) of the leftover split into `key`: from
+  // money you haven't chosen anything for first, then from your other choices
+  // in proportion. Kept in the unit you entered it in.
   function moveShare(p, key, points) {
+    const left = cashFlow(p).surplus;
+    const pct = FP.projection.splitAsPct(p.leftover, left);
     const keys = FP.projection.SPLIT_KEYS.filter((k) => k !== key);
-    const free = Math.max(0, 100 - sum(FP.projection.SPLIT_KEYS, (k) => p.leftover[k] || 0));
+    const free = Math.max(0, 100 - sum(FP.projection.SPLIT_KEYS, (k) => pct[k] || 0));
     const fromFree = Math.min(points, free);
-    p.leftover[key] = Math.round(((p.leftover[key] || 0) + fromFree) * 10) / 10;
+    pct[key] = (pct[key] || 0) + fromFree;
     points -= fromFree;
-    const others = sum(keys, (k) => p.leftover[k] || 0);
+    const others = sum(keys, (k) => pct[k] || 0);
     const take = Math.min(points, others);
     keys.forEach((k) => {
-      if (others > 0) p.leftover[k] = Math.round(((p.leftover[k] || 0) - take * (p.leftover[k] || 0) / others) * 10) / 10;
+      if (others > 0) pct[k] = (pct[k] || 0) - take * (pct[k] || 0) / others;
     });
-    p.leftover[key] = Math.round(((p.leftover[key] || 0) + take) * 10) / 10;
+    pct[key] += take;
+    FP.projection.setSplitFromPct(p.leftover, pct, left);
   }
 
   const byId = (id) => OUTCOMES.find((o) => o.id === id);
