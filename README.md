@@ -94,6 +94,7 @@ one-line "So what" under it.
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (retirement age, mortgage rate, pension %) link there. |
+| **Settings** (More menu) | Theme (System, Light or Dark) and whether projections open in today's money or future money. Saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
 
 Old links to `#today` and `#income` open the matching part of **Today** (its link is still `#now`).
@@ -453,5 +454,5 @@ works from 320px wide with no sideways scrolling.
 - Buttons and links used often on a phone are at least 44px tall (40px for the header
   and small buttons). Text that carries information is at least 0.8rem.
 - Focused fields get a solid 2px ring in the focus colour.
-- **Theme:** Your data → Appearance sets System, Light or Dark. The choice is saved in
+- **Theme:** More → Settings sets System, Light or Dark. The choice is saved in
   this browser. System follows the device setting.
