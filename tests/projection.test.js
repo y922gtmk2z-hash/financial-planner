@@ -115,11 +115,12 @@ test('leftover money isn\u2019t saved until you choose what to do with it', () =
 });
 
 test('older saves keep their split (it used to be four assumptions)', () => {
-  const p = FP.profile.normalise({ assumptions: { splitCash: 10, splitInvest: 60, splitMortgage: 0, splitPension: 30 } });
+  const v2 = (profile) => FP.migrate.upgrade({ schemaVersion: 2, workspace: { scenarios: [{ profile }] } }).workspace.scenarios[0].profile;
+  const p = v2({ assumptions: { splitCash: 10, splitInvest: 60, splitMortgage: 0, splitPension: 30 } });
   assert.deepEqual(p.leftover, { unit: 'pct', emergency: 0, debts: 0, cash: 10, invest: 60, mortgage: 0, pension: 30, emergencyMonths: 3 });
   assert.equal(p.assumptions.splitCash, undefined);
   // Saved before the emergency fund share: it starts at 0 so the split still adds up.
-  const q = FP.profile.normalise({ leftover: { cash: 30, invest: 50, mortgage: 10, pension: 10 } });
+  const q = v2({ leftover: { cash: 30, invest: 50, mortgage: 10, pension: 10 } });
   assert.equal(q.leftover.emergency, 0);
   assert.deepEqual(FP.profile.blank().leftover, { unit: 'pct', emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 });
   assert.equal(FP.profile.normalise({ leftover: { emergencyMonths: 99 } }).leftover.emergencyMonths, 3);

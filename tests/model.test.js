@@ -103,12 +103,15 @@ test('bonuses are stored as a list and validated', () => {
 });
 
 test('older saves with a single bonus are converted to the list', () => {
-  const p = FP.profile.normalise({ income: { bonus: 2000, bonusMonth: 'jun' } });
+  const v1 = (profile) => FP.migrate.upgrade({ schemaVersion: 1, profile }).workspace.scenarios[0].profile;
+  const p = v1({ income: { bonus: '£2,000', bonusMonth: 'jun' } });
   assert.equal(p.income.bonuses.length, 1);
   assert.equal(p.income.bonuses[0].amount, 2000);
   assert.equal(p.income.bonuses[0].month, 'jun');
   assert.equal(p.income.bonus, undefined);
-  assert.deepEqual(FP.profile.normalise({ income: { bonus: 0 } }).income.bonuses, []);
+  assert.deepEqual(v1({ income: { bonus: 0 } }).income.bonuses, []);
+  // Today's saves don't have one, so normalise doesn't look for it.
+  assert.deepEqual(FP.profile.normalise({ income: { bonus: 2000 } }).income.bonuses, []);
 });
 
 test('checklist: age and spending are needed before a projection; others are optional', () => {
@@ -193,7 +196,8 @@ test('outgoings: an estimate of everything going out; what isn’t itemised coun
 });
 
 test('an older plan’s one spending total becomes an estimate that includes its payments', () => {
-  const p = FP.profile.normalise({
+  const v2 = (profile) => FP.migrate.upgrade({ schemaVersion: 2, workspace: { scenarios: [{ profile }] } }).workspace.scenarios[0].profile;
+  const p = v2({
     spending: [{ id: 's', category: 'Everything', monthly: 1000 }],
     debts: [{ id: 'd', name: 'Loan', balance: 3000, monthlyPayment: 100 }],
   });
@@ -201,7 +205,7 @@ test('an older plan’s one spending total becomes an estimate that includes its
   assert.equal(p.spending[0].rest, true);
   assert.equal(FP.summary.compute(p).cashFlow.outgoings, 1100);
   // Categories stay as they were, under Other.
-  const q = FP.profile.normalise({ spending: [{ category: 'Food', monthly: 300 }, { category: 'Fun', monthly: 100 }] });
+  const q = v2({ spending: [{ category: 'Food', monthly: 300 }, { category: 'Fun', monthly: 100 }] });
   assert.equal(q.outgoings.estimate, null);
   assert.deepEqual(q.spending.map((r) => r.group), ['other', 'other']);
 });

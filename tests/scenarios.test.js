@@ -47,9 +47,10 @@ test('rename and remove; the baseline stays', () => {
   assert.equal(ws.activeId, base.id); // active fell back to the baseline
 });
 
-test('normalise repairs bad data and upgrades a single profile', () => {
-  const up = FP.scenarios.normalise({ profile: { about: { age: 50 } } });
+test('normalise repairs bad data; a single profile is upgraded to a workspace', () => {
+  const up = FP.migrate.upgrade({ profile: { about: { age: 50 } } }).workspace;
   assert.equal(up.scenarios.length, 1);
+  assert.equal(up.scenarios[0].name, 'Baseline');
   assert.equal(up.scenarios[0].profile.about.age, 50);
   const ws = FP.scenarios.normalise({
     activeId: 'missing',

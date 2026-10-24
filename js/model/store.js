@@ -7,8 +7,8 @@
 
   const KEY = 'ukfp.v1';
   const APP_ID = 'uk-finance-planner';
-  // 1: a single profile. 2: a workspace of scenarios.
-  const STORE_VERSION = 2;
+  // The version of what's saved: see js/model/migrate.js for each one.
+  const STORE_VERSION = FP.profile.SCHEMA_VERSION;
 
   function storage() {
     try {
@@ -20,11 +20,6 @@
     } catch (e) {
       return null;
     }
-  }
-
-  // Version 1 files hold { profile }; version 2 hold { workspace }.
-  function workspaceFrom(data) {
-    return FP.scenarios.normalise(data.workspace || { profile: data.profile });
   }
 
   const fresh = () => FP.scenarios.fromProfile(FP.profile.blank());
@@ -51,12 +46,13 @@
       keepBackup(s, raw);
       return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. A copy is kept: download it from Your data.' };
     }
-    if (data && typeof data.schemaVersion === 'number' && data.schemaVersion > STORE_VERSION) {
-      keepBackup(s, raw);
-      return { workspace: workspaceFrom(data), source: 'saved', error: 'Your figures were saved by a newer version of the planner. Reload the page to get it; a copy of what was saved is kept in Your data.' };
-    }
     try {
-      return { workspace: workspaceFrom(data), source: 'saved' };
+      const up = FP.migrate.upgrade(data);
+      if (up.newer) {
+        keepBackup(s, raw);
+        return { workspace: up.workspace, source: 'saved', error: 'Your figures were saved by a newer version of the planner. Reload the page to get it; a copy of what was saved is kept in Your data.' };
+      }
+      return { workspace: up.workspace, source: 'saved' };
     } catch (e) {
       keepBackup(s, raw);
       return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. A copy is kept: download it from Your data.' };
@@ -113,10 +109,9 @@
     if (!data || data.app !== APP_ID || typeof body !== 'object' || body === null) {
       return { ok: false, error: 'That file wasn’t exported from this planner.' };
     }
-    if (typeof data.schemaVersion === 'number' && data.schemaVersion > STORE_VERSION) {
-      return { ok: false, error: 'That file is from a newer version of the planner.' };
-    }
-    return { ok: true, workspace: workspaceFrom(data) };
+    const up = FP.migrate.upgrade(data);
+    if (up.newer) return { ok: false, error: 'That file is from a newer version of the planner.' };
+    return { ok: true, workspace: up.workspace };
   }
 
   // Small per-browser preferences (which view, what you've dismissed). Removed by clear().
