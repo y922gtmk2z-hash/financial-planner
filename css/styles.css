@@ -236,6 +236,8 @@ main:focus, main:focus-visible { outline: none; }
   }
   body > * { grid-column: 3; }
   body > .app-header { grid-column: 1 / -1; }
+  /* No side nav yet (before the quick start): the page takes its place, centred. */
+  body:has(.tabbar[hidden]) > :is(aside, .sample-banner, .scenario-bar, main, .app-footer) { grid-column: 2 / 4; }
   .app-header-inner { max-width: 1254px; }
   .disclaimer, .sample-banner, .scenario-bar, main, .app-footer { max-width: none; width: 100%; }
   .disclaimer, .sample-banner { margin-top: 8px; }
@@ -877,18 +879,35 @@ li.row-card { padding: 12px; border: 1px solid var(--border); border-radius: var
 li.row-card .field:last-of-type { margin-bottom: 4px; }
 
 /* ---------- Welcome (first visit) ---------- */
-.welcome { padding: 8px 0 16px; }
-.welcome h1 { font-size: 1.8rem; line-height: 1.2; margin-bottom: 8px; }
-.welcome-answers { list-style: none; margin: 12px 0 20px; padding: 0; display: grid; gap: 10px; }
-.welcome-answers li {
-  display: flex; flex-direction: column; padding: 12px 14px; border: 1px solid var(--border);
-  border-left: 4px solid var(--accent); border-radius: 10px; background: var(--surface);
+/* The front page: the app's name, three steps and one button, with no other chrome. */
+body:has(main > .gate) > :is(.app-header, aside, .sample-banner, .scenario-bar, .app-footer) { display: none; }
+.gate {
+  max-width: 460px; margin: 0 auto; padding: 48px 0 32px; text-align: center;
+  display: flex; flex-direction: column; align-items: center;
 }
-.welcome-answers span { color: var(--text-2); font-size: 0.92rem; }
-.welcome-start { display: block; width: 100%; min-height: 52px; font-size: 1.05rem; text-align: center; line-height: 52px; padding: 0; text-decoration: none; }
-.welcome-steps { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
-.empty-plan .button { display: inline-block; text-decoration: none; }
-@media (min-width: 640px) { .welcome-answers { grid-template-columns: 1fr 1fr; } }
+.gate-mark {
+  display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; margin-bottom: 20px;
+  background: var(--accent); color: #fff; font-size: 2.2rem; font-weight: 700;
+}
+.gate h1 { font-size: 2.2rem; line-height: 1.1; margin: 0 0 10px; letter-spacing: -0.02em; }
+.gate-tag { color: var(--text-2); font-size: 1.05rem; margin: 0 0 28px; }
+.gate-steps { list-style: none; counter-reset: gate; margin: 0 0 28px; padding: 0; display: grid; gap: 16px; text-align: left; width: 100%; }
+.gate-steps li { counter-increment: gate; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 14px; }
+.gate-steps li::before {
+  content: counter(gate); grid-row: 1 / span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700;
+}
+.gate-steps strong { font-size: 1rem; }
+.gate-steps span { color: var(--text-2); font-size: 0.92rem; }
+.gate-go { width: 100%; min-height: 54px; font-size: 1.1rem; border-radius: 14px; margin-bottom: 16px; }
+.gate-other { font-size: 0.9rem; color: var(--text-2); margin: 0 0 24px; line-height: 1.6; }
+.gate-other .link, .gate-other a { min-height: 0; display: inline; color: var(--accent); font-weight: 600; text-decoration: none; }
+.gate-note { font-size: 0.85rem; color: var(--text-2); margin: 0 0 4px; }
+.gate-note a { color: var(--accent); }
+.gate-notice { font-size: 0.85rem; color: var(--text-2); }
+.gate-notice summary { cursor: pointer; }
+.gate-notice p { text-align: left; margin-top: 8px; }
+.quick-start h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .quick-start .quick-go { width: 100%; margin-top: 8px; }
 .alloc { margin: 12px 0; }
 .alloc-total { margin: 0 0 6px; font-variant-numeric: tabular-nums; }

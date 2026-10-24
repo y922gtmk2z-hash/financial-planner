@@ -130,6 +130,8 @@
     route();
   }
   window.addEventListener('storage', (e) => {
+    // Get started in another tab: leave the front page here too.
+    if (e.key === 'ukfp.pref.started') { if (main.querySelector('.gate')) route(); return; }
     if (e.key !== FP.store.KEY && e.key !== null) return;
     document.querySelectorAll('dialog[open]').forEach((d) => d.close());
     reloadFromStorage();
@@ -305,9 +307,12 @@
     if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
   });
   // Lets things pinned under the header (Setup's steps) sit just below it.
-  const setHeaderHeight = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
-  window.addEventListener('resize', setHeaderHeight);
-  setHeaderHeight();
+  // Measured whenever the header changes size, including when it comes back
+  // after the front page (which hides it, so it measures 0 there).
+  const setHeaderHeight = () => {
+    if (header.offsetHeight) document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  };
+  new ResizeObserver(setHeaderHeight).observe(header);
   window.addEventListener('pagehide', flush);
 
   // The full disclaimer shows on your first visit; after that it's one line (tap for more).
