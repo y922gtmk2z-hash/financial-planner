@@ -18,6 +18,10 @@
  *     cash, investments (ISA first), mortgage overpayment and pension. A
  *     deficit is drawn from the pension (in retirement, after tax), then cash,
  *     then investments; anything left becomes an unfunded shortfall.
+ *
+ * initState sets up where you start, stepYear runs one year, and project
+ * loops it, giving each year its rates of return (the assumptions, or
+ * opts.returnsPath) and any life events (opts.events, not used yet).
  */
 (function (FP) {
   'use strict';
@@ -132,12 +136,18 @@
     return hi;
   }
 
-  function project(profile, opts) {
+  /*
+   * Where the projection starts: opening balances, debts, the mortgage and
+   * student loan, ages, and the rules that stay fixed from year to year.
+   * Returns the state, or { ok: false, reason, message } when it can't run.
+   */
+  function initState(profile, opts) {
     opts = opts || {};
     const cfg = opts.taxConfig || FP.taxConfig;
     const a = profile.assumptions;
     const age0 = profile.about.age;
     if (age0 == null) return { ok: false, reason: 'age', message: 'Enter your age in Your figures to see a projection.' };
+    // Up to 40 years are shown; the retirement solvers ask for more, up to your end age.
     const years = Math.min(opts.maxYears || MAX_YEARS, (a.endAge || 0) - age0);
     if (years < 1) return { ok: false, reason: 'endAge', message: 'Your projection end age must be after your current age.' };
 
@@ -145,326 +155,375 @@
     const startYear = opts.startYear || now.getFullYear();
     // Month the projection starts (1-12). Each projection year runs from here.
     const startMonth = opts.startMonth || now.getMonth() + 1;
-    const startMonthIndex = startYear * 12 + (startMonth - 1);
     const [clY, clM] = cfg.isa.cashLimitFrom.split('-').map(Number);
-    const cashLimitFromIndex = clY * 12 + (clM - 1);
-    const region = profile.income.region;
     // Entered in £: shared out of each year's leftover money, rising with prices.
     const byAmount = profile.leftover.unit === 'gbp';
     const leftToday = byAmount ? FP.summary.compute(profile, FP.tax.forProfile(profile, cfg).takeHomeMonthly).cashFlow.surplus : null;
-    const shares = splitShares(profile.leftover, leftToday);
     const warnings = [];
-    const warnOnce = (key, text) => { if (!warnings.some((w) => w.key === key)) warnings.push({ key, level: 'warn', text }); };
 
-    // Opening balances
-    let home = profile.assets.homeValue || 0;
-    let cash = profile.assets.cashSavings || 0;
-    let isa = profile.assets.isa || 0;
-    let gia = profile.assets.gia || 0;
-    let pension = profile.assets.pension || 0;
-    const other = profile.assets.other || 0;
-    let shortfall = 0;
-
-    let mBal = profile.mortgage.balance || 0;
+    const mBal = profile.mortgage.balance || 0;
     const mLoan = FP.loan.forMortgage(profile);
     const termMonths = FP.summary.mortgageMonths(mLoan);
-    const overMonthly = mBal > 0 ? profile.mortgage.monthlyOverpayment || 0 : 0;
-    let mRate = mLoan.rate;
-    let mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths);
-    let monthsElapsed = 0;
-
-    // Rates are APRs, so interest is charged at the matching monthly rate.
-    const debts = profile.debts.map((d) => {
-      const loan = FP.loan.forDebt(d, a);
-      return { bal: d.balance || 0, rate: loan.rate, monthly: FP.loan.monthlyRate(loan.rate, 'apr'), pay: loan.payment };
-    });
     // Student loan: tracked only when there's a plan and a balance. Otherwise
     // repayments simply continue while working.
     const slPlan = profile.income.studentLoanPlan;
     const slTracked = FP.studentLoan.tracked(profile);
-    let slBal = slTracked ? profile.income.studentLoanBalance : 0;
-    const slWriteOff = slTracked ? FP.studentLoan.writeOffYear(slPlan, profile.income.studentLoanStartYear, cfg) : null;
 
-    const spendMonthly0 = sum(profile.spending, (r) => r.monthly || 0);
-    const relief = (cfg.reliefAtSourceRate || 0) / 100;
+    return {
+      ok: true, profile, opts, cfg, a, age0, years, startYear, warnings,
+      startMonthIndex: startYear * 12 + (startMonth - 1),
+      cashLimitFromIndex: clY * 12 + (clM - 1),
+      region: profile.income.region,
+      byAmount, leftToday,
+      shares: splitShares(profile.leftover, leftToday),
+      warnOnce: (key, text) => { if (!warnings.some((w) => w.key === key)) warnings.push({ key, level: 'warn', text }); },
 
-    const snapshot = (y, extra) => {
-      const debtTotal = sum(debts, (d) => d.bal);
-      const assets = home + cash + isa + gia + pension + other;
-      const liabilities = mBal + debtTotal + slBal + shortfall;
-      return {
-        y, year: startYear + y, age: age0 + y,
-        home, mortgage: mBal, equity: home - mBal, cash, isa, gia, pension, other,
-        debts: debtTotal, studentLoan: slBal, shortfall, assets, liabilities, netWorth: assets - liabilities,
-        inflationFactor: FP.growth.inflationFactor(a.inflation, y),
-        ...extra,
-      };
+      // Opening balances
+      home: profile.assets.homeValue || 0,
+      cash: profile.assets.cashSavings || 0,
+      isa: profile.assets.isa || 0,
+      gia: profile.assets.gia || 0,
+      pension: profile.assets.pension || 0,
+      other: profile.assets.other || 0,
+      shortfall: 0,
+
+      mBal, termMonths,
+      overMonthly: mBal > 0 ? profile.mortgage.monthlyOverpayment || 0 : 0,
+      mRate: mLoan.rate,
+      mPayment: FP.mortgage.monthlyPayment(mBal, mLoan.rate, termMonths),
+      monthsElapsed: 0,
+
+      // Rates are APRs, so interest is charged at the matching monthly rate.
+      debts: profile.debts.map((d) => {
+        const loan = FP.loan.forDebt(d, a);
+        return { bal: d.balance || 0, rate: loan.rate, monthly: FP.loan.monthlyRate(loan.rate, 'apr'), pay: loan.payment };
+      }),
+      slPlan, slTracked,
+      slBal: slTracked ? profile.income.studentLoanBalance : 0,
+      slWriteOff: slTracked ? FP.studentLoan.writeOffYear(slPlan, profile.income.studentLoanStartYear, cfg) : null,
+
+      spendMonthly0: sum(profile.spending, (r) => r.monthly || 0),
+      relief: (cfg.reliefAtSourceRate || 0) / 100,
+      boosted: false,
     };
+  }
 
-    const rows = [snapshot(0, { today: true })];
-    let boosted = false;
+  // A row of the projection: balances at the end of year y, plus that year's flows.
+  function snapshot(state, y, extra) {
+    const { home, cash, isa, gia, pension, other, mBal, slBal, shortfall } = state;
+    const debtTotal = sum(state.debts, (d) => d.bal);
+    const assets = home + cash + isa + gia + pension + other;
+    const liabilities = mBal + debtTotal + slBal + shortfall;
+    return {
+      y, year: state.startYear + y, age: state.age0 + y,
+      home, mortgage: mBal, equity: home - mBal, cash, isa, gia, pension, other,
+      debts: debtTotal, studentLoan: slBal, shortfall, assets, liabilities, netWorth: assets - liabilities,
+      inflationFactor: FP.growth.inflationFactor(state.a.inflation, y),
+      ...extra,
+    };
+  }
 
-    for (let y = 1; y <= years; y += 1) {
-      const g = y - 1; // years of growth applied to this year's income and spending
-      const startAge = age0 + g;
-      const working = startAge < a.retirementAge;
-      const priceFactor = FP.growth.inflationFactor(a.inflation, g);
-      const cfgY = a.taxThresholds === 'inflation' ? FP.tax.indexConfig(cfg, priceFactor) : cfg;
+  /*
+   * One year (y = 1 for the first), in the order at the top of this file.
+   * Changes `state` and returns the year's row. ctx.returns = { cash, invest,
+   * pension, house }: this year's rates, % a year, before fees (fees still come
+   * off investments and pensions). ctx.events: life events (not used yet).
+   */
+  function stepYear(state, y, ctx) {
+    const { profile, opts, cfg, a, age0, startYear, startMonthIndex, cashLimitFromIndex, region, byAmount, shares, debts, termMonths, overMonthly, slPlan, slTracked, slWriteOff, spendMonthly0, relief, warnOnce } = state;
+    let { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, slBal, boosted } = state;
+    const g = y - 1; // years of growth applied to this year's income and spending
+    const startAge = age0 + g;
+    const working = startAge < a.retirementAge;
+    const priceFactor = FP.growth.inflationFactor(a.inflation, g);
+    const cfgY = a.taxThresholds === 'inflation' ? FP.tax.indexConfig(cfg, priceFactor) : cfg;
 
-      // 1. Income
-      let salary = 0;
-      let bonus = 0;
-      let takeHome = 0;
-      let pensionFromPay = 0;
-      let salarySacrifice = 0;
-      let slDue = 0;
-      let slPay = 0;
-      if (working) {
-        const sf = FP.growth.compound(1, a.salaryGrowth, g);
-        const input = FP.tax.inputFromProfile(profile);
-        input.salary = (input.salary || 0) * sf;
-        input.bonuses = (input.bonuses || []).map((b) => ({ ...b, amount: (b.amount || 0) * sf }));
-        // Salary sacrifice (car, cycle...) only while each arrangement lasts.
-        const ss = FP.tax.sacrificeForYear(profile.income.sacrifices, g);
-        input.otherSacrifice = ss.sacrifice;
-        // Benefits in kind and other income rise with prices.
-        input.benefitInKind = ss.benefitInKind + FP.tax.benefitsTotal(profile.income.benefits) * priceFactor;
-        input.otherIncome = (profile.income.otherIncome || 0) * priceFactor;
-        input.taxFreeIncome = (profile.income.taxFreeIncome || 0) * priceFactor;
-        const th = FP.tax.takeHome(input, cfgY);
-        salary = th.salary;
-        salarySacrifice = th.salarySacrifice;
-        bonus = th.bonus;
-        takeHome = th.takeHome;
-        pensionFromPay = th.pensionIntoPot;
-        slDue = th.studentLoan;
-        slPay = th.niablePay;
-      }
+    // 1. Income
+    let salary = 0;
+    let bonus = 0;
+    let takeHome = 0;
+    let pensionFromPay = 0;
+    let salarySacrifice = 0;
+    let slDue = 0;
+    let slPay = 0;
+    if (working) {
+      const sf = FP.growth.compound(1, a.salaryGrowth, g);
+      const input = FP.tax.inputFromProfile(profile);
+      input.salary = (input.salary || 0) * sf;
+      input.bonuses = (input.bonuses || []).map((b) => ({ ...b, amount: (b.amount || 0) * sf }));
+      // Salary sacrifice (car, cycle...) only while each arrangement lasts.
+      const ss = FP.tax.sacrificeForYear(profile.income.sacrifices, g);
+      input.otherSacrifice = ss.sacrifice;
+      // Benefits in kind and other income rise with prices.
+      input.benefitInKind = ss.benefitInKind + FP.tax.benefitsTotal(profile.income.benefits) * priceFactor;
+      input.otherIncome = (profile.income.otherIncome || 0) * priceFactor;
+      input.taxFreeIncome = (profile.income.taxFreeIncome || 0) * priceFactor;
+      const th = FP.tax.takeHome(input, cfgY);
+      salary = th.salary;
+      salarySacrifice = th.salarySacrifice;
+      bonus = th.bonus;
+      takeHome = th.takeHome;
+      pensionFromPay = th.pensionIntoPot;
+      slDue = th.studentLoan;
+      slPay = th.niablePay;
+    }
 
-      // Student loan balance, month by month: written off in April of the
-      // write-off year; otherwise interest is added (published rates for the
-      // current interest year, then either the same rates or your inflation
-      // assumption as RPI plus the plan's margin) and repayments taken. Once it's cleared, repayments
-      // stop and take-home rises.
-      let slRepaid = slDue;
-      let slInterest = 0;
-      let slWrittenOff = 0;
-      let slExtra = 0; // voluntary payments, from take-home pay
-      const slExtraMonthly = profile.income.studentLoanOverpayment || 0;
-      if (slTracked) {
-        slRepaid = 0;
-        const override = profile.income.studentLoanRate;
-        const ratePublished = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override });
-        // After the current interest year: today's rates, or inflation as RPI (see Assumptions).
-        const rateFuture = a.studentLoanInterest === 'inflation'
-          ? FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override, rpi: a.inflation })
-          : ratePublished;
-        for (let m = 0; m < 12; m += 1) {
-          const abs = startMonthIndex + 12 * g + m; // months since year 0
-          const year = Math.floor(abs / 12);
-          const month = (abs % 12) + 1;
-          if (slBal > 0 && slWriteOff != null && (year > slWriteOff || (year === slWriteOff && month >= 4))) {
-            slWrittenOff = slBal;
-            slBal = 0;
-          }
-          if (slBal <= 0.005) break;
-          const rate = FP.studentLoan.publishedRatesApply(year, month, cfgY) ? ratePublished : rateFuture;
-          const interest = slBal * rate / 100 / 12;
-          const paid = Math.min(slBal + interest, slDue / 12);
-          const extra = Math.min(slBal + interest - paid, slExtraMonthly);
-          slBal = slBal + interest - paid - extra;
-          slInterest += interest;
-          slRepaid += paid + extra;
-          slExtra += extra;
+    // Student loan balance, month by month: written off in April of the
+    // write-off year; otherwise interest is added (published rates for the
+    // current interest year, then either the same rates or your inflation
+    // assumption as RPI plus the plan's margin) and repayments taken. Once it's cleared, repayments
+    // stop and take-home rises.
+    let slRepaid = slDue;
+    let slInterest = 0;
+    let slWrittenOff = 0;
+    let slExtra = 0; // voluntary payments, from take-home pay
+    const slExtraMonthly = profile.income.studentLoanOverpayment || 0;
+    if (slTracked) {
+      slRepaid = 0;
+      const override = profile.income.studentLoanRate;
+      const ratePublished = FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override });
+      // After the current interest year: today's rates, or inflation as RPI (see Assumptions).
+      const rateFuture = a.studentLoanInterest === 'inflation'
+        ? FP.studentLoan.interestRate(slPlan, slPay, cfgY, { override, rpi: a.inflation })
+        : ratePublished;
+      for (let m = 0; m < 12; m += 1) {
+        const abs = startMonthIndex + 12 * g + m; // months since year 0
+        const year = Math.floor(abs / 12);
+        const month = (abs % 12) + 1;
+        if (slBal > 0 && slWriteOff != null && (year > slWriteOff || (year === slWriteOff && month >= 4))) {
+          slWrittenOff = slBal;
+          slBal = 0;
         }
-        if (slBal <= 0.5) slBal = 0;
-        takeHome += slDue - (slRepaid - slExtra);
+        if (slBal <= 0.005) break;
+        const rate = FP.studentLoan.publishedRatesApply(year, month, cfgY) ? ratePublished : rateFuture;
+        const interest = slBal * rate / 100 / 12;
+        const paid = Math.min(slBal + interest, slDue / 12);
+        const extra = Math.min(slBal + interest - paid, slExtraMonthly);
+        slBal = slBal + interest - paid - extra;
+        slInterest += interest;
+        slRepaid += paid + extra;
+        slExtra += extra;
       }
-      const statePension = startAge >= a.statePensionAge ? (a.statePension || 0) * priceFactor : 0;
-      // Other income you've said carries on after you retire (it's in take-home while you work).
-      const keepsOther = !working && profile.income.otherIncomeAfterRetirement === 'yes';
-      const otherTaxable = keepsOther ? (profile.income.otherIncome || 0) * priceFactor : 0;
-      const otherTaxFree = keepsOther ? (profile.income.taxFreeIncome || 0) * priceFactor : 0;
-      const retiredTaxable = statePension + otherTaxable;
-      const statePensionTax = FP.tax.incomeTaxOnly(retiredTaxable, region, cfgY);
-      const netIncome = takeHome + retiredTaxable + otherTaxFree - statePensionTax;
+      if (slBal <= 0.5) slBal = 0;
+      takeHome += slDue - (slRepaid - slExtra);
+    }
+    const statePension = startAge >= a.statePensionAge ? (a.statePension || 0) * priceFactor : 0;
+    // Other income you've said carries on after you retire (it's in take-home while you work).
+    const keepsOther = !working && profile.income.otherIncomeAfterRetirement === 'yes';
+    const otherTaxable = keepsOther ? (profile.income.otherIncome || 0) * priceFactor : 0;
+    const otherTaxFree = keepsOther ? (profile.income.taxFreeIncome || 0) * priceFactor : 0;
+    const retiredTaxable = statePension + otherTaxable;
+    const statePensionTax = FP.tax.incomeTaxOnly(retiredTaxable, region, cfgY);
+    const netIncome = takeHome + retiredTaxable + otherTaxFree - statePensionTax;
 
-      // opts.retirementBoost (today's money) adds savings at the start of
-      // retirement, or takes them away if negative (used to find what you'd need).
-      if (opts.retirementBoost && !working && !boosted) {
-        boosted = true;
-        const boost = opts.retirementBoost * priceFactor;
-        if (boost > 0 && opts.retirementBoostTo === 'pension') pension += boost;
-        else if (boost > 0) isa += boost;
-        else {
-          // Taken from cash, then investments, then the pension.
-          let take = -boost;
-          const from = (pot) => { const t = Math.min(pot, take); take -= t; return pot - t; };
-          cash = from(cash);
-          gia = from(gia);
-          isa = from(isa);
-          pension = from(pension);
-        }
+    // opts.retirementBoost (today's money) adds savings at the start of
+    // retirement, or takes them away if negative (used to find what you'd need).
+    if (opts.retirementBoost && !working && !boosted) {
+      boosted = true;
+      const boost = opts.retirementBoost * priceFactor;
+      if (boost > 0 && opts.retirementBoostTo === 'pension') pension += boost;
+      else if (boost > 0) isa += boost;
+      else {
+        // Taken from cash, then investments, then the pension.
+        let take = -boost;
+        const from = (pot) => { const t = Math.min(pot, take); take -= t; return pot - t; };
+        cash = from(cash);
+        gia = from(gia);
+        isa = from(isa);
+        pension = from(pension);
       }
+    }
 
-      // 2. Growth on opening balances
-      home = FP.growth.compound(home, a.housePriceGrowth, 1);
-      cash = FP.growth.compound(cash, a.savingsRate, 1);
-      isa = FP.growth.compound(isa, FP.growth.netRate(a.investmentReturn, a.investmentFees), 1);
-      gia = FP.growth.compound(gia, FP.growth.netRate(a.investmentReturn, a.investmentFees), 1);
-      pension = FP.growth.compound(pension, FP.growth.netRate(a.pensionGrowth, a.pensionFees), 1);
+    // 2. Growth on opening balances
+    const r = ctx.returns;
+    home = FP.growth.compound(home, r.house, 1);
+    cash = FP.growth.compound(cash, r.cash, 1);
+    isa = FP.growth.compound(isa, FP.growth.netRate(r.invest, a.investmentFees), 1);
+    gia = FP.growth.compound(gia, FP.growth.netRate(r.invest, a.investmentFees), 1);
+    pension = FP.growth.compound(pension, FP.growth.netRate(r.pension, a.pensionFees), 1);
 
-      // 3. Mortgage, month by month
-      const mStart = mBal;
-      let mortgagePaid = 0;
-      let overpaid = 0;
-      if (a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null && g === a.mortgageRateChangeYear && mBal > 0) {
-        mRate = a.mortgageRateAfterChange;
-        mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths - monthsElapsed);
+    // 3. Mortgage, month by month
+    const mStart = mBal;
+    let mortgagePaid = 0;
+    let overpaid = 0;
+    if (a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null && g === a.mortgageRateChangeYear && mBal > 0) {
+      mRate = a.mortgageRateAfterChange;
+      mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths - monthsElapsed);
+    }
+    for (let m = 0; m < 12 && mBal > 0.005; m += 1) {
+      const interest = mBal * mRate / 100 / 12;
+      const due = mBal + interest;
+      const contractual = monthsElapsed >= termMonths ? due : mPayment;
+      const paid = Math.min(due, contractual + overMonthly);
+      overpaid += Math.max(0, paid - contractual);
+      mBal = due - paid;
+      mortgagePaid += paid;
+      monthsElapsed += 1;
+    }
+    if (mBal <= 0.005) mBal = 0;
+
+    let debtPaid = 0;
+    debts.forEach((d) => {
+      for (let m = 0; m < 12 && d.bal > 0.005; m += 1) {
+        const due = d.bal * (1 + d.monthly);
+        const paid = Math.min(due, d.pay);
+        d.bal = due - paid;
+        debtPaid += paid;
       }
-      for (let m = 0; m < 12 && mBal > 0.005; m += 1) {
-        const interest = mBal * mRate / 100 / 12;
-        const due = mBal + interest;
-        const contractual = monthsElapsed >= termMonths ? due : mPayment;
-        const paid = Math.min(due, contractual + overMonthly);
-        overpaid += Math.max(0, paid - contractual);
-        mBal = due - paid;
-        mortgagePaid += paid;
-        monthsElapsed += 1;
-      }
+      if (d.bal <= 0.005) d.bal = 0;
+    });
+
+    // 4. Spending, regular savings (while working) and surplus
+    // opts.retirementSpending scales spending once you've retired (used to find what you could afford).
+    const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g) * (working ? 1 : (opts.retirementSpending == null ? 1 : opts.retirementSpending));
+    const yearStartsAfterCashLimit = startMonthIndex + 12 * g >= cashLimitFromIndex;
+    const saved = working
+      ? FP.savings.forYear(profile.savings, {
+        salaryFactor: FP.growth.compound(1, a.salaryGrowth, g),
+        isaAllowance: a.isaAllowance,
+        cashIsaLimit: yearStartsAfterCashLimit && startAge < cfg.isa.cashLimitExemptAge ? a.cashIsaLimit : null,
+      })
+      : FP.savings.forYear([], {});
+    if (saved.overAllowance) {
+      warnOnce('isaAllowance', `From ${startYear + y} (age ${age0 + y}) your regular ISA savings are more than the ${fmt(a.isaAllowance)} ISA allowance. The extra is saved outside an ISA.`);
+    } else if (saved.overCashLimit) {
+      warnOnce('cashIsaLimit', `From ${startYear + y} (age ${age0 + y}) your cash ISA savings are more than the ${fmt(a.cashIsaLimit)} cash ISA limit for under-65s. The extra is saved as ordinary cash.`);
+    }
+    const surplus = netIncome - spending - mortgagePaid - debtPaid - slExtra - saved.total;
+
+    // Regular savings go in first (so they take ISA allowance before the leftover money is shared out).
+    cash += saved.cash;
+    isa += saved.isa;
+    gia += saved.gia;
+    const isaRoomLeft = Math.max(0, (a.isaAllowance || 0) - saved.isaUsed);
+
+    // 5. Pension contributions from pay
+    if (working) pension += pensionFromPay;
+
+    // 6. Allocate a surplus or fund a deficit
+    // The emergency fund aims to cover this much of the year's essential outgoings.
+    const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
+    const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, notSaved: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+    const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
+    if (surplus >= 0) {
+      let s = surplus;
+      const repay = Math.min(s, shortfall);
+      shortfall -= repay;
+      s -= repay;
+
+      // What each choice can take this year. The emergency fund tops cash up
+      // to its target, debts and the mortgage take what's owed (overpayments
+      // within the limit unless you've turned that off), and pension
+      // contributions stop when you retire.
+      const caps = {
+        emergency: Math.max(0, emergencyTarget - cash),
+        debts: sum(debts, (d) => d.bal),
+        cash: Infinity,
+        invest: Infinity,
+        mortgage: a.capOverpayments === 'none' ? mBal : Math.min(mBal, Math.max(0, allowance - overpaid)),
+        pension: working ? Infinity : 0,
+      };
+      const share = allocate(s, byAmount ? splitShares(profile.leftover, s / 12 / priceFactor) : shares, caps);
+      const toEmergency = share.emergency;
+      const toCash = share.cash;
+      const toPension = share.pension;
+      const toInvest = share.invest;
+      const toMortgage = share.mortgage;
+      const toDebts = share.debts;
+
+      mBal -= toMortgage;
       if (mBal <= 0.005) mBal = 0;
-
-      let debtPaid = 0;
-      debts.forEach((d) => {
-        for (let m = 0; m < 12 && d.bal > 0.005; m += 1) {
-          const due = d.bal * (1 + d.monthly);
-          const paid = Math.min(due, d.pay);
-          d.bal = due - paid;
-          debtPaid += paid;
-        }
+      // Extra debt payments clear the most expensive debt first.
+      let extra = toDebts;
+      debts.slice().sort((x, z) => z.rate - x.rate).forEach((d) => {
+        const paid = Math.min(extra, d.bal);
+        d.bal -= paid;
+        extra -= paid;
         if (d.bal <= 0.005) d.bal = 0;
       });
-
-      // 4. Spending, regular savings (while working) and surplus
-      // opts.retirementSpending scales spending once you've retired (used to find what you could afford).
-      const spending = spendMonthly0 * 12 * FP.growth.compound(1, a.spendingGrowth, g) * (working ? 1 : (opts.retirementSpending == null ? 1 : opts.retirementSpending));
-      const yearStartsAfterCashLimit = startMonthIndex + 12 * g >= cashLimitFromIndex;
-      const saved = working
-        ? FP.savings.forYear(profile.savings, {
-          salaryFactor: FP.growth.compound(1, a.salaryGrowth, g),
-          isaAllowance: a.isaAllowance,
-          cashIsaLimit: yearStartsAfterCashLimit && startAge < cfg.isa.cashLimitExemptAge ? a.cashIsaLimit : null,
-        })
-        : FP.savings.forYear([], {});
-      if (saved.overAllowance) {
-        warnOnce('isaAllowance', `From ${startYear + y} (age ${age0 + y}) your regular ISA savings are more than the ${fmt(a.isaAllowance)} ISA allowance. The extra is saved outside an ISA.`);
-      } else if (saved.overCashLimit) {
-        warnOnce('cashIsaLimit', `From ${startYear + y} (age ${age0 + y}) your cash ISA savings are more than the ${fmt(a.cashIsaLimit)} cash ISA limit for under-65s. The extra is saved as ordinary cash.`);
+      const intoIsa = Math.min(toInvest, isaRoomLeft);
+      isa += intoIsa;
+      gia += toInvest - intoIsa;
+      const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
+      pension += grossPension;
+      cash += toEmergency + toCash;
+      Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension, notSaved: share.unallocated });
+    }
+    // (Not in the year it's paid off, when the limit on a small balance means little.)
+    if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
+      warnOnce('overpay', flow.toMortgage > 0
+        ? `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + flow.toMortgage)} are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee. Keep overpayments from your leftover money within the limit in Assumptions, or lower your monthly overpayment.`
+        : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Your figures.`);
+    }
+    if (surplus < 0) {
+      let need = -surplus;
+      const canDrawPension = !working && startAge >= a.pensionAccessAge;
+      if (canDrawPension && pension > 0) {
+        const gross = Math.min(pension, grossUpPension(need, retiredTaxable, region, cfgY));
+        const tax = FP.tax.incomeTaxOnly(retiredTaxable + gross * 0.75, region, cfgY) - statePensionTax;
+        pension -= gross;
+        need = Math.max(0, need - (gross - tax));
+        flow.fromPension = gross;
+        flow.pensionTax = tax;
       }
-      const surplus = netIncome - spending - mortgagePaid - debtPaid - slExtra - saved.total;
-
-      // Regular savings go in first (so they take ISA allowance before the leftover money is shared out).
-      cash += saved.cash;
-      isa += saved.isa;
-      gia += saved.gia;
-      const isaRoomLeft = Math.max(0, (a.isaAllowance || 0) - saved.isaUsed);
-
-      // 5. Pension contributions from pay
-      if (working) pension += pensionFromPay;
-
-      // 6. Allocate a surplus or fund a deficit
-      // The emergency fund aims to cover this much of the year's essential outgoings.
-      const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
-      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, notSaved: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
-      const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
-      if (surplus >= 0) {
-        let s = surplus;
-        const repay = Math.min(s, shortfall);
-        shortfall -= repay;
-        s -= repay;
-
-        // What each choice can take this year. The emergency fund tops cash up
-        // to its target, debts and the mortgage take what's owed (overpayments
-        // within the limit unless you've turned that off), and pension
-        // contributions stop when you retire.
-        const caps = {
-          emergency: Math.max(0, emergencyTarget - cash),
-          debts: sum(debts, (d) => d.bal),
-          cash: Infinity,
-          invest: Infinity,
-          mortgage: a.capOverpayments === 'none' ? mBal : Math.min(mBal, Math.max(0, allowance - overpaid)),
-          pension: working ? Infinity : 0,
-        };
-        const share = allocate(s, byAmount ? splitShares(profile.leftover, s / 12 / priceFactor) : shares, caps);
-        const toEmergency = share.emergency;
-        const toCash = share.cash;
-        const toPension = share.pension;
-        const toInvest = share.invest;
-        const toMortgage = share.mortgage;
-        const toDebts = share.debts;
-
-        mBal -= toMortgage;
-        if (mBal <= 0.005) mBal = 0;
-        // Extra debt payments clear the most expensive debt first.
-        let extra = toDebts;
-        debts.slice().sort((x, z) => z.rate - x.rate).forEach((d) => {
-          const paid = Math.min(extra, d.bal);
-          d.bal -= paid;
-          extra -= paid;
-          if (d.bal <= 0.005) d.bal = 0;
-        });
-        const intoIsa = Math.min(toInvest, isaRoomLeft);
-        isa += intoIsa;
-        gia += toInvest - intoIsa;
-        const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
-        pension += grossPension;
-        cash += toEmergency + toCash;
-        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension, notSaved: share.unallocated });
+      const fromCash = Math.min(cash, need);
+      cash -= fromCash;
+      need -= fromCash;
+      const fromGia = Math.min(gia, need);
+      gia -= fromGia;
+      need -= fromGia;
+      const fromIsa = Math.min(isa, need);
+      isa -= fromIsa;
+      need -= fromIsa;
+      flow.fromCash = fromCash;
+      flow.fromInvest = fromGia + fromIsa;
+      if (need > 0.5) {
+        shortfall += need;
+        flow.unfunded = need;
+        warnOnce('shortfall', `From ${startYear + y} (age ${age0 + y}) your savings and investments${canDrawPension ? ' and pension' : ''} can’t cover your spending. The gap is shown as an unfunded shortfall.`);
       }
-      // (Not in the year it's paid off, when the limit on a small balance means little.)
-      if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
-        warnOnce('overpay', flow.toMortgage > 0
-          ? `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + flow.toMortgage)} are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee. Keep overpayments from your leftover money within the limit in Assumptions, or lower your monthly overpayment.`
-          : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Your figures.`);
+      if (working && startAge >= a.pensionAccessAge && need > 0.5 && pension > 0) {
+        warnOnce('pensionWhileWorking', 'The projection doesn’t draw on your pension while you’re still working, even after the minimum pension age.');
       }
-      if (surplus < 0) {
-        let need = -surplus;
-        const canDrawPension = !working && startAge >= a.pensionAccessAge;
-        if (canDrawPension && pension > 0) {
-          const gross = Math.min(pension, grossUpPension(need, retiredTaxable, region, cfgY));
-          const tax = FP.tax.incomeTaxOnly(retiredTaxable + gross * 0.75, region, cfgY) - statePensionTax;
-          pension -= gross;
-          need = Math.max(0, need - (gross - tax));
-          flow.fromPension = gross;
-          flow.pensionTax = tax;
-        }
-        const fromCash = Math.min(cash, need);
-        cash -= fromCash;
-        need -= fromCash;
-        const fromGia = Math.min(gia, need);
-        gia -= fromGia;
-        need -= fromGia;
-        const fromIsa = Math.min(isa, need);
-        isa -= fromIsa;
-        need -= fromIsa;
-        flow.fromCash = fromCash;
-        flow.fromInvest = fromGia + fromIsa;
-        if (need > 0.5) {
-          shortfall += need;
-          flow.unfunded = need;
-          warnOnce('shortfall', `From ${startYear + y} (age ${age0 + y}) your savings and investments${canDrawPension ? ' and pension' : ''} can’t cover your spending. The gap is shown as an unfunded shortfall.`);
-        }
-        if (working && startAge >= a.pensionAccessAge && need > 0.5 && pension > 0) {
-          warnOnce('pensionWhileWorking', 'The projection doesn’t draw on your pension while you’re still working, even after the minimum pension age.');
-        }
-      }
+    }
 
-      rows.push(snapshot(y, {
-        working, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
-        otherIncomeRetired: otherTaxable + otherTaxFree,
-        studentLoanRepaid: slRepaid, studentLoanExtra: slExtra, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
-        netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
-      }));
+    Object.assign(state, { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, slBal, boosted });
+    return snapshot(state, y, {
+      working, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
+      otherIncomeRetired: otherTaxable + otherTaxFree,
+      studentLoanRepaid: slRepaid, studentLoanExtra: slExtra, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
+      netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
+    });
+  }
+
+  // This year's returns: the assumptions, or that year of opts.returnsPath.
+  function returnsFor(a, path, y) {
+    const out = { cash: a.savingsRate, invest: a.investmentReturn, pension: a.pensionGrowth, house: a.housePriceGrowth };
+    const given = Array.isArray(path) ? path[y - 1] : null;
+    if (given && typeof given === 'object') {
+      Object.keys(out).forEach((k) => { if (Number.isFinite(given[k])) out[k] = given[k]; });
+    }
+    return out;
+  }
+
+  /*
+   * opts: maxYears (up to your end age; 40 if not given), startYear,
+   * startMonth, taxConfig, returnsPath (an array of { cash, invest, pension,
+   * house } by year, first projection year first, overriding the assumption
+   * rates; missing years or rates use the assumptions), events (an array,
+   * passed to each year as ctx.events), and the solvers' retirementSpending,
+   * retirementBoost and retirementBoostTo.
+   */
+  function project(profile, opts) {
+    opts = opts || {};
+    const state = initState(profile, opts);
+    if (!state.ok) return state;
+    const { a, years, startYear, shares, byAmount, leftToday, warnings } = state;
+    const lifeEvents = Array.isArray(opts.events) ? opts.events : [];
+
+    const rows = [snapshot(state, 0, { today: true })];
+    for (let y = 1; y <= years; y += 1) {
+      rows.push(stepYear(state, y, { returns: returnsFor(a, opts.returnsPath, y), events: lifeEvents }));
     }
 
     if (shares.status !== 'ok') {
@@ -482,7 +541,7 @@
 
     return {
       ok: true, rows, years, startYear, shares, warnings,
-      events: { ...events(rows, profile, a), studentLoan: studentLoanEvents(rows, slTracked, slWriteOff) },
+      events: { ...events(rows, profile, a), studentLoan: studentLoanEvents(rows, state.slTracked, state.slWriteOff) },
     };
   }
 
@@ -676,5 +735,5 @@
     return out;
   }
 
-  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, retirementNeed, potNeeded, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, initState, stepYear, returnsFor, project, retirementSpend, retirementNeed, potNeeded, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});
