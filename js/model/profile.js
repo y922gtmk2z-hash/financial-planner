@@ -180,10 +180,8 @@
     { key: 'monthly', label: 'Per month', type: 'money' },
   ];
 
-  const DEFAULT_SPENDING_CATEGORIES = [
-    'Bills & utilities', 'Council tax', 'Groceries', 'Transport', 'Childcare',
-    'Insurance', 'Eating out & leisure', 'Holidays', 'Other',
-  ];
+  // One total to start with; you can split it into categories if that helps.
+  const DEFAULT_SPENDING_CATEGORIES = ['Everything'];
 
   let idCounter = 0;
   function newId(prefix) {

@@ -215,7 +215,7 @@
       const p = ctx.profile();
       FP.dom.fill(card,
         h('h2', { id: 'sec-spend' }, 'Monthly spending'),
-        h('p', { class: 'muted' }, 'Typical monthly spend by category. Don’t include your mortgage or debt payments — those are added from above.'),
+        h('p', { class: 'muted' }, 'What you typically spend in a month. One total is fine, or add categories if it helps you work it out. Don\u2019t include your mortgage or debt payments \u2014 those are added from above.'),
         h('div', { class: 'spend-list' }, p.spending.map((r, i) => h('div', { class: 'spend-row' },
           FP.field.render(FP.profile.SPENDING_FIELDS[0], {
             value: r.category, compact: true,
