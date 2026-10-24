@@ -714,3 +714,4 @@ html.sheet-open { overflow: hidden; }
 .card-idea.warn .idea-icon, .card-idea.warn strong { color: var(--warn-ink); }
 .sheet-titles { min-width: 0; }
 .sheet-status { margin: 2px 0 0; font-size: 0.9rem; font-weight: 600; }
+.mode-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
