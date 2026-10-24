@@ -150,7 +150,7 @@
       h('p', { class: 'muted small' }, cf.savingsMonthly > 0
         ? 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings.'
         : 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.',
-        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with suggestions) at the end of Your figures.'),
+        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with a suggested split) under Outgoings in Your figures.'),
       chips([
         `Tax year ${pay.taxYear}`,
         region,

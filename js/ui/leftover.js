@@ -116,7 +116,7 @@
       drawAlloc(shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
       // Under 100% is said in the allocation notice; the line below covers the rest.
-      status.hidden = shares.status === 'under' && shares.total > 0;
+      status.hidden = shares.status === 'under';
 
       if (r.split) {
         const same = FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((pct[f.key] || 0) - r.split[f.key]) < 0.5);
@@ -150,7 +150,8 @@
       const keys = FP.profile.LEFTOVER_FIELDS.filter((f) => shares[f.key] > 0);
       const allocated = keys.reduce((t, f) => t + shares[f.key], 0);
       const rest = Math.max(0, 1 - allocated);
-      if (!(left > 0)) { FP.dom.fill(alloc); alloc.hidden = true; return; }
+      // Nothing chosen yet: the line above the suggestion already says so.
+      if (!(left > 0) || allocated === 0) { FP.dom.fill(alloc); alloc.hidden = true; return; }
       alloc.hidden = false;
       const label = keys.map((f) => `${f.label} ${Math.round(shares[f.key] * 100)}%`)
         .concat(rest > 0.0005 ? [`not allocated ${Math.round(rest * 100)}%`] : []).join(', ');
@@ -197,24 +198,40 @@
             h('button', { type: 'button', class: 'link', onclick: () => mark(s.id, null) }, 'Bring back'))))))) : null);
     }
 
+    // The suggested split comes first; choosing your own is folded away (open
+    // once you have a split of your own), and so are the ideas.
+    const own = h('details', { class: 'advanced', id: 'own-split' },
+      h('summary', null, 'Choose your own split'),
+      h('p', { class: 'help' }, 'Share it out as a share of what\u2019s left or as amounts a month (which rise with prices). Anything you don\u2019t allocate is treated as spent.'),
+      unitHolder,
+      rows);
     FP.dom.fill(card,
       h('h2', { id: 'leftover-h' }, 'Money left over each month'),
       headline,
-      h('h3', null, 'What do you want to do with it?'),
-      h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection, as a share of what\u2019s left or as amounts a month (which rise with prices). Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
-      unitHolder,
-      rows,
+      h('p', { class: 'help' }, 'Your plan only saves it once you choose what to do with it.'),
+      suggested,
       alloc,
       status,
-      suggested,
-      h('h3', null, 'Ideas based on your figures'),
-      h('p', { class: 'help' }, 'General rules of thumb to consider — not financial advice.'),
-      ideas);
+      own,
+      h('details', { class: 'advanced', id: 'ideas-box' },
+        h('summary', null, 'Ideas based on your figures'),
+        h('p', { class: 'help' }, 'General rules of thumb to consider \u2014 not financial advice.'),
+        ideas));
     ideas.id = 'ideas';
     drawFields();
     refresh();
+    own.open = hasOwnSplit(ctx.profile());
     card.refresh = refresh;
     return card;
+  }
+
+  // Whether you've chosen a split that isn't the suggested one (or there's no suggestion).
+  function hasOwnSplit(p) {
+    const r = FP.suggest.analyse(p);
+    if (!r.split) return true;
+    const mine = FP.projection.splitAsPct(p.leftover, Math.max(0, r.left || 0));
+    const chosen = FP.projection.splitShares(p.leftover, r.left).total > 0;
+    return chosen && !FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((mine[f.key] || 0) - r.split[f.key]) < 0.5);
   }
 
   FP.leftoverCard = { render };

@@ -132,8 +132,8 @@
 
   /*
    * Whether a backup is due: you've changed something since your last export
-   * (or never exported), and that export is over 30 days old or you've made
-   * a good number of edits since.
+   * (or never exported), and you've made a good number of edits since, or
+   * that export is over 30 days old.
    */
   const MANY_EDITS = 15;
   function status(now) {
@@ -141,7 +141,7 @@
     const lastExport = FP.store.pref('lastExport');
     const lastChange = FP.store.pref('lastChange');
     const changedSince = !!lastChange && (!lastExport || lastChange > lastExport);
-    const old = !lastExport || now - Date.parse(lastExport) > 30 * DAY;
+    const old = !!lastExport && now - Date.parse(lastExport) > 30 * DAY;
     const many = Number(FP.store.pref('editsSinceExport')) >= MANY_EDITS;
     return { lastExport, lastChange, changedSince, due: changedSince && (old || many) };
   }

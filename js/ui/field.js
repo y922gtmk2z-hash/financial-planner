@@ -28,7 +28,8 @@
 
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
-   * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared) }
+   * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared),
+   *          noBlankNote (don't point out a blank key figure) }
    */
   function render(field, opts) {
     uid += 1;
@@ -81,7 +82,7 @@
       });
     }
 
-    const blank = KEY_FIELDS.includes(field.path) && !opts.compact
+    const blank = KEY_FIELDS.includes(field.path) && !opts.compact && !opts.noBlankNote
       ? h('p', { class: 'help blank-note', hidden: opts.value > 0 }, 'Not entered yet: counts as \u00a30.')
       : null;
 
@@ -115,28 +116,5 @@
       opts.extra || null);
   }
 
-  /*
-   * The fields of a Setup section: ungrouped basic fields, then `between`
-   * (e.g. the bonus editor), then each field group under its heading, then
-   * advanced fields behind "Advanced". `make(field)` renders one field.
-   */
-  function sectionBody(sec, make, between) {
-    const basic = sec.fields.filter((f) => !f.advanced && !f.group);
-    const groups = [...new Set(sec.fields.filter((f) => f.group).map((f) => f.group))];
-    const adv = sec.fields.filter((f) => f.advanced && !f.group);
-    return [
-      basic.map(make),
-      between || null,
-      groups.map((g) => {
-        const info = FP.profile.FIELD_GROUPS[g];
-        return h('div', { class: 'field-group', role: 'group', 'aria-labelledby': `grp-${sec.id}-${g}` },
-          h('h3', { id: `grp-${sec.id}-${g}` }, info.title),
-          info.intro ? h('p', { class: 'help' }, info.intro) : null,
-          sec.fields.filter((f) => f.group === g).map(make));
-      }),
-      adv.length ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), adv.map(make)) : null,
-    ];
-  }
-
-  FP.field = { render, sectionBody };
+  FP.field = { render };
 })(globalThis.FP = globalThis.FP || {});

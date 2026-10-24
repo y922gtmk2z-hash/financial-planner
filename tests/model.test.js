@@ -149,3 +149,17 @@ test('a first visit starts empty, not with sample data', () => {
   assert.equal(p.about.age, null);
   assert.equal(p.income.grossSalary, 0);
 });
+
+test('Your figures sections: About you, Income (with the student loan), Assets, Debts', () => {
+  const paths = (id) => FP.profile.SECTIONS.find((s) => s.id === id).fields.map((f) => f.path);
+  assert.deepEqual(paths('about'), ['about.age', 'assumptions.retirementAge', 'goals.retirementIncome', 'about.riskAppetite']);
+  assert.ok(paths('income').includes('income.studentLoanPlan'));
+  assert.ok(!paths('debts').some((x) => x.includes('studentLoan')));
+});
+
+test('risk appetite: blank by default, kept when valid, dropped when not', () => {
+  assert.equal(FP.profile.blank().about.riskAppetite, '');
+  assert.equal(FP.profile.normalise({ about: { riskAppetite: 'cautious' } }).about.riskAppetite, 'cautious');
+  assert.equal(FP.profile.normalise({ about: { riskAppetite: 'reckless' } }).about.riskAppetite, '');
+  assert.equal(FP.profile.normalise({ about: { age: 40 } }).about.riskAppetite, '');
+});

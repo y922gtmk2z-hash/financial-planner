@@ -364,6 +364,20 @@ details.advanced > summary {
   cursor: pointer; color: var(--accent); font-weight: 600; padding: 6px 0; list-style-position: outside;
 }
 
+/* Income's Advanced: one row per part, each folding open on its own. */
+.parts { border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
+details.part + details.part { border-top: 1px solid var(--border); }
+details.part > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 8px 12px; cursor: pointer; font-weight: 600; list-style: none;
+}
+details.part > summary::-webkit-details-marker { display: none; }
+details.part > summary::after { content: '\203a'; color: var(--text-2); font-size: 1.2rem; transition: transform 0.15s ease; }
+details.part[open] > summary::after { transform: rotate(90deg); }
+details.part > summary .part-status { margin-left: auto; color: var(--text-2); font-weight: 400; font-size: 0.9rem; text-align: right; }
+details.part > :not(summary) { padding: 0 12px; }
+details.part[open] { padding-bottom: 12px; }
+
 fieldset.row-card {
   border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 12px; margin: 12px 0;
 }
@@ -682,7 +696,7 @@ fieldset.row-card { min-width: 0; }
 .setup-intro { margin-bottom: 12px; }
 .step-nav { position: sticky; top: 0; z-index: 15; transition: top 0.22s ease; margin: 0 calc(-1 * var(--gutter)) 12px; padding: 8px var(--gutter); background: var(--bg); }
 .app-header:not(.is-hidden) ~ main .step-nav { top: var(--header-h, 56px); }
-.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .step-nav li { display: flex; }
 .step-nav .step-chip { flex: 1; justify-content: flex-start; text-align: center; line-height: 1.2; }
 .step-chip {

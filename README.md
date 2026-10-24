@@ -42,10 +42,14 @@ publish, so browsers fetch the new files instead of a cached copy (GitHub Pages 
 browsers keep files for about 10 minutes). `npm test` checks they all match.
 
 The first time you open it, it starts **empty**, with a short welcome that says what
-the planner does and a **Quick start**: your age, salary, monthly spending and
-retirement age. Those four answers give a first look at Your plan, marked "Based on 4
-answers" until you add savings, pensions or debts. The same four questions sit at the
-top of Your figures until they're answered. You can also fill in all your figures, or **Load
+the planner does and a **Quick start**: your age, salary, monthly spending, retirement
+age and (optionally) what you'd like to spend in retirement. Those answers give a
+**first look** at Your plan: what you take home and have left each month, and for
+retirement how much you'd need in savings and pensions when you retire, how much you're
+on course for and how long it would last at your spending. It doesn't say whether
+you're "on track" yet, and next steps, ideas and the net-worth chart wait until you've
+added more (savings, pensions, debts or pay details, or been through Assets and
+Debts). The quick-start answers then live under About you in Your figures. You can also fill in all your figures, or **Load
 sample data** (a clearly fictional household, with a banner saying so) from the
 welcome screen or Your data. Until you add figures, every screen says to add them to
 see results; no illustrative data is used.
@@ -60,20 +64,27 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
 
 **Your journey:**
 
-1. **Your figures**, in four sections (section by section the first time, then on one page):
+1. **Your figures**, in five sections (section by section unless you choose one page):
    - **About you:** your age, when you'd like to retire, what you'd like to spend in
-     retirement, your salary and (optionally) your **tax code**. **More about your pay** (folded away) has your
-     pension, bonuses, salary sacrifice, **workplace benefits** (private medical
-     insurance or another taxable benefit) and **other income**.
-   - **What you spend and save:** one question on what you spend in a month (split it
-     into categories if you like), one on what you save each month, then **money
-     left over each month**.
+     retirement and how you feel about investment **risk** (cautious, balanced or
+     adventurous). *Risk appetite is stored but not used yet: it's there so a later
+     version can suggest growth rates and where to put money to match it.*
+   - **Income:** your salary. **Advanced** (folded away) holds the rest, each part
+     folding open on its own with a one-line summary: workplace pension, **student
+     loan** (repaid from your pay, so it lives here rather than under Debts),
+     bonuses, salary sacrifice, **workplace benefits**, tax code and where you live,
+     and other income.
+   - **Outgoings:** what you spend in a month (split it into categories if you
+     like), what you save each month, then **money left over each month**: a
+     suggested split to use in one tap, with your own split and ideas folded away.
    - **Assets:** what you own today.
-   - **Debts:** what you owe: mortgage, student loan and other debts.
+   - **Debts:** your mortgage (its rate and term appear once you enter a balance)
+     and other debts.
 2. **Your plan** answers four questions, each with a verdict and its top
    recommendation: **Each month** (take-home, what's left over, emergency fund),
-   **Debt-free** (mortgage, student loan, other debts), **Retirement** (what you could
-   spend against your goal, pension pot) and **Next steps**.
+   **Debt-free** (mortgage, student loan, other debts), **Retirement** (how much
+   you'd need when you retire, how much you're on course for, how long it lasts at
+   your goal, and what you could spend) and **Next steps**.
 3. **Tap any figure** to open its detail panel: the result and a chart, the inputs
    and assumptions that drive it (change them right there), a before-and-after
    comparison as you type, the changes that would help most (**Try it**), and the
@@ -95,7 +106,7 @@ one-line "So what" under it.
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Your figures** (header, `#setup`) | Four sections, plus **Projections** (show amounts in today's or future money): **About you** (age, retirement goal, salary, and folded away: pension, bonuses, salary sacrifice, workplace benefits, other income), **What you spend and save** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, student loan, other debts). Section by section the first time, then one page. A strip above the tabs shows take-home and what's left over as you type. |
+| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite, and folded away how amounts are shown), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, other debts). Section by section, or all on one page if you choose. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |

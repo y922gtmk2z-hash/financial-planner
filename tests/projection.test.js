@@ -391,3 +391,34 @@ test('what you could spend in retirement keeps every retirement year funded', ()
   const r = FP.projection.project(p, { retirementSpending: rs.factor, maxYears: 100 });
   assert.ok(r.rows.every((row) => row.shortfall <= 0.5));
 });
+
+test('retirement need: what you’d need, what you’re on course for and how long it lasts', () => {
+  const p = FP.profile.blank();
+  p.about.age = 35;
+  p.income.grossSalary = 45000;
+  p.spending[0].monthly = 2000;
+  const n = FP.projection.retirementNeed(p);
+  assert.equal(n.goal, 2000);
+  assert.equal(n.goalIsSet, false);
+  assert.ok(n.needed > n.have && n.have > 0);
+  assert.ok(n.lastsUntil > p.assumptions.retirementAge && n.lastsUntil < n.endAge);
+  // Topping up to what's needed funds every retirement year at the goal.
+  const factor = (FP.projection.retirementSpend(p).factor * 2000) / FP.projection.retirementSpend(p).monthly;
+  const topped = FP.projection.project(p, { maxYears: 100, retirementSpending: factor, retirementBoost: n.needed - n.have + 100 });
+  assert.ok(topped.rows.every((r) => r.working !== false || r.shortfall <= 0.5));
+  // A lower goal needs less, and lasts longer.
+  p.goals.retirementIncome = 1000;
+  const lower = FP.projection.retirementNeed(p);
+  assert.ok(lower.needed < n.needed);
+  assert.ok(lower.lastsUntil == null || lower.lastsUntil > n.lastsUntil);
+});
+
+test('retirement need: nothing needed when the State Pension covers the goal', () => {
+  const p = FP.profile.blank();
+  p.about.age = 60;
+  p.spending[0].monthly = 500;
+  Object.assign(p.assumptions, { retirementAge: 67, statePensionAge: 67 });
+  const n = FP.projection.retirementNeed(p);
+  assert.equal(n.needed, 0);
+  assert.equal(n.lastsUntil, null);
+});

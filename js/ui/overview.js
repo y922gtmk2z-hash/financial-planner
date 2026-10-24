@@ -26,26 +26,37 @@
     const proj = ready ? FP.projection.project(p) : { ok: false };
     const a = p.assumptions;
 
+    // Only the quick-start answers so far: a first look, kept short. Ideas,
+    // next steps and the chart wait until there's more to go on.
+    const rough = FP.welcome.isRough(p);
     const warnings = today.warnings.concat(proj.ok ? proj.warnings : []);
     const seen = new Set();
-    const notices = warnings.filter((w) => !seen.has(w.text) && seen.add(w.text));
-    const ideas = ready ? openIdeas(p) : [];
+    // The split notice repeats what the Each month card says.
+    const notices = warnings.filter((w) => w.key !== 'split' && !seen.has(w.text) && seen.add(w.text) && (!rough || w.level === 'warn'));
+    const ideas = ready && !rough ? openIdeas(p) : [];
     const panel = (id) => () => FP.explore.open(ctx, id);
 
     FP.dom.add(root,
-      FP.dom.pageHead('Your plan', 'Four questions, answered', { edit: true }),
-      ready && FP.welcome.isRough(p) ? h('p', { class: 'notice info rough-plan' },
-        h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
-        h('span', null, h('strong', null, 'Based on 4 answers: '), 'add more detail (savings, pensions, debts) to sharpen this. ', h('a', { href: '#setup' }, 'Add more figures'))) : null,
+      FP.dom.pageHead('Your plan', rough && ready ? 'A first look, from your quick answers' : 'Four questions, answered', { edit: !rough }),
       FP.checklist.card(p),
       noticeList(notices),
-      FP.backup.nudge(ctx),
-      monthCard(p, today, pay, ideas, panel, ctx),
-      ready && proj.ok ? debtCard(p, proj, ideas, panel, ctx) : null,
-      ready && proj.ok ? retirementCard(p, proj, ideas, panel, ctx) : null,
-      ready ? FP.checklist.note(p) : null,
-      proj.ok ? chartCard(proj, today, a) : null,
-      nextCard(ideas, a, ctx));
+      rough ? null : FP.backup.nudge(ctx),
+      monthCard(p, today, pay, ideas, panel, rough),
+      ready && proj.ok ? debtCard(p, proj, ideas, panel) : null,
+      ready && proj.ok ? retirementCard(p, proj, ideas, panel, rough) : null,
+      ready && rough ? moreCard() : null,
+      ready && !rough ? FP.checklist.note(p) : null,
+      proj.ok && !rough ? chartCard(proj, today, a) : null,
+      rough ? null : nextCard(ideas, a, ctx));
+  }
+
+  // After the quick start: one clear next move.
+  function moreCard() {
+    return h('section', { class: 'card more-detail', 'aria-labelledby': 'more-h' },
+      h('h2', { id: 'more-h' }, 'Make it your plan'),
+      h('p', null, 'This uses just your quick answers. Add your savings, pensions and any debts and the planner can tell you when you\u2019ll be debt-free, what you could spend in retirement and what to do next.'),
+      h('a', { class: 'button', href: '#setup' }, 'Add more detail'),
+      h('p', { class: 'muted small' }, 'About five minutes. A rough figure is fine.'));
   }
 
   // Ideas you haven't ticked off or hidden, most pressing first.
@@ -78,15 +89,17 @@
 
   const ideaFor = (area, ideas) => ideas.find((x) => AREA_IDEAS[area].includes(x.id)) || null;
 
-  function monthCard(p, today, pay, ideas, panel) {
+  function monthCard(p, today, pay, ideas, panel, rough) {
     const cf = today.cashFlow;
     const left = cf.surplus;
-    const e = FP.summary.checklist(p).ready ? FP.suggest.analyse(p).emergency : null;
+    const e = FP.summary.checklist(p).ready && !rough ? FP.suggest.analyse(p).emergency : null;
     const verdict = !(pay.takeHomeMonthly > 0) && !(cf.spendingMonthly > 0)
       ? { tone: 'info', text: 'Add your pay and spending to see your month.' }
       : left < 0
         ? { tone: 'warn', text: `You\u2019re ${money(-left)} short each month.` }
-        : FP.projection.splitShares(p.leftover, left).total === 0 && left > 0
+        : rough
+          ? { tone: 'info', text: `${money(left)} left over each month after spending.` }
+          : FP.projection.splitShares(p.leftover, left).total === 0 && left > 0
           ? { tone: 'info', text: `${money(left)} left over each month, but you haven\u2019t chosen what to do with it, so your plan doesn\u2019t save any of it.` }
           : { tone: 'ok', text: `${money(left)} left over each month${cf.savingsMonthly > 0 ? `, after saving ${money(cf.savingsMonthly)}` : ''}.` };
     return outcomeCard('month', 'Each month', verdict, [
@@ -127,22 +140,38 @@
     return outcomeCard('debt', 'Debt-free', verdict, out, ideaFor('debt', ideas), panel);
   }
 
-  function retirementCard(p, proj, ideas, panel) {
+  /*
+   * Retirement leads with what you'd need and how long your money would last
+   * at your goal, rather than a verdict: with only the quick answers it's too
+   * early to say you're on track.
+   */
+  function retirementCard(p, proj, ideas, panel, rough) {
     const a = p.assumptions;
-    const ev = proj.events;
-    const rs = FP.projection.retirementSpend(p);
-    const goal = FP.outcomes.goalMonthly(p);
-    const ret = ev.retirement ? FP.projection.toReal(proj.rows[ev.retirement.y]) : null;
+    const need = FP.projection.retirementNeed(p);
+    const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';
     let verdict;
-    if (!rs) verdict = { tone: 'info', text: `Retiring at ${a.retirementAge} is beyond the projection.` };
-    else if (rs.monthly >= goal) verdict = { tone: 'ok', text: `On track: you could spend ${money(rs.monthly)} a month from ${a.retirementAge}, against your goal of ${money(goal)}.` };
-    else verdict = { tone: 'warn', text: `Short by ${money(goal - rs.monthly)} a month: you could spend ${money(rs.monthly)} from ${a.retirementAge}, against your goal of ${money(goal)}.` };
-    return outcomeCard('retirement', 'Retirement', verdict, [
-      rs ? { label: 'You could spend', value: `${money(rs.monthly)} a month`, sub: `from ${a.retirementAge} to ${rs.endAge}, today\u2019s money`, warn: rs.monthly < goal, open: panel('retirement') } : null,
-      { label: 'Your goal', value: `${money(goal)} a month`, sub: p.goals && p.goals.retirementIncome > 0 ? 'what you set' : 'what you spend now', open: panel('retirement') },
-      ret ? { label: `Pension pot at ${ret.age}`, value: money(ret.pension), sub: 'today\u2019s money', open: panel('retirement') } : null,
-      ev.runsOut ? { label: 'Money runs short', value: `Age ${ev.runsOut.age}`, sub: String(ev.runsOut.year), warn: true, open: panel('retirement') } : null,
-    ], ideaFor('retirement', ideas), panel, h('p', { class: 'small how-link' }, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')));
+    if (!need) verdict = { tone: 'info', text: `Retiring at ${a.retirementAge} is beyond the projection.` };
+    else if (need.needed <= 0) verdict = { tone: rough ? 'info' : 'ok', text: `Your State Pension and other income would cover spending ${goalText} from ${a.retirementAge}.` };
+    else {
+      const text = need.lastsUntil
+        ? `Spending ${goalText} from ${a.retirementAge}, your money would last until about ${need.lastsUntil}.`
+        : `Spending ${goalText} from ${a.retirementAge}, your money would last beyond ${need.endAge}.`;
+      verdict = { tone: rough ? 'info' : need.lastsUntil ? 'warn' : 'ok', text };
+    }
+    const rs = rough ? null : FP.projection.retirementSpend(p);
+    return outcomeCard('retirement', 'Retirement', verdict, need ? [
+      { label: `Needed by ${a.retirementAge}`, value: `about ${money(roundTo(need.needed))}`, sub: `to last to ${need.endAge}, in savings and pensions (today\u2019s money)`, open: panel('retirement') },
+      { label: 'On course to have', value: `about ${money(roundTo(need.have))}`, sub: rough ? `assumes ${a.employeePensionPct}% + ${a.employerPensionPct}% workplace pension` : 'savings and pensions', warn: !rough && need.have < need.needed, open: panel('retirement') },
+      { label: `At ${money(need.goal)} a month, lasts until`, value: need.lastsUntil ? `Age ${need.lastsUntil}` : `${need.endAge}+`, sub: need.lastsUntil ? 'then runs short' : 'the end of your plan', warn: !rough && !!need.lastsUntil, open: panel('retirement') },
+      rs ? { label: 'You could spend', value: `${money(rs.monthly)} a month`, sub: `from ${a.retirementAge} to ${rs.endAge}`, open: panel('retirement') } : null,
+    ] : [], ideaFor('retirement', ideas), panel, h('p', { class: 'small how-link' },
+      `Includes the State Pension from ${a.statePensionAge}. `, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')));
+  }
+
+  // Estimates shown to the nearest £1,000 (or £100 under £10,000), not to the pound.
+  function roundTo(n) {
+    const step = Math.abs(n) < 10000 ? 100 : 1000;
+    return Math.round(n / step) * step;
   }
 
   function nextCard(ideas, a, ctx) {

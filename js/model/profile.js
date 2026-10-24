@@ -32,10 +32,21 @@
     ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
       .map((m) => ({ value: m.slice(0, 3).toLowerCase(), label: m })));
 
-  // Setup screen fields, in four sections. `path` is where the value lives in
-  // the profile. Fields under `assumptions.` are the same values shown in the
-  // Assumptions panel. Fields with a `group` sit under that group's heading;
-  // `more` groups are folded away until you open them.
+  const RISK_LEVELS = [
+    { value: '', label: 'Not sure yet' },
+    { value: 'cautious', label: 'Cautious' },
+    { value: 'balanced', label: 'Balanced' },
+    { value: 'adventurous', label: 'Adventurous' },
+  ];
+
+  /*
+   * Your figures fields, in five sections: About you, Income, Outgoings
+   * (spending, saving and money left over, which have their own editors),
+   * Assets and Debts. `path` is where the value lives in the profile. Fields
+   * under `assumptions.` are the same values shown in the Assumptions panel.
+   * Fields with a `group` sit under that group's heading; in Income every
+   * group is folded under Advanced, beneath your salary.
+   */
   const SECTIONS = [
     {
       id: 'about', title: 'About you',
@@ -43,22 +54,40 @@
         { path: 'about.age', label: 'Your age', type: 'int', min: 16, max: 100, suffix: 'years', nullable: true,
           help: 'Your age today, in whole years.' },
         { path: 'assumptions.retirementAge', label: 'When you\u2019d like to retire', type: 'int', min: 40, max: 80, suffix: 'years old',
-          help: 'When your salary and workplace pension contributions stop.', shared: true },
+          help: 'When your salary and workplace pension contributions stop.' },
         { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
           nullPlaceholder: 'Same as now',
           help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
+        // Not used in the plan yet (see README): stored so it can be later.
+        { path: 'about.riskAppetite', label: 'How do you feel about investment risk?', type: 'select', options: RISK_LEVELS,
+          help: 'Cautious: you\u2019d rather grow slowly than see big falls. Adventurous: you can ride out falls for higher long-term growth. This doesn\u2019t change your plan yet.' },
+      ],
+    },
+    {
+      id: 'income', title: 'Income',
+      fields: [
         { path: 'income.grossSalary', label: 'Gross salary', type: 'money', suffix: 'a year',
-          help: 'Your yearly salary before tax and deductions.' },
-        { path: 'income.taxCode', label: 'Tax code (optional)', type: 'taxcode', placeholder: 'e.g. 1257L',
-          help: 'On your payslip, P60 or the HMRC app. Leave blank for the standard allowance. A code starting with S uses Scottish rates.' },
-        { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS, group: 'pay',
-          help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
-        { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pay',
-          help: 'Shared with the Assumptions panel.', shared: true },
-        { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pay',
-          help: 'Shared with the Assumptions panel.', shared: true },
-        { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, group: 'pay',
+          help: 'Your yearly salary before tax and deductions. Leave blank if you\u2019re not working.' },
+        { path: 'assumptions.employeePensionPct', label: 'Your pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pension',
+          help: 'What you pay in, from your payslip. 5% is the usual minimum for workplace pensions.', shared: true },
+        { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary', group: 'pension',
+          help: 'What your employer adds. 3% is the legal minimum; many pay more.', shared: true },
+        { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, group: 'pension',
           help: 'Check your payslip or ask payroll. Net pay is the most common workplace scheme; salary sacrifice also saves National Insurance.' },
+        { path: 'income.studentLoanPlan', label: 'Your plan', type: 'select', options: STUDENT_LOAN_PLANS, group: 'studentLoan',
+          help: 'Your Student Loans Company account and payslip show it. As a guide: England or Wales courses from 1998 to 2011 are Plan 1, from 2012 to July 2023 Plan 2, from August 2023 Plan 5; Scotland Plan 4; Northern Ireland Plan 1.' },
+        { path: 'income.studentLoanBalance', label: 'Balance', type: 'money', group: 'studentLoan', needsPlan: true,
+          help: 'What you owe today, from your Student Loans Company online account. Leave blank and repayments simply carry on until you retire.' },
+        { path: 'income.studentLoanStartYear', label: 'Year you were first due to repay', type: 'int', min: 1990, max: 2040, nullable: true, placeholder: 'e.g. 2016', group: 'studentLoan', needsPlan: true,
+          help: 'The April after you left your course. Used to work out when any balance left is written off.' },
+        { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan', more: true, needsPlan: true,
+          help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
+        { path: 'income.studentLoanOverpayment', label: 'Extra payments (optional)', type: 'money', suffix: 'a month', group: 'studentLoan', more: true, needsPlan: true,
+          help: 'Voluntary payments on top of what comes out of your pay, from your take-home pay. They stop when the loan is repaid or written off. If it\u2019s likely to be written off, extra payments may be money you\u2019d never have had to pay.' },
+        { path: 'income.taxCode', label: 'Tax code (optional)', type: 'taxcode', placeholder: 'e.g. 1257L', group: 'tax',
+          help: 'On your payslip, P60 or the HMRC app. Leave blank for the standard allowance. A code starting with S uses Scottish rates.' },
+        { path: 'income.region', label: 'Where you pay income tax', type: 'toggle', options: REGIONS, group: 'tax',
+          help: 'Scotland has its own income tax bands. National Insurance is the same everywhere.' },
         { path: 'income.otherIncome', label: 'Other taxable income', type: 'money', suffix: 'a year', group: 'otherIncome',
           help: 'Before tax: for example rental profit, self-employment or a second job paid gross. Income tax is worked out on it with your salary; National Insurance and student loan on it aren\u2019t modelled.' },
         { path: 'income.taxFreeIncome', label: 'Tax-free income', type: 'money', suffix: 'a year', group: 'otherIncome',
@@ -76,53 +105,39 @@
           help: 'Roughly what your home would sell for today. Leave blank if you rent.' },
         { path: 'assets.cashSavings', label: 'Cash savings', type: 'money',
           help: 'Current accounts, savings accounts and cash ISAs.' },
-        { path: 'assets.isa', label: 'Investments in ISAs', type: 'money',
-          help: 'Stocks & shares ISAs and Lifetime ISAs.' },
-        { path: 'assets.gia', label: 'Other investments (GIA)', type: 'money',
-          help: 'General investment accounts held outside an ISA or pension.' },
         { path: 'assets.pension', label: 'Pension pots', type: 'money',
           help: 'Total of your defined-contribution pension pots.' },
+        { path: 'assets.isa', label: 'Investments in ISAs', type: 'money',
+          help: 'Stocks & shares ISAs and Lifetime ISAs.' },
+        { path: 'assets.gia', label: 'Other investments (GIA)', type: 'money', advanced: true,
+          help: 'General investment accounts held outside an ISA or pension.' },
         { path: 'assets.other', label: 'Other assets', type: 'money', advanced: true,
           help: 'Anything else you would count, such as a car. Treated as not growing.' },
       ],
     },
     {
       id: 'debts', title: 'Debts',
-      intro: 'What you owe. Leave anything that doesn\u2019t apply blank.',
+      intro: 'What you owe. Leave anything that doesn\u2019t apply blank. Your student loan is under Income, as it\u2019s repaid from your pay.',
       fields: [
         { path: 'mortgage.balance', label: 'Mortgage balance', type: 'money', group: 'mortgage',
-          help: 'How much you still owe, from your latest statement.' },
-        { path: 'assumptions.mortgageRate', label: 'Interest rate', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage',
+          help: 'How much you still owe, from your latest statement. Leave blank if you don\u2019t have one.' },
+        { path: 'assumptions.mortgageRate', label: 'Interest rate', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage', needsMortgage: true,
           help: 'Your current rate. Shared with the Assumptions panel.', shared: true },
-        { path: 'mortgage.remainingTermYears', label: 'Years left on the mortgage', type: 'years', min: 0, max: 40, suffix: 'years', group: 'mortgage',
+        { path: 'mortgage.remainingTermYears', label: 'Years left on the mortgage', type: 'years', min: 0, max: 40, suffix: 'years', group: 'mortgage', needsMortgage: true,
           help: 'Remaining term, for example 22 or 22.5.' },
-        { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true,
+        { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true, needsMortgage: true,
           help: 'Extra paid on top of your normal payment each month. Most lenders allow up to 10% of the balance a year without a charge.' },
-        { path: 'income.studentLoanPlan', label: 'Your plan', type: 'select', options: STUDENT_LOAN_PLANS, group: 'studentLoan',
-          help: 'Your Student Loans Company account and payslip show it. As a guide: England or Wales courses from 1998 to 2011 are Plan 1, from 2012 to July 2023 Plan 2, from August 2023 Plan 5; Scotland Plan 4; Northern Ireland Plan 1.' },
-        { path: 'income.studentLoanBalance', label: 'Balance', type: 'money', group: 'studentLoan',
-          help: 'What you owe today, from your Student Loans Company online account. Leave blank and repayments simply carry on until you retire.' },
-        { path: 'income.studentLoanStartYear', label: 'Year you were first due to repay', type: 'int', min: 1990, max: 2040, nullable: true, placeholder: 'e.g. 2016', group: 'studentLoan',
-          help: 'The April after you left your course. Used to work out when any balance left is written off.' },
-        { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan', more: true,
-          help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
-        { path: 'income.studentLoanOverpayment', label: 'Extra payments (optional)', type: 'money', suffix: 'a month', group: 'studentLoan', more: true,
-          help: 'Voluntary payments on top of what comes out of your pay, from your take-home pay. They stop when the loan is repaid or written off. If it\u2019s likely to be written off, extra payments may be money you\u2019d never have had to pay.' },
       ],
     },
   ];
 
   // Headings for groups of fields.
   const FIELD_GROUPS = {
-    pay: { title: 'More about your pay', more: true,
-      intro: 'Your pension, bonuses, salary sacrifice and workplace benefits. Leave this closed if you only want to give your salary.' },
-    otherIncome: { title: 'Other income', more: true,
-      intro: 'Income on top of your salary.' },
-    mortgage: { title: 'Mortgage', intro: 'Leave the balance blank if you don\u2019t have one.' },
-    studentLoan: {
-      title: 'Student loan',
-      intro: 'Repayments come out of your pay. Add your balance to see when the loan will be repaid or written off.',
-    },
+    pension: { title: 'Workplace pension', intro: 'Usually on your payslip.' },
+    studentLoan: { title: 'Student loan', intro: 'Repayments come out of your pay. Add your balance to see when the loan will be repaid or written off.' },
+    tax: { title: 'Tax code and where you live' },
+    otherIncome: { title: 'Other income', intro: 'Income on top of your salary.' },
+    mortgage: { title: 'Mortgage' },
   };
 
   const DEBT_FIELDS = [
@@ -226,7 +241,7 @@
     return {
       schemaVersion: SCHEMA_VERSION,
       isSample: false,
-      about: { age: null },
+      about: { age: null, riskAppetite: '' },
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyOverpayment: 0 },
       debts: [],
@@ -430,7 +445,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending,
   };
 })(globalThis.FP = globalThis.FP || {});
