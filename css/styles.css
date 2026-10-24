@@ -176,6 +176,8 @@ p { margin: 0 0 10px; }
   background: var(--info-bg); color: var(--info-ink); font-size: 0.9rem;
 }
 .sample-banner p { margin-bottom: 8px; }
+.sample-banner.slim { padding: 6px 14px; }
+.sample-banner.slim p { margin: 0; }
 @media (min-width: 792px) { .sample-banner { border-radius: var(--radius); } }
 
 main { max-width: 760px; margin: 0 auto; padding: 0 var(--gutter) 24px; }
@@ -218,6 +220,7 @@ main:focus, main:focus-visible { outline: none; }
 /* Phones: while the on-screen keyboard is up (a field has focus), the tab bar steps aside. */
 @media (max-width: 899px) {
   body.kbd-open { padding-bottom: 0; }
+  body:has(.tabbar[hidden]) { padding-bottom: 0; }
   .kbd-open .tabbar { display: none; }
   .kbd-open .live-strip { bottom: 8px; }
   .kbd-open .toast { bottom: 16px; }
@@ -341,6 +344,23 @@ main:focus, main:focus-visible { outline: none; }
   min-height: 46px; padding: 0 12px;
 }
 .input-wrap:focus-within { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+/* Help steps aside once a box is answered; the "i" or focusing the box brings it back. */
+.label-row { display: flex; align-items: center; gap: 6px; }
+.label-row { margin-bottom: 4px; }
+.label-row > label { margin-bottom: 0; }
+.field.answered .help-text { display: none; }
+.field.answered.show-help .help-text, .field.answered:focus-within .help-text { display: block; }
+.help-toggle {
+  flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; min-height: 0; padding: 0; margin: 0;
+  border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text-2);
+  font: 700 0.75rem/1 Georgia, serif; font-style: italic; cursor: pointer; position: relative;
+}
+.help-toggle::before { content: ''; position: absolute; inset: -11px; } /* a 44px tap area */
+.help-toggle[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+/* A figure worked out from the others shows in its empty box. */
+.input-wrap.worked input::placeholder { color: var(--accent); opacity: 1; font-style: italic; }
+/* Time left: the number, then months or years. */
+.term-row { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem; gap: 8px; }
 .input-wrap input, .input-wrap select {
   flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
   font: inherit; font-size: 1rem; /* 16px stops iOS zooming */ padding: 10px 4px; outline: none;
@@ -363,6 +383,20 @@ details.advanced { margin-top: 12px; border-top: 1px solid var(--border); paddin
 details.advanced > summary {
   cursor: pointer; color: var(--accent); font-weight: 600; padding: 6px 0; list-style-position: outside;
 }
+
+/* Income's Advanced: one row per part, each folding open on its own. */
+.parts { border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
+details.part + details.part { border-top: 1px solid var(--border); }
+details.part > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 8px 12px; cursor: pointer; font-weight: 600; list-style: none;
+}
+details.part > summary::-webkit-details-marker { display: none; }
+details.part > summary::after { content: '\203a'; color: var(--text-2); font-size: 1.2rem; transition: transform 0.15s ease; }
+details.part[open] > summary::after { transform: rotate(90deg); }
+details.part > summary .part-status { margin-left: auto; color: var(--text-2); font-weight: 400; font-size: 0.9rem; text-align: right; }
+details.part > :not(summary) { padding: 0 12px; }
+details.part[open] { padding-bottom: 12px; }
 
 fieldset.row-card {
   border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 12px; margin: 12px 0;
@@ -444,6 +478,18 @@ fieldset.field { border: 0; padding: 0; min-width: 0; }
 .notes { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 0.9rem; }
 .notes li { margin-bottom: 6px; }
 details.card > summary { cursor: pointer; }
+/* A card folded to one line: title, a short summary, and a chevron. */
+details.fold-card > summary {
+  list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 44px;
+}
+details.fold-card > summary::-webkit-details-marker { display: none; }
+details.fold-card > summary::after {
+  content: '\203a'; grid-column: 2; grid-row: 1 / span 2; color: var(--text-2); font-size: 1.4rem; transition: transform 0.15s ease;
+}
+details.fold-card[open] > summary::after { transform: rotate(90deg); }
+.fold-title { font-weight: 700; font-size: 1.1rem; }
+.fold-sum { grid-column: 1; color: var(--text-2); font-size: 0.9rem; }
+details.fold-card[open] > summary { margin-bottom: 8px; }
 .rules table { margin-top: 14px; }
 .rules caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
 .card > .notice { margin-top: 10px; }
@@ -532,7 +578,33 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .scenario-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
 .scenario-name .swatch { width: 12px; height: 12px; }
 .scenario-name .rename { flex: 1; min-width: 160px; min-height: 38px; }
-.scenario-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px; }
+/* Your figures on one page: each section is a heading with a summary, one open at a time. */
+.step-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; width: 100%;
+  min-height: 56px; margin: 0 0 12px; padding: 10px 16px; text-align: left;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+}
+.step-head::after { content: '\203a'; grid-column: 2; grid-row: 1 / span 2; color: var(--text-2); font-size: 1.4rem; transition: transform 0.15s ease; }
+.step-head[aria-expanded="true"] { border-color: var(--accent); }
+.step-head[aria-expanded="true"]::after { transform: rotate(90deg); }
+.step-head .fold-sum { grid-column: 1; font-weight: 400; }
+/* The heading already names the section, so its first card doesn't repeat it. */
+.one-page .setup-step > section.card:first-of-type > h2:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+/* A scenario's row: name, Edit, and a "⋯" menu for the rest. */
+.scenario-head { display: flex; align-items: center; gap: 8px; }
+.scenario-head .scenario-name { flex: 1; min-width: 0; margin-bottom: 0; }
+.row-menu { position: relative; }
+.row-menu > summary {
+  list-style: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px;
+  cursor: pointer; font-size: 1.3rem; color: var(--text-2);
+}
+.row-menu > summary::-webkit-details-marker { display: none; }
+.row-menu[open] > summary { background: var(--surface-2); }
+.row-menu-list {
+  position: absolute; right: 0; top: 46px; z-index: 5; display: grid; gap: 2px; min-width: 150px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+.row-menu-list button { justify-content: flex-start; text-align: left; min-height: 40px; padding: 0 10px; }
 .diff-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 0.85rem; color: var(--text-2); }
 .diff-list li { padding: 2px 0; }
 .diff-from { text-decoration: line-through; color: var(--text-3); }
@@ -682,7 +754,7 @@ fieldset.row-card { min-width: 0; }
 .setup-intro { margin-bottom: 12px; }
 .step-nav { position: sticky; top: 0; z-index: 15; transition: top 0.22s ease; margin: 0 calc(-1 * var(--gutter)) 12px; padding: 8px var(--gutter); background: var(--bg); }
 .app-header:not(.is-hidden) ~ main .step-nav { top: var(--header-h, 56px); }
-.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.step-nav ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .step-nav li { display: flex; }
 .step-nav .step-chip { flex: 1; justify-content: flex-start; text-align: center; line-height: 1.2; }
 .step-chip {

@@ -166,15 +166,18 @@
     let shortfall = 0;
 
     let mBal = profile.mortgage.balance || 0;
-    const termMonths = Math.round((profile.mortgage.remainingTermYears || 0) * 12);
+    const mLoan = FP.loan.forMortgage(profile);
+    const termMonths = FP.summary.mortgageMonths(mLoan);
     const overMonthly = mBal > 0 ? profile.mortgage.monthlyOverpayment || 0 : 0;
-    let mRate = a.mortgageRate || 0;
+    let mRate = mLoan.rate;
     let mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths);
     let monthsElapsed = 0;
 
-    const debts = profile.debts.map((d) => ({
-      bal: d.balance || 0, rate: FP.summary.debtRate(d, a), pay: d.monthlyPayment || 0,
-    }));
+    // Rates are APRs, so interest is charged at the matching monthly rate.
+    const debts = profile.debts.map((d) => {
+      const loan = FP.loan.forDebt(d, a);
+      return { bal: d.balance || 0, rate: loan.rate, monthly: FP.loan.monthlyRate(loan.rate, 'apr'), pay: loan.payment };
+    });
     // Student loan: tracked only when there's a plan and a balance. Otherwise
     // repayments simply continue while working.
     const slPlan = profile.income.studentLoanPlan;
@@ -199,6 +202,7 @@
     };
 
     const rows = [snapshot(0, { today: true })];
+    let boosted = false;
 
     for (let y = 1; y <= years; y += 1) {
       const g = y - 1; // years of growth applied to this year's income and spending
@@ -285,6 +289,23 @@
       const statePensionTax = FP.tax.incomeTaxOnly(retiredTaxable, region, cfgY);
       const netIncome = takeHome + retiredTaxable + otherTaxFree - statePensionTax;
 
+      // opts.retirementBoost (today's money) adds savings at the start of
+      // retirement, or takes them away if negative (used to find what you'd need).
+      if (opts.retirementBoost && !working && !boosted) {
+        boosted = true;
+        const boost = opts.retirementBoost * priceFactor;
+        if (boost > 0) isa += boost;
+        else {
+          // Taken from cash, then investments, then the pension.
+          let take = -boost;
+          const from = (pot) => { const t = Math.min(pot, take); take -= t; return pot - t; };
+          cash = from(cash);
+          gia = from(gia);
+          isa = from(isa);
+          pension = from(pension);
+        }
+      }
+
       // 2. Growth on opening balances
       home = FP.growth.compound(home, a.housePriceGrowth, 1);
       cash = FP.growth.compound(cash, a.savingsRate, 1);
@@ -315,7 +336,7 @@
       let debtPaid = 0;
       debts.forEach((d) => {
         for (let m = 0; m < 12 && d.bal > 0.005; m += 1) {
-          const due = d.bal * (1 + d.rate / 100 / 12);
+          const due = d.bal * (1 + d.monthly);
           const paid = Math.min(due, d.pay);
           d.bal = due - paid;
           debtPaid += paid;
@@ -539,8 +560,9 @@
     if (!(now > 0)) return null;
     const lasts = (factor) => {
       const r = project(profile, { ...opts, retirementSpending: factor });
-      // Every retirement year, not just the last: a gap repaid later is still a gap.
-      return r.rows.every((row) => row.working !== false || row.shortfall <= 0.5);
+      // Every retirement year, not just the last: a gap repaid later is still a
+      // gap. (A gap from before you retire isn't changed by retirement spending.)
+      return r.rows.every((row) => row.working !== false || !(row.unfunded > 0.5));
     };
     let lo = 0;
     let hi = 1;
@@ -560,11 +582,81 @@
     return { factor: lo, monthly: atRetirement * lo, now, endAge: base.events.end.age, capped: lo >= 16 };
   }
 
+  /*
+   * The first answer about retirement: to spend your goal each month (today's
+   * money) from retirement to your end age, how much you'd need in savings,
+   * investments and pensions when you retire (on top of the State Pension and
+   * any income that carries on), how much you're on course to have, and how
+   * long that would last. Returns null when there are no retirement years or
+   * no spending entered; else { goal, goalIsSet, needed, have, lastsUntil
+   * (age money runs short, or null if it lasts), endAge, retirementAge }.
+   */
+  const needCache = new Map();
+
+  function retirementNeed(profile) {
+    const key = JSON.stringify([profile, new Date().getFullYear(), new Date().getMonth()]);
+    if (needCache.has(key)) return needCache.get(key);
+    const result = solveRetirementNeed(profile);
+    needCache.set(key, result);
+    if (needCache.size > 30) needCache.delete(needCache.keys().next().value);
+    return result;
+  }
+
+  function solveRetirementNeed(profile) {
+    const opts = { maxYears: 100 };
+    const base = project(profile, opts);
+    if (!base.ok || !base.events.retirement || base.events.retirement.y >= base.rows.length - 1) return null;
+    const now = sum(profile.spending, (r) => r.monthly || 0);
+    if (!(now > 0)) return null;
+    const a = profile.assumptions;
+    const set = profile.goals && profile.goals.retirementIncome > 0;
+    const goal = set ? profile.goals.retirementIncome : now;
+    const ret = base.events.retirement;
+    // Spending in retirement scaled so its first year is your goal (in today's money).
+    const factor = goal / (now * FP.growth.compound(1, a.spendingGrowth, ret.y) / ret.inflationFactor);
+    const run = (boost) => project(profile, { ...opts, retirementSpending: factor, retirementBoost: boost });
+    // The first retirement year your savings can't cover.
+    const shortRow = (r) => r.rows.find((row) => row.working === false && row.unfunded > 0.5) || null;
+    const funded = (boost) => !shortRow(run(boost));
+
+    const atRet = toReal(base.rows[ret.y]);
+    const have = atRet.cash + atRet.isa + atRet.gia + atRet.pension;
+    const short = shortRow(run(0));
+
+    // The smallest boost (or largest take-away) that still funds every year.
+    let lo;
+    let hi;
+    if (short) {
+      lo = 0;
+      hi = Math.max(have, goal * 12 * 10);
+      for (let i = 0; i < 20 && !funded(hi); i += 1) hi *= 2;
+      if (!funded(hi)) return null; // no amount of savings would cover it
+    } else if (funded(-have)) {
+      lo = -have;
+      hi = -have;
+    } else {
+      lo = -have;
+      hi = 0;
+    }
+    for (let i = 0; i < 30 && hi - lo > 50; i += 1) {
+      const mid = (lo + hi) / 2;
+      if (funded(mid)) hi = mid; else lo = mid;
+    }
+    return {
+      goal, goalIsSet: !!set,
+      needed: Math.max(0, have + hi),
+      have,
+      lastsUntil: short ? short.age : null,
+      endAge: base.events.end.age,
+      retirementAge: a.retirementAge,
+    };
+  }
+
   function toReal(row) {
     const out = { ...row };
     MONEY_KEYS.forEach((k) => { if (typeof row[k] === 'number') out[k] = row[k] / row.inflationFactor; });
     return out;
   }
 
-  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
+  FP.projection = { MAX_YEARS, SPLIT_KEYS, project, retirementSpend, retirementNeed, splitShares, splitAsPct, setSplitFromPct, allocate, grossUpPension, toReal };
 })(globalThis.FP = globalThis.FP || {});

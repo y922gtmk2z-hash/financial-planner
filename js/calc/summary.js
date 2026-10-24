@@ -18,8 +18,15 @@
     return Number.isFinite(v) ? v : 0;
   }
 
+  // A debt's APR: yours, worked out from its payment and time left, or the default.
   function debtRate(debt, assumptions) {
-    return debt.rate == null ? assumptions.otherDebtRate : debt.rate;
+    return FP.loan.forDebt(debt, assumptions).rate;
+  }
+
+  // Months left on the mortgage, from its term or worked out from its payment
+  // (0 when unknown, or when the payment never clears it).
+  function mortgageMonths(loan) {
+    return Number.isFinite(loan.months) ? Math.ceil(loan.months - 1e-6) : 0;
   }
 
   /*
@@ -34,17 +41,18 @@
 
     const m = profile.mortgage;
     const mBalance = num(m.balance);
-    const termMonths = Math.round(num(m.remainingTermYears) * 12);
+    const loan = FP.loan.forMortgage(profile);
+    const termMonths = mortgageMonths(loan);
     const rateChange = a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null
       ? { afterMonths: a.mortgageRateChangeYear * 12, annualRatePct: a.mortgageRateAfterChange }
       : null;
 
     let mortgage = null;
     if (mBalance > 0) {
-      if (termMonths <= 0) {
-        warnings.push({ level: 'warn', text: 'Enter the years left on your mortgage to work out the monthly payment.' });
-      }
-      const base = { balance: mBalance, annualRatePct: a.mortgageRate, termMonths, rateChange };
+      if (loan.error) warnings.push({ level: 'warn', text: `Mortgage: ${loan.error}` });
+      else if (loan.months === Infinity) warnings.push({ level: 'warn', text: 'Your mortgage payment doesn\u2019t cover the interest, so the balance won\u2019t go down. Check your payment and rate.' });
+      else if (termMonths <= 0) warnings.push({ level: 'warn', text: 'Add the time left on your mortgage, or your monthly payment, to work out the rest.' });
+      const base = { balance: mBalance, annualRatePct: loan.rate, termMonths, rateChange };
       const withOver = FP.mortgage.amortise({ ...base, monthlyOverpayment: num(m.monthlyOverpayment) });
       const without = FP.mortgage.amortise({ ...base, monthlyOverpayment: 0 });
       const limit = FP.mortgage.overpaymentLimit(mBalance, m.monthlyOverpayment, a.overpaymentLimitPct);
@@ -57,7 +65,9 @@
       mortgage = {
         balance: mBalance,
         termMonths,
-        rate: a.mortgageRate,
+        rate: loan.rate,
+        rateIsDefault: loan.rateIsDefault,
+        worked: loan.worked,
         payment: termMonths > 0 ? withOver.payment : 0,
         overpayment: num(m.monthlyOverpayment),
         monthsToClear: withOver.months,
@@ -69,17 +79,19 @@
     }
 
     const debts = profile.debts.map((d) => {
-      const rate = debtRate(d, a);
+      const loan = FP.loan.forDebt(d, a);
+      const rate = loan.rate;
       const balance = num(d.balance);
-      const payment = num(d.monthlyPayment);
-      const monthlyInterest = balance * rate / 100 / 12;
-      if (balance > 0 && payment <= monthlyInterest) {
+      const payment = loan.payment;
+      const monthlyInterest = balance * FP.loan.monthlyRate(rate, 'apr');
+      if (loan.error) warnings.push({ level: 'warn', text: `${d.name || 'A debt'}: ${loan.error}` });
+      else if (balance > 0 && payment <= monthlyInterest) {
         warnings.push({
           level: 'warn',
           text: `${d.name || 'A debt'}: the monthly payment doesn’t cover the interest (about ${fmt(monthlyInterest)} a month), so the balance won’t go down.`,
         });
       }
-      return { id: d.id, name: d.name || 'Unnamed debt', balance, rate, rateIsDefault: d.rate == null, payment };
+      return { id: d.id, name: d.name || 'Unnamed debt', balance, rate, rateIsDefault: loan.rateIsDefault, payment, months: loan.months, worked: loan.worked };
     });
 
     const totalDebts = debts.reduce((s, d) => s + d.balance, 0);
@@ -183,5 +195,5 @@
     };
   }
 
-  FP.summary = { compute, checklist, ASSET_ITEMS, debtRate };
+  FP.summary = { compute, checklist, ASSET_ITEMS, debtRate, mortgageMonths };
 })(globalThis.FP = globalThis.FP || {});

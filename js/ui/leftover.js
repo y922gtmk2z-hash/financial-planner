@@ -12,11 +12,18 @@
 
   /*
    * opts.onChange: called after the split changes (e.g. to redraw a projection).
+   * opts.fold: fold the card to a one-line summary (open while nothing's chosen).
    * Returns the card; card.refresh() updates the figures without touching inputs.
    */
   function render(ctx, opts) {
     opts = opts || {};
-    const card = h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' });
+    const body = h('div', { class: 'leftover-body' });
+    const sum = h('span');
+    const card = opts.fold
+      ? FP.dom.foldCard(opts.id || 'leftover', 'Money left over each month', sum, body)
+      : h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' }, body);
+    card.classList.add('leftover');
+    const choose = h('p', { class: 'help' }, 'Your plan only saves it once you choose what to do with it.');
     const headline = h('div', { class: 'leftover-amount', role: 'status', 'aria-live': 'polite' });
     const rows = h('div', { class: 'leftover-rows' });
     const status = h('p', { class: 'split-status', role: 'status' });
@@ -57,17 +64,17 @@
         amounts[f.key] = h('span', { class: 'leftover-money' });
         return h('div', { class: `leftover-row${f.key === 'emergency' ? ' emergency' : ''}` },
           FP.field.render(f, {
-            value: p.leftover[f.key], compact: false,
+            value: p.leftover[f.key], foldHelp: true,
             onChange: (v) => { ctx.update(`leftover.${f.key}`, v); refresh(); changed(); },
             extra: amounts[f.key],
           }),
-          f.key === 'emergency' ? [
+          // The fund's target only matters once some money goes to it.
+          f.key === 'emergency' ? h('div', { class: 'fund-target' },
             FP.field.render(target, {
-              value: p.leftover[target.key], compact: false,
+              value: p.leftover[target.key], foldHelp: true,
               onChange: (v) => { ctx.update(`leftover.${target.key}`, v); refresh(); changed(); },
             }),
-            fundStatus,
-          ] : null);
+            fundStatus) : null);
       }));
     }
 
@@ -113,10 +120,11 @@
           : `= ${money(left * shares[f.key])} a month`;
       });
       drawFund(r, shares, left);
+      rows.querySelectorAll('.fund-target').forEach((el) => { el.hidden = !(shares.emergency > 0); });
       drawAlloc(shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
       // Under 100% is said in the allocation notice; the line below covers the rest.
-      status.hidden = shares.status === 'under' && shares.total > 0;
+      status.hidden = shares.status === 'under';
 
       if (r.split) {
         const same = FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((pct[f.key] || 0) - r.split[f.key]) < 0.5);
@@ -143,6 +151,13 @@
       suggested.hidden = !r.split;
 
       drawIdeas(r.suggestions);
+
+      // The one-line summary when folded, and the nudge while nothing's chosen.
+      const state = !(r.left > 0) ? 'nothing left over'
+        : shares.total === 0 ? 'nothing chosen yet'
+          : hasOwnSplit(p) ? 'your own split' : 'using the suggested split';
+      sum.textContent = `${money(Math.max(0, r.left || 0))} a month \u00b7 ${state}`;
+      choose.hidden = shares.total > 0;
     }
 
     // One bar across your choices, a running total, and what's left unallocated.
@@ -150,7 +165,8 @@
       const keys = FP.profile.LEFTOVER_FIELDS.filter((f) => shares[f.key] > 0);
       const allocated = keys.reduce((t, f) => t + shares[f.key], 0);
       const rest = Math.max(0, 1 - allocated);
-      if (!(left > 0)) { FP.dom.fill(alloc); alloc.hidden = true; return; }
+      // Nothing chosen yet: the line above the suggestion already says so.
+      if (!(left > 0) || allocated === 0) { FP.dom.fill(alloc); alloc.hidden = true; return; }
       alloc.hidden = false;
       const label = keys.map((f) => `${f.label} ${Math.round(shares[f.key] * 100)}%`)
         .concat(rest > 0.0005 ? [`not allocated ${Math.round(rest * 100)}%`] : []).join(', ');
@@ -197,24 +213,44 @@
             h('button', { type: 'button', class: 'link', onclick: () => mark(s.id, null) }, 'Bring back'))))))) : null);
     }
 
-    FP.dom.fill(card,
-      h('h2', { id: 'leftover-h' }, 'Money left over each month'),
-      headline,
-      h('h3', null, 'What do you want to do with it?'),
-      h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection, as a share of what\u2019s left or as amounts a month (which rise with prices). Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
+    // The suggested split comes first; choosing your own is folded away (open
+    // once you have a split of your own), and so are the ideas.
+    const own = h('details', { class: 'advanced', id: 'own-split' },
+      h('summary', null, 'Choose your own split'),
+      h('p', { class: 'help' }, 'Share it out as a share of what\u2019s left or as amounts a month (which rise with prices). Anything you don\u2019t allocate is treated as spent.'),
       unitHolder,
-      rows,
+      rows);
+    FP.dom.fill(body,
+      opts.fold ? null : h('h2', { id: 'leftover-h' }, 'Money left over each month'),
+      headline,
+      choose,
+      suggested,
       alloc,
       status,
-      suggested,
-      h('h3', null, 'Ideas based on your figures'),
-      h('p', { class: 'help' }, 'General rules of thumb to consider — not financial advice.'),
-      ideas);
+      own,
+      h('details', { class: 'advanced', id: 'ideas-box' },
+        h('summary', null, 'Ideas based on your figures'),
+        h('p', { class: 'help' }, 'General rules of thumb to consider \u2014 not financial advice.'),
+        ideas));
     ideas.id = 'ideas';
     drawFields();
     refresh();
+    own.open = hasOwnSplit(ctx.profile());
+    if (opts.fold) {
+      const left = leftNow();
+      card.open = left > 0 && FP.projection.splitShares(ctx.profile().leftover, left).total === 0;
+    }
     card.refresh = refresh;
     return card;
+  }
+
+  // Whether you've chosen a split that isn't the suggested one (or there's no suggestion).
+  function hasOwnSplit(p) {
+    const r = FP.suggest.analyse(p);
+    if (!r.split) return true;
+    const mine = FP.projection.splitAsPct(p.leftover, Math.max(0, r.left || 0));
+    const chosen = FP.projection.splitShares(p.leftover, r.left).total > 0;
+    return chosen && !FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((mine[f.key] || 0) - r.split[f.key]) < 0.5);
   }
 
   FP.leftoverCard = { render };

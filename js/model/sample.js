@@ -43,7 +43,7 @@
         { id: 'sample-s8', category: 'Holidays', monthly: 120 },
         { id: 'sample-s9', category: 'Other', monthly: 120 },
       ],
-      assumptions: FP.assumptions.defaults(),
+      assumptions: { ...FP.assumptions.defaults(), mortgageRate: 4.5 },
     });
   }
 

@@ -1,7 +1,8 @@
 /*
- * Setup: enter your numbers once, in four sections: About you, What you spend
- * and save, Assets and Debts. Each asks the essentials first, with more detail
- * folded away. Every field writes straight into the shared profile.
+ * Your figures: enter your numbers once, in five sections: About you, Income,
+ * Outgoings, Assets and Debts. Each asks the essentials first, with detail
+ * folded away (under Income, everything beyond your salary is under
+ * Advanced). Every field writes straight into the shared profile.
  */
 (function (FP) {
   'use strict';
@@ -11,20 +12,43 @@
 
   // A first-time visitor goes section by section; you can switch to
   // everything on one page at any time.
+  // summary(p): one line for the section's heading on the one-page view.
+  const sum = (list, key) => (list || []).reduce((t, x) => t + (x[key] || 0), 0);
   const STEPS = [
-    { id: 'you', title: 'About you', short: 'You' },
-    { id: 'spend', title: 'What you spend and save', short: 'Spend & save' },
-    { id: 'assets', title: 'Assets', short: 'Assets' },
-    { id: 'debts', title: 'Debts', short: 'Debts' },
+    { id: 'you', title: 'About you', short: 'About you',
+      summary: (p) => `Age ${p.about.age == null ? '\u2014' : p.about.age} \u00b7 retire at ${p.assumptions.retirementAge}` },
+    { id: 'income', title: 'Income', short: 'Income',
+      summary: (p) => {
+        const extras = INCOME_PARTS.filter((part) => part.id !== 'pension' && part.status(p)).length;
+        return [p.income.grossSalary > 0 ? `${money(p.income.grossSalary)} salary` : 'No salary', extras ? `${extras} extra${extras === 1 ? '' : 's'}` : null].filter(Boolean).join(' \u00b7 ');
+      } },
+    { id: 'outgoings', title: 'Outgoings', short: 'Outgoings',
+      summary: (p) => [`${money(sum(p.spending, 'monthly'))} a month`, sum(p.savings, 'monthly') > 0 ? `${money(sum(p.savings, 'monthly'))} saved` : null].filter(Boolean).join(' \u00b7 ') },
+    { id: 'assets', title: 'Assets', short: 'Assets',
+      summary: (p) => { const t = Object.values(p.assets).reduce((a, v) => a + (v || 0), 0); return t > 0 ? money(t) : 'None added'; } },
+    { id: 'debts', title: 'Debts', short: 'Debts',
+      summary: (p) => { const t = (p.mortgage.balance || 0) + sum(p.debts, 'balance'); return t > 0 ? `${money(t)} owed` : 'None added'; } },
   ];
 
   // Steps that need something before a projection can be shown.
   function stepMissing(step, p) {
-    const ids = { you: ['age'], spend: ['spending'] }[step.id] || [];
+    const ids = { you: ['age'], outgoings: ['spending'] }[step.id] || [];
     return FP.summary.checklist(p).blocking.filter((i) => ids.includes(i.id));
   }
 
   const section = (id) => P.SECTIONS.find((sec) => sec.id === id);
+
+  // Fields that only matter once something else is set (e.g. a student loan's
+  // balance once you've chosen a plan) stay hidden until then.
+  const NEEDS = {
+    plan: (p) => p.income.studentLoanPlan !== 'none',
+    mortgage: (p) => p.mortgage.balance > 0,
+  };
+  function showNeeded(root, p) {
+    Object.entries(NEEDS).forEach(([k, test]) => {
+      root.querySelectorAll(`[data-needs="${k}"]`).forEach((el) => { el.hidden = !test(p); });
+    });
+  }
 
   function maker(ctx) {
     return (f) => {
@@ -32,73 +56,107 @@
       const note = f.type === 'taxcode' ? h('p', { class: 'help tax-code-note', role: 'status' }) : null;
       const explain = () => { if (note) note.textContent = FP.tax.describeTaxCode(P.get(ctx.profile(), f.path)); };
       explain();
-      return FP.field.render(f, {
+      const el = FP.field.render(f, {
         value: P.get(ctx.profile(), f.path),
         nullPlaceholder: f.nullPlaceholder,
         onChange: (v) => { ctx.update(f.path, v); explain(); },
         extra: note,
       });
+      const needs = f.needsPlan ? 'plan' : f.needsMortgage ? 'mortgage' : null;
+      if (needs) {
+        el.dataset.needs = needs;
+        el.hidden = !NEEDS[needs](ctx.profile());
+      }
+      return el;
     };
   }
 
-  // A group's fields under its heading, with any `more` fields folded under "More".
-  function group(sec, id, make, extra) {
-    const g = P.FIELD_GROUPS[id];
+  // A group's fields, with any `more` fields folded under "More".
+  function groupFields(sec, id, make) {
     const fields = sec.fields.filter((f) => f.group === id);
-    const main = fields.filter((f) => !f.more);
     const more = fields.filter((f) => f.more);
-    return h('div', { class: 'field-group', role: 'group', 'aria-labelledby': `grp-${id}` },
-      h('h3', { id: `grp-${id}` }, g.title),
-      g.intro ? h('p', { class: 'help' }, g.intro) : null,
-      main.map(make),
+    const intro = P.FIELD_GROUPS[id].intro;
+    return [
+      intro ? h('p', { class: 'help' }, intro) : null,
+      fields.filter((f) => !f.more).map(make),
       more.length ? h('details', { class: 'advanced' }, h('summary', null, 'More'), more.map(make)) : null,
-      extra || null);
+    ];
   }
 
-  // Whether you've given any pay details beyond your salary (to open that part).
-  function hasPayDetail(p) {
-    const inc = p.income;
-    return inc.bonuses.length > 0 || inc.sacrifices.length > 0 || (inc.benefits || []).length > 0
-      || (inc.otherIncome || 0) > 0 || (inc.taxFreeIncome || 0) > 0
-      || inc.region === 'scotland' || inc.pensionMethod !== 'netPay';
+  // A group under its own heading (Debts: the mortgage).
+  function group(sec, id, make) {
+    return h('div', { class: 'field-group', role: 'group', 'aria-labelledby': `grp-${id}` },
+      h('h3', { id: `grp-${id}` }, P.FIELD_GROUPS[id].title),
+      groupFields(sec, id, make));
   }
 
-  // About you: age, retirement target and salary; everything else about your pay folded away.
+  // About you: what the quick start asked, plus how you feel about risk.
   function aboutCard(ctx) {
-    const p = ctx.profile();
-    const sec = section('about');
-    const make = maker(ctx);
-    const pay = P.FIELD_GROUPS.pay;
-    const other = P.FIELD_GROUPS.otherIncome;
     return h('section', { class: 'card', id: 'about', 'aria-labelledby': 'sec-about' },
       h('h2', { id: 'sec-about' }, 'About you'),
+      section('about').fields.map(maker(ctx)));
+  }
+
+  /*
+   * The parts of Advanced under Income. Each folds away on its own, and its
+   * heading says what you've entered so you can see it at a glance.
+   * status(p): a short summary, or '' when nothing is set.
+   */
+  const pct = (n) => `${Number(n || 0)}%`;
+  const count = (list, one, many) => (list.length ? `${list.length} ${list.length === 1 ? one : many}` : '');
+  const INCOME_PARTS = [
+    { id: 'pension', title: 'Workplace pension', group: 'pension',
+      status: (p) => `${pct(p.assumptions.employeePensionPct)} + ${pct(p.assumptions.employerPensionPct)} employer` },
+    { id: 'studentLoan', title: 'Student loan', group: 'studentLoan',
+      status: (p) => (p.income.studentLoanPlan === 'none' ? '' : P.STUDENT_LOAN_PLANS.find((x) => x.value === p.income.studentLoanPlan).label) },
+    { id: 'bonus', title: 'Bonuses', editor: () => FP.bonusEditor,
+      status: (p) => count(p.income.bonuses, 'bonus', 'bonuses') },
+    { id: 'sacrifice', title: 'Salary sacrifice', editor: () => FP.sacrificeEditor,
+      status: (p) => count(p.income.sacrifices, 'scheme', 'schemes') },
+    { id: 'benefit', title: 'Workplace benefits', editor: () => FP.benefitsEditor,
+      status: (p) => count(p.income.benefits || [], 'benefit', 'benefits') },
+    { id: 'tax', title: 'Tax code and where you live', group: 'tax',
+      status: (p) => [p.income.taxCode, p.income.region === 'scotland' ? 'Scotland' : ''].filter(Boolean).join(', ') },
+    { id: 'otherIncome', title: 'Other income', group: 'otherIncome',
+      status: (p) => (p.income.otherIncome > 0 || p.income.taxFreeIncome > 0 ? `${money((p.income.otherIncome || 0) + (p.income.taxFreeIncome || 0))} a year` : '') },
+  ];
+
+  // Whether you've given any pay details beyond your salary and the default pension.
+  function hasPayDetail(p) {
+    const d = FP.assumptions.defaults();
+    return INCOME_PARTS.some((part) => part.id !== 'pension' && part.status(p))
+      || p.assumptions.employeePensionPct !== d.employeePensionPct || p.assumptions.employerPensionPct !== d.employerPensionPct
+      || p.income.pensionMethod !== 'netPay';
+  }
+
+  // Income: your salary, and everything else about your pay under Advanced.
+  function incomeCard(ctx) {
+    const p = ctx.profile();
+    const sec = section('income');
+    const make = maker(ctx);
+    const statuses = [];
+    const parts = INCOME_PARTS.map((part) => {
+      const status = h('span', { class: 'part-status' });
+      const draw = () => { status.textContent = part.status(ctx.profile()); };
+      draw();
+      statuses.push(draw);
+      return h('details', { class: 'part', id: part.group === 'otherIncome' ? 'other-income' : `part-${part.id}` },
+        h('summary', null, h('span', { id: `${part.id}-h` }, part.title), status),
+        part.group ? groupFields(sec, part.group, make) : part.editor().render(ctx));
+    });
+    const card = h('section', { class: 'card', id: 'income', 'aria-labelledby': 'sec-income' },
+      h('h2', { id: 'sec-income' }, 'Income'),
       sec.fields.filter((f) => !f.group).map(make),
       h('details', { class: 'advanced more-details', id: 'pay-details', open: hasPayDetail(p) || null },
-        h('summary', null, pay.title),
-        h('p', { class: 'help' }, pay.intro),
-        sec.fields.filter((f) => f.group === 'pay').map(make),
-        FP.bonusEditor.render(ctx),
-        FP.sacrificeEditor.render(ctx),
-        FP.benefitsEditor.render(ctx),
-        h('div', { class: 'field-group', role: 'group', 'aria-labelledby': 'grp-otherIncome', id: 'other-income' },
-          h('h3', { id: 'grp-otherIncome' }, other.title),
-          h('p', { class: 'help' }, other.intro),
-          sec.fields.filter((f) => f.group === 'otherIncome').map(make))));
+        h('summary', null, 'Advanced: pension, student loan, bonuses and more'),
+        h('p', { class: 'help' }, 'Optional. Leave this closed if you only want to give your salary: a 5% pension with 3% from your employer is assumed.'),
+        h('div', { class: 'parts' }, parts)));
+    card.refreshStatus = () => statuses.forEach((d) => d());
+    return card;
   }
 
-  // How projections show amounts: a viewing choice, kept with your figures so it's easy to find.
-  function projectionsCard() {
-    return h('section', { class: 'card', id: 'projections', 'aria-labelledby': 'sec-projections' },
-      h('h2', { id: 'sec-projections' }, 'Projections'),
-      FP.field.render({
-        label: 'Show amounts in', type: 'toggle',
-        help: 'Today\u2019s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Future and Scenarios.',
-        options: [{ value: 'real', label: 'Today\u2019s money' }, { value: 'nominal', label: 'Future money' }],
-      }, { value: FP.screens.future.getView(), onChange: (v) => FP.screens.future.setView(v) }));
-  }
-
-  // What you spend and save: one spending question (split it up if you like),
-  // then regular savings; your leftover money follows as its own card.
+  // Outgoings: one spending question (split it up if you like), then regular
+  // savings; your leftover money follows as its own card.
   function spendCard(ctx) {
     const card = h('section', { class: 'card', id: 'spending', 'aria-labelledby': 'sec-spend' });
     const spend = h('div', { class: 'spend-part' });
@@ -111,31 +169,34 @@
       const single = p.spending.length <= 1;
       if (!p.spending.length) p.spending.push(P.newSpending());
       FP.dom.fill(spend,
-        h('h3', null, 'What you spend'),
-        h('p', { class: 'help' }, 'What you typically spend in a month, apart from your mortgage and debt payments (those come from Debts). A rough total is fine.'),
         single
-          ? FP.field.render({ path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month' }, {
+          ? FP.field.render({ path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month',
+            help: 'Everything apart from your mortgage and debt payments (those go under Debts). A rough total is fine.' }, {
             value: p.spending[0].monthly,
             onChange: (v) => { ctx.update('spending.0.monthly', v); updateTotal(); },
           })
-          : h('div', { class: 'spend-list' }, p.spending.map((r, i) => {
-            // Each row's labels are hidden, so name the inputs after the category.
-            const amountName = (cat) => `${cat || `Category ${i + 1}`} amount per month`;
-            const amount = FP.field.render(P.SPENDING_FIELDS[1], {
-              value: r.monthly, compact: true, ariaLabel: amountName(r.category),
-              onChange: (v) => { ctx.update(`spending.${i}.monthly`, v); updateTotal(); },
-            });
-            return h('div', { class: 'spend-row' },
-              FP.field.render(P.SPENDING_FIELDS[0], {
-                value: r.category, compact: true, ariaLabel: `Category name ${i + 1}`,
-                onChange: (v) => { ctx.update(`spending.${i}.category`, v); amount.querySelector('input').setAttribute('aria-label', amountName(v)); },
-              }),
-              amount,
-              h('button', {
-                type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this category'}`,
-                onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawSpend(); },
-              }, '×'));
-          })),
+          : [
+            h('h3', null, 'What you spend in a month'),
+            h('p', { class: 'help' }, 'Everything apart from your mortgage and debt payments (those go under Debts).'),
+            h('div', { class: 'spend-list' }, p.spending.map((r, i) => {
+              // Each row's labels are hidden, so name the inputs after the category.
+              const amountName = (cat) => `${cat || `Category ${i + 1}`} amount per month`;
+              const amount = FP.field.render(P.SPENDING_FIELDS[1], {
+                value: r.monthly, compact: true, ariaLabel: amountName(r.category),
+                onChange: (v) => { ctx.update(`spending.${i}.monthly`, v); updateTotal(); },
+              });
+              return h('div', { class: 'spend-row' },
+                FP.field.render(P.SPENDING_FIELDS[0], {
+                  value: r.category, compact: true, ariaLabel: `Category name ${i + 1}`,
+                  onChange: (v) => { ctx.update(`spending.${i}.category`, v); amount.querySelector('input').setAttribute('aria-label', amountName(v)); },
+                }),
+                amount,
+                h('button', {
+                  type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this category'}`,
+                  onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawSpend(); },
+                }, '×'));
+            })),
+          ],
         h('button', {
           type: 'button', class: single ? 'link' : 'secondary',
           onclick: () => {
@@ -153,7 +214,7 @@
     };
     drawSpend();
     FP.dom.fill(card,
-      h('h2', { id: 'sec-spend' }, 'What you spend and save'),
+      h('h2', { id: 'sec-spend' }, 'Outgoings'),
       spend,
       FP.savingsEditor.render(ctx, { embedded: true }));
     return card;
@@ -166,53 +227,150 @@
       h('h2', { id: 'sec-assets' }, 'Assets'),
       h('p', { class: 'muted' }, sec.intro),
       sec.fields.filter((f) => !f.advanced).map(make),
-      h('details', { class: 'advanced' }, h('summary', null, 'More'), sec.fields.filter((f) => f.advanced).map(make)));
+      h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(make)));
   }
 
+  /*
+   * What a loan's figures need saying beyond the worked-out value, which shows
+   * in its own box: figures that don't add up, a payment that never clears
+   * it, a rate that had to be assumed, or a prompt for more. '' if nothing.
+   * `yearly` describes the rate: '% APR' or '% a year'.
+   */
+  function loanNote(loan, yearly) {
+    if (!(loan.balance > 0)) return '';
+    if (loan.error) return loan.error;
+    const rate = `${Math.round(loan.rate * 10) / 10}${yearly}`;
+    if (loan.months === Infinity) return `At this payment it’s never paid off: the payment doesn’t cover the interest${loan.rateIsDefault ? ` (at an assumed ${rate})` : ''}.`;
+    if (loan.worked && loan.rateIsDefault) return `Worked out using an assumed ${rate}. Add your rate if you know it.`;
+    if (!(loan.payment > 0)) return 'Give any two of monthly payment, time left and interest rate, and the third is worked out.';
+    return '';
+  }
+
+  // The worked-out value shown in its empty box (as the placeholder).
+  function showWorked(scope, loan, paths) {
+    const wrap = (key) => {
+      const field = scope.querySelector(`[data-path="${CSS.escape(paths[key])}"]`);
+      return field && { field, input: field.querySelector('input'), box: field.querySelector('.input-wrap') };
+    };
+    Object.keys(paths).forEach((key) => {
+      const w = wrap(key);
+      if (!w || !w.input) return;
+      const worked = loan.balance > 0 && loan.worked === key && Number.isFinite(loan[key]);
+      if (!w.input.dataset.placeholder) w.input.dataset.placeholder = w.input.placeholder;
+      let text = w.input.dataset.placeholder;
+      if (worked && key === 'rate') text = `≈ ${Math.round(loan.rate * 10) / 10} · worked out`;
+      if (worked && key === 'payment') text = `≈ ${Math.round(loan.payment).toLocaleString('en-GB')} · worked out`;
+      if (worked && key === 'months') {
+        const unit = w.field.querySelector('select.term-unit');
+        const n = unit && unit.value === 'months' ? Math.ceil(loan.months) : Math.round((loan.months / 12) * 10) / 10;
+        text = `≈ ${n} · worked out`;
+      }
+      w.input.placeholder = text;
+      w.box.classList.toggle('worked', worked);
+    });
+  }
+
+  // "£7,800 · £245 a month · about 3 years left": a loan folded to one line.
+  function loanSummary(loan) {
+    if (!(loan.balance > 0)) return 'Not added';
+    const left = loan.months === Infinity ? 'never paid off' : loan.months > 0 ? `${FP.dom.months(Math.ceil(loan.months))} left` : null;
+    return [money(loan.balance), loan.payment > 0 ? `${money(loan.payment)} a month` : null, left].filter(Boolean).join(' · ');
+  }
+
+  /*
+   * Debts: the mortgage and each other debt fold to a one-line summary once
+   * they have a balance (open while empty, so a new one is ready to fill in).
+   */
   function debtsCard(ctx) {
     const sec = section('debts');
     const make = maker(ctx);
+    // One loan's fold: its summary line, the note and worked-out boxes kept up to date.
+    // Returns { fold, draw }.
+    const loanFold = (id, title, body, get, paths, yearly) => {
+      const sum = h('span', { class: 'part-status' });
+      const note = h('p', { class: 'help loan-note', role: 'status' });
+      const fold = h('details', { class: 'part', id }, h('summary', null, h('span', null, title()), sum), body, note);
+      const draw = () => {
+        const loan = get();
+        sum.textContent = loanSummary(loan);
+        note.textContent = loanNote(loan, yearly);
+        note.hidden = !note.textContent;
+        showWorked(fold, loan, paths);
+      };
+      fold.open = !(get().balance > 0);
+      return { fold, draw };
+    };
+
+    const mortgagePaths = { rate: 'assumptions.mortgageRate', payment: 'mortgage.monthlyPayment', months: 'mortgage.remainingTermYears' };
+    const mortgage = loanFold('mortgage-item', () => 'Mortgage',
+      [sec.fields.filter((f) => f.group === 'mortgage' && !f.more).map(make),
+        h('details', { class: 'advanced' }, h('summary', null, 'Overpayments'), sec.fields.filter((f) => f.group === 'mortgage' && f.more).map(make))],
+      () => FP.loan.forMortgage(ctx.profile()), mortgagePaths, '% a year');
+    let debtDraws = [];
+
     const others = h('div', { class: 'field-group', role: 'group', 'aria-labelledby': 'grp-otherDebts', id: 'other-debts' });
     const drawOthers = () => {
       const p = ctx.profile();
+      const folds = p.debts.map((d, i) => {
+        const paths = { rate: `debts.${i}.rate`, payment: `debts.${i}.monthlyPayment`, months: `debts.${i}.termMonths` };
+        const name = () => (ctx.profile().debts[i] || {}).name || `Debt ${i + 1}`;
+        const { fold, draw } = loanFold(`debt-${d.id}`, name,
+          [P.DEBT_FIELDS.map((f) => FP.field.render({ ...f, path: `debts.${i}.${f.key}` }, {
+            value: d[f.key],
+            nullPlaceholder: 'Not sure',
+            onChange: (v) => {
+              ctx.update(`debts.${i}.${f.key}`, v);
+              if (f.key === 'name') fold.querySelector('summary > span').textContent = name();
+            },
+          })),
+          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt')],
+          () => FP.loan.forDebt(ctx.profile().debts[i] || {}, ctx.profile().assumptions), paths, '% APR');
+        return { fold, draw };
+      });
       FP.dom.fill(others,
         h('h3', { id: 'grp-otherDebts' }, 'Other debts'),
-        h('p', { class: 'help' }, 'Loans, car finance, credit cards. Leave the rate blank to use the default in Assumptions.'),
-        p.debts.length ? null : h('p', { class: 'empty' }, 'No other debts added.'),
-        p.debts.map((d, i) => h('fieldset', { class: 'row-card' },
-          h('legend', null, d.name || `Debt ${i + 1}`),
-          P.DEBT_FIELDS.map((f) => FP.field.render(f, {
-            value: d[f.key],
-            compact: f.key !== 'rate',
-            nullPlaceholder: `Default ${p.assumptions.otherDebtRate}%`,
-            onChange: (v) => ctx.update(`debts.${i}.${f.key}`, v),
-          })),
-          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt'))),
+        h('p', { class: 'help' }, 'Loans, car finance, credit cards.'),
+        folds.length ? h('div', { class: 'parts' }, folds.map((x) => x.fold)) : null,
         h('button', { type: 'button', class: 'secondary', onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawOthers(); } }, '+ Add a debt'));
+      debtDraws = folds.map((x) => x.draw);
+      debtDraws.forEach((d) => d());
     };
     drawOthers();
-    return h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
+    const card = h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
       h('h2', { id: 'sec-debts' }, 'Debts'),
-      h('p', { class: 'muted' }, sec.intro),
-      group(sec, 'mortgage', make),
-      group(sec, 'studentLoan', make),
+      h('p', { class: 'muted' }, `${sec.intro} For each, give the balance and any two of monthly payment, time left and interest rate: the third is worked out.`),
+      h('div', { class: 'parts' }, mortgage.fold),
       others);
+    mortgage.draw();
+    card.refreshNotes = () => [mortgage.draw, ...debtDraws].forEach((d) => d());
+    return card;
   }
 
   function render(root, ctx) {
-    const p = ctx.profile();
     const saved = FP.store.pref('setupMode');
-    let mode = saved === 'all' || saved === 'steps' ? saved : (FP.summary.checklist(p).ready ? 'all' : 'steps');
+    // Section by section unless you've chosen the one-page view.
+    let mode = saved === 'all' ? 'all' : 'steps';
     let current = Math.min(STEPS.length - 1, Number(FP.store.pref('setupStep')) || 0);
     const visited = new Set((FP.store.pref('setupVisited') || '').split(',').filter(Boolean));
 
-    const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
+    const leftover = FP.leftoverCard.render(ctx, { id: 'leftover', fold: true });
+    const income = incomeCard(ctx);
+    const debts = debtsCard(ctx);
     const groups = [
-      [aboutCard(ctx), projectionsCard()],
+      [aboutCard(ctx)],
+      [income],
       [spendCard(ctx), leftover],
       [assetsCard(ctx)],
-      [debtsCard(ctx)],
+      [debts],
     ].map((cards, i) => h('div', { class: 'setup-step', 'data-step': STEPS[i].id }, cards));
+    // On the one-page view each section folds to a heading with a summary; one is open at a time.
+    let openAll = current;
+    const heads = STEPS.map((st, i) => {
+      const head = h('button', { type: 'button', class: 'step-head', 'aria-expanded': 'false',
+        onclick: () => { openAll = openAll === i ? -1 : i; draw(); head.scrollIntoView({ block: 'nearest' }); } });
+      groups[i].prepend(head);
+      return head;
+    });
     const nav = h('nav', { class: 'step-nav', 'aria-label': 'Your figures sections' });
     const intro = h('div', { class: 'setup-intro' });
     const footer = h('div', { class: 'step-footer' });
@@ -271,6 +429,14 @@
         h('button', { type: 'button', class: 'link', onclick: () => setMode(steps ? 'all' : 'steps') },
           steps ? 'Show everything on one page' : 'Go section by section'));
       groups.forEach((g, i) => { g.hidden = steps && i !== current; });
+      root.classList.toggle('one-page', !steps);
+      heads.forEach((head, i) => {
+        const open = !steps && openAll === i;
+        head.hidden = steps;
+        head.setAttribute('aria-expanded', String(open));
+        FP.dom.fill(head, h('span', { class: 'fold-title' }, STEPS[i].title), h('span', { class: 'fold-sum' }, STEPS[i].summary(pp)));
+        [...groups[i].children].forEach((el) => { if (el !== head) el.hidden = !steps && !open; });
+      });
       calc.hidden = steps;
       footer.hidden = !steps;
       if (steps) {
@@ -286,14 +452,14 @@
       }
     }
 
-    const quick = FP.summary.checklist(p).ready ? null : FP.welcome.quickStart(ctx, root);
-    FP.dom.add(root, h('h1', null, 'Your figures'), quick, intro, nav, groups, footer, calc);
+    FP.dom.add(root, h('h1', null, 'Your figures'), intro, nav, groups, footer, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {
       const g = e.target.closest('[data-step]');
       const i = g ? STEPS.findIndex((st) => st.id === g.dataset.step) : -1;
       if (mode === 'steps' && i >= 0 && i !== current) show(i, false);
+      if (mode === 'all' && i >= 0 && i !== openAll) { openAll = i; draw(); }
     });
 
     const strip = liveStrip(ctx, root);
@@ -303,6 +469,9 @@
       timer = setTimeout(() => {
         if (!leftover.contains(e.target)) leftover.refresh();
         strip.refresh();
+        income.refreshStatus();
+        debts.refreshNotes();
+        showNeeded(root, ctx.profile());
         // Typing in a section counts as having been there.
         const g = e.target.closest && e.target.closest('[data-step]');
         if (g && e.type !== 'click') {

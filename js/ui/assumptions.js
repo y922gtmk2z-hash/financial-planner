@@ -11,7 +11,7 @@
       h('h1', null, 'Assumptions'),
       h('p', { class: 'lead' }, 'These numbers drive every result. Change them to match your view; the defaults are reasonable starting points, not predictions.'),
       h('div', { class: 'card actions' },
-        h('p', { class: 'muted' }, `${countEdited(p)} of ${A.DEFS.length} changed from the defaults. Resetting doesn’t touch your balances, salary or spending.`),
+        h('p', { class: 'muted' }, `${countEdited(p)} of ${A.DEFS.length} changed from the defaults (set ${FP.dom.date(A.DEFS[0].setOn)}). Resetting doesn’t touch your balances, salary or spending.`),
         h('button', {
           type: 'button', class: 'secondary',
           onclick: () => {
@@ -23,45 +23,71 @@
           },
         }, 'Reset all to defaults')));
 
-    A.GROUPS.forEach((g) => {
+    // Each group folds to one line showing its values; one is open at a time.
+    const groups = A.GROUPS.map((g) => {
       const defs = A.DEFS.filter((d) => d.group === g.id);
-      const make = (d) => row(d, ctx);
-      root.appendChild(h('section', { class: 'card', 'aria-labelledby': `grp-${g.id}` },
-        h('h2', { id: `grp-${g.id}` }, g.label),
-        defs.filter((d) => !d.advanced).map(make),
-        defs.some((d) => d.advanced)
-          ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), defs.filter((d) => d.advanced).map(make))
-          : null));
+      const own = defs.filter((d) => !IN_SETUP.has(d.key));
+      const make = (d) => row(d, ctx, () => drawSum());
+      const sum = h('span');
+      const drawSum = () => {
+        const changed = own.filter((d) => p.assumptions[d.key] !== d.default).length;
+        // Its main values, or its others when the main ones are set in Your figures.
+        const shown = own.some((d) => !d.advanced) ? own.filter((d) => !d.advanced) : own;
+        sum.textContent = shown.slice(0, 3).map((d) => `${shortLabel(d)}${d.unit === 'choice' ? ':' : ''} ${valueText(d, p.assumptions[d.key])}`).join(' \u00b7 ')
+          + (changed ? ` \u00b7 ${changed} changed` : '');
+      };
+      drawSum();
+      const fold = FP.dom.foldCard(`grp-${g.id}`, g.label, sum,
+        own.filter((d) => !d.advanced).map(make),
+        own.some((d) => d.advanced)
+          ? h('details', { class: 'advanced', id: `adv-${g.id}` }, h('summary', null, 'Advanced'), own.filter((d) => d.advanced).map(make))
+          : null,
+        setupLine(defs.filter((d) => IN_SETUP.has(d.key)), p));
+      fold.addEventListener('toggle', () => {
+        if (fold.open) groups.forEach((other) => { if (other !== fold) other.open = false; });
+      });
+      return fold;
     });
+    FP.dom.add(root, groups);
   }
 
-  // Assumptions that are entered in Setup (e.g. your mortgage rate) are shown
-  // here with a link, so each figure has one place to change it.
+  // A shorter name for the one-line summary.
+  const shortLabel = (d) => d.label.replace(/ \(.*\)$/, '').replace(/ in future years$/, '');
+
+  function valueText(d, v) {
+    if (v == null) return 'not set';
+    if (d.unit === 'choice') return ((d.options.find((o) => o.value === v) || {}).label || v).toLowerCase();
+    if (d.unit === 'money') return FP.dom.money(v);
+    if (d.unit === 'age') return String(v);
+    if (d.unit === 'year') return `${v} yr`;
+    return `${v}%`;
+  }
+
+  // The assumptions you set in Your figures, in one line with a link.
+  function setupLine(defs, p) {
+    if (!defs.length) return null;
+    return h('p', { class: 'help in-setup' }, 'Set in Your figures: ',
+      defs.map((d, i) => [i ? ', ' : '', `${shortLabel(d).toLowerCase()} ${valueText(d, p.assumptions[d.key])}`]), '. ',
+      h('a', { href: `#setup/assumptions.${defs[0].key}` }, 'Change'));
+  }
+
+  // Assumptions that are entered in Your figures (e.g. your mortgage rate) are
+  // listed in one line with a link, so each figure has one place to change it.
   const IN_SETUP = new Set(FP.profile.SECTIONS.flatMap((sec) => sec.fields)
     .filter((f) => f.path.startsWith('assumptions.')).map((f) => f.path.slice(12)));
 
-  function setupRow(d, p) {
-    const v = p.assumptions[d.key];
-    const value = v == null ? 'Not set' : d.unit === 'money' ? FP.dom.money(v) : `${v}${A.UNIT_SUFFIX[d.unit] ? ` ${A.UNIT_SUFFIX[d.unit]}`.replace(' %', '%') : ''}`;
-    return h('div', { class: 'field in-setup' },
-      h('dl', { class: 'facts' }, h('div', null, h('dt', null, d.label),
-        h('dd', null, value, ' ', h('a', { href: `#setup/assumptions.${d.key}`, class: 'edit-link', 'aria-label': `Change ${d.label.toLowerCase()} in Your figures` }, 'Change in Your figures')))),
-      h('p', { class: 'help' }, d.help),
-      h('p', { class: 'meta' }, `Default ${defaultText(d)} \u00b7 set ${FP.dom.date(d.setOn)}`));
-  }
-
   function row(d, ctx, onChange) {
     const p = ctx.profile();
-    if (IN_SETUP.has(d.key)) return setupRow(d, p);
     const field = { ...FP.profile.assumptionField(d.key), help: d.help, suffix: A.UNIT_SUFFIX[d.unit] };
     const meta = h('p', { class: 'meta' });
     const holder = h('div');
     const drawMeta = () => {
+      // Only said when it differs from the default.
       const edited = p.assumptions[d.key] !== d.default;
-      const def = defaultText(d);
+      meta.hidden = !edited;
       FP.dom.fill(meta,
-        `Default ${def} · set ${FP.dom.date(d.setOn)}`,
         edited ? h('span', { class: 'badge edited' }, 'Changed') : null,
+        edited ? ` from ${defaultText(d)} ` : null,
         edited ? h('button', {
           type: 'button', class: 'link',
           onclick: () => { p.assumptions[d.key] = d.default; ctx.changed(); draw(); if (onChange) onChange(); },

@@ -1,4 +1,4 @@
-/* Settings: how the planner looks on this device. Not part of your plan. */
+/* Settings: how the planner looks and shows amounts on this device. Not part of your plan. */
 (function (FP) {
   'use strict';
 
@@ -15,7 +15,14 @@
           help: 'System follows your device’s light or dark setting.',
           options: [{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }],
         }, { value: FP.theme.get(), onChange: (v) => FP.theme.set(v) })),
-      h('p', { class: 'muted small' }, 'Whether projections show today’s money or future money is in ', h('a', { href: '#setup/projections' }, 'Your figures'), '. Backups, import and clearing your data are in ', h('a', { href: '#data' }, 'Your data'), '.'));
+      h('section', { class: 'card', id: 'projections', 'aria-labelledby': 'set-proj' },
+        h('h2', { id: 'set-proj' }, 'Projections'),
+        FP.field.render({
+          label: 'Show amounts in', type: 'toggle',
+          help: 'Today\u2019s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Future and Scenarios.',
+          options: [{ value: 'real', label: 'Today\u2019s money' }, { value: 'nominal', label: 'Future money' }],
+        }, { value: FP.screens.future.getView(), onChange: (v) => FP.screens.future.setView(v) })),
+      h('p', { class: 'muted small' }, 'Backups, import and clearing your data are in ', h('a', { href: '#data' }, 'Your data'), '.'));
   }
 
   FP.screens = FP.screens || {};

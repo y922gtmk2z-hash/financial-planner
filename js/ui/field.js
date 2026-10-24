@@ -28,7 +28,8 @@
 
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
-   * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared) }
+   * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared),
+   *          noBlankNote (don't point out a blank key figure), foldHelp (help behind the "i" even when blank) }
    */
   function render(field, opts) {
     uid += 1;
@@ -39,8 +40,9 @@
 
     if (field.type === 'toggle') {
       // Segmented radio buttons for a short list of choices.
-      return h('fieldset', { class: 'field', 'aria-describedby': helpId, 'data-path': field.path || null },
-        h('legend', { class: 'field-legend' }, field.label),
+      const hasHelp = field.help && !opts.compact;
+      const fs = h('fieldset', { class: `field${hasHelp ? ' answered' : ''}`, 'aria-describedby': helpId, 'data-path': field.path || null },
+        h('legend', { class: 'field-legend label-row' }, field.label, hasHelp ? helpToggle(field, helpId) : null),
         h('div', { class: 'toggle' }, field.options.map((o, i) => [
           h('input', {
             type: 'radio', name: id, id: `${id}-${i}`, value: o.value, checked: o.value === opts.value,
@@ -48,8 +50,11 @@
           }),
           h('label', { for: `${id}-${i}` }, o.label),
         ])),
-        field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : null);
+        hasHelp ? h('p', { class: 'help help-text', id: helpId }, field.help) : null);
+      return fs;
     }
+
+    if (field.type === 'term') return termField(field, opts, { id, helpId, errId, err });
 
     let input;
     if (field.type === 'select') {
@@ -81,7 +86,7 @@
       });
     }
 
-    const blank = KEY_FIELDS.includes(field.path) && !opts.compact
+    const blank = KEY_FIELDS.includes(field.path) && !opts.compact && !opts.noBlankNote
       ? h('p', { class: 'help blank-note', hidden: opts.value > 0 }, 'Not entered yet: counts as \u00a30.')
       : null;
 
@@ -104,11 +109,15 @@
     const suffix = field.suffix ? h('span', { class: 'affix', 'aria-hidden': 'true' }, field.suffix) : null;
 
     const where = opts.compact ? null : whereFor(field);
-    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}`, 'data-path': field.path || null },
-      h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
+    const hasHelp = (field.help && !opts.compact) || !!where;
+    const done = hasHelp && (opts.foldHelp || isAnswered(field, opts.value));
+    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
+      h('div', { class: 'label-row' },
+        h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
+        done ? helpToggle(field, helpId) : null),
       h('div', { class: 'input-wrap' }, prefix, input, suffix),
-      field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
-        : where ? h('p', { class: 'help', id: helpId }, h('strong', null, 'Where do I find this? '), where)
+      field.help && !opts.compact ? h('p', { class: 'help help-text', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
+        : where ? h('p', { class: 'help help-text', id: helpId }, h('strong', null, 'Where do I find this? '), where)
           : h('span', { id: helpId, hidden: true }),
       blank,
       err,
@@ -116,27 +125,69 @@
   }
 
   /*
-   * The fields of a Setup section: ungrouped basic fields, then `between`
-   * (e.g. the bonus editor), then each field group under its heading, then
-   * advanced fields behind "Advanced". `make(field)` renders one field.
+   * Help stays in view while a box is empty (or you're in it). Once it's
+   * answered the help steps aside behind a small "i" by the label, which
+   * brings it back; it stays linked to the box for screen readers.
    */
-  function sectionBody(sec, make, between) {
-    const basic = sec.fields.filter((f) => !f.advanced && !f.group);
-    const groups = [...new Set(sec.fields.filter((f) => f.group).map((f) => f.group))];
-    const adv = sec.fields.filter((f) => f.advanced && !f.group);
-    return [
-      basic.map(make),
-      between || null,
-      groups.map((g) => {
-        const info = FP.profile.FIELD_GROUPS[g];
-        return h('div', { class: 'field-group', role: 'group', 'aria-labelledby': `grp-${sec.id}-${g}` },
-          h('h3', { id: `grp-${sec.id}-${g}` }, info.title),
-          info.intro ? h('p', { class: 'help' }, info.intro) : null,
-          sec.fields.filter((f) => f.group === g).map(make));
-      }),
-      adv.length ? h('details', { class: 'advanced' }, h('summary', null, 'Advanced'), adv.map(make)) : null,
-    ];
+  function isAnswered(field, v) {
+    if (field.type === 'select' || field.type === 'toggle') return true;
+    if (field.type === 'text' || field.type === 'taxcode') return !!v;
+    return v != null && v !== 0;
   }
 
-  FP.field = { render, sectionBody };
+  function helpToggle(field, helpId) {
+    return h('button', {
+      type: 'button', class: 'help-toggle', 'aria-expanded': 'false', 'aria-controls': helpId,
+      'aria-label': `About \u201c${field.label}\u201d`,
+      onclick: (e) => {
+        const wrap = e.currentTarget.closest('.field');
+        const open = wrap.classList.toggle('show-help');
+        e.currentTarget.setAttribute('aria-expanded', String(open));
+      },
+    }, 'i');
+  }
+
+  /*
+   * Time left: a number in months or years (your choice), stored in the
+   * field's own unit (field.store: 'months' or 'years').
+   */
+  function termField(field, opts, ids) {
+    const toMonths = (v) => (v == null ? null : field.store === 'years' ? v * 12 : v);
+    const months = toMonths(opts.value);
+    let unit = months && months % 12 !== 0 ? 'months' : 'years';
+    const shown = (m) => (m ? String(Number((unit === 'years' ? m / 12 : m).toFixed(2))) : '');
+    const input = h('input', {
+      id: ids.id, type: 'text', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false', maxlength: 8,
+      placeholder: field.nullable === false ? '0' : 'Not sure', value: shown(months),
+      'aria-describedby': `${ids.helpId} ${ids.errId}`, 'aria-label': opts.ariaLabel || null,
+    });
+    const unitSel = h('select', { 'aria-label': `${field.label}: months or years`, class: 'term-unit' },
+      ['years', 'months'].map((u) => h('option', { value: u, selected: u === unit }, u)));
+    const maxMonths = field.store === 'years' ? field.max * 12 : field.max;
+    function commit() {
+      const r = FP.profile.parseValue({ type: 'years', nullable: true, min: 0, max: unit === 'years' ? maxMonths / 12 : maxMonths }, input.value);
+      if (!r.ok) {
+        ids.err.hidden = false;
+        ids.err.textContent = r.error;
+        input.setAttribute('aria-invalid', 'true');
+        return;
+      }
+      ids.err.hidden = true;
+      input.removeAttribute('aria-invalid');
+      const m = r.value == null || r.value === 0 ? null : unit === 'years' ? r.value * 12 : r.value;
+      const stored = m == null ? (field.nullable ? null : 0) : field.store === 'years' ? m / 12 : m;
+      opts.onChange(stored);
+    }
+    input.addEventListener('input', commit);
+    unitSel.addEventListener('change', () => { unit = unitSel.value; commit(); });
+    const done = field.help && !opts.compact && isAnswered(field, opts.value);
+    return h('div', { class: `field term${opts.compact ? ' compact' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
+      h('div', { class: 'label-row' }, h('label', { for: ids.id }, field.label), done ? helpToggle(field, ids.helpId) : null),
+      h('div', { class: 'term-row' }, h('div', { class: 'input-wrap' }, input), h('div', { class: 'input-wrap term-unit-wrap' }, unitSel)),
+      field.help && !opts.compact ? h('p', { class: 'help help-text', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
+      ids.err,
+      opts.extra || null);
+  }
+
+  FP.field = { render };
 })(globalThis.FP = globalThis.FP || {});

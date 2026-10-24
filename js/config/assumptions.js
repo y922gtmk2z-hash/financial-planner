@@ -66,8 +66,8 @@
     },
     {
       key: 'mortgageRate', group: 'borrowing', label: 'Mortgage interest rate', unit: 'pct',
-      default: 4.5, min: 0, max: 25, setOn: SET_ON,
-      help: 'The rate on your mortgage today. Entered in Your figures.',
+      default: null, nullable: true, min: 0, max: 25, setOn: SET_ON,
+      help: 'The yearly rate on your mortgage today (not the APRC). Entered in Your figures. If it\u2019s blank it\u2019s worked out from your monthly payment, or 4.5% is used.',
     },
     {
       key: 'mortgageRateChangeYear', group: 'borrowing', label: 'Rate changes after (years)', unit: 'year',

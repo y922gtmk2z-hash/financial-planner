@@ -107,9 +107,9 @@
         ? h('p', { class: 'muted' }, 'No home or mortgage entered. If you own a home, add it in Your figures.')
         : body,
       m ? chips([
-        `Mortgage rate ${pct(a.mortgageRate, 2)}`,
+        `Mortgage rate ${pct(m.rate, 2)}${m.worked === 'rate' ? ' (worked out)' : m.rateIsDefault ? ' (assumed)' : ''}`,
         rateChange,
-        `${p.mortgage.remainingTermYears || 0} years left`,
+        `${months(m.termMonths)} left${m.worked === 'months' ? ' (worked out)' : ''}`,
         `Overpayment warning above ${a.overpaymentLimitPct}% a year`,
         'Payment stays fixed; overpayments shorten the term',
       ]) : null);
@@ -150,7 +150,7 @@
       h('p', { class: 'muted small' }, cf.savingsMonthly > 0
         ? 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings.'
         : 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.',
-        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with suggestions) at the end of Your figures.'),
+        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with a suggested split) under Outgoings in Your figures.'),
       chips([
         `Tax year ${pay.taxYear}`,
         region,
@@ -159,7 +159,7 @@
         pay.bonusSpread > 0 ? 'Some bonus spread over 12 months' : null,
         `${p.spending.filter((r) => r.monthly > 0).length} spending categories`,
         defaultRateUsed ? `Other debts default rate ${pct(a.otherDebtRate, 1)}` : null,
-        `Mortgage rate ${pct(a.mortgageRate, 2)}`,
+        s.mortgage ? `Mortgage rate ${pct(s.mortgage.rate, 2)}` : null,
       ]));
   }
 

@@ -32,7 +32,6 @@
         },
       }, label);
       FP.dom.fill(wrap,
-        h('h3', { id: 'benefit-h' }, 'Workplace benefits'),
         h('p', { class: 'help' }, 'Benefits your employer pays for, such as private medical insurance. You don’t receive them as pay, but their value is taxed as income (no National Insurance for you).'),
         list.length ? null : h('p', { class: 'empty' }, 'No taxable benefits added.'),
         h('ul', { class: 'benefit-list' }, list.map((b, i) => {

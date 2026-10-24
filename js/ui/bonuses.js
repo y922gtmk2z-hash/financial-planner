@@ -1,6 +1,6 @@
 /*
  * Bonus list editor: add any number of bonuses, each with an amount and the
- * month it's paid in. Used by Setup and the Income screen (same profile data).
+ * month it's paid in. Used under Income in Your figures, which supplies the heading (#bonus-h).
  */
 (function (FP) {
   'use strict';
@@ -15,7 +15,6 @@
     const draw = () => {
       const list = ctx.profile().income.bonuses;
       FP.dom.fill(wrap,
-        h('h3', { id: 'bonus-h' }, 'Bonuses'),
         h('p', { class: 'help' }, 'Add each bonus you expect in a year, before tax. Choose the month it’s paid to see that month’s payslip, or spread it evenly across the year.'),
         list.length ? null : h('p', { class: 'empty' }, 'No bonuses added.'),
         list.map((b, i) => h('div', { class: 'bonus-row' },

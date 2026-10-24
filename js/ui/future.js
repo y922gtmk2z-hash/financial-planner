@@ -55,7 +55,7 @@
     if (!FP.summary.checklist(p).ready) return null;
     const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
     if (!(left > 0)) return null;
-    return h('details', { class: 'leftover-fold' },
+    return h('details', { class: 'leftover-fold', id: 'future-leftover' },
       h('summary', null, h('span', null, 'Left over each month: ', h('strong', null, `${FP.dom.money(left)} a month`)), h('span', { class: 'muted small' }, 'Change what you do with it')),
       FP.leftoverCard.render(ctx, { onChange: draw }));
   }
@@ -147,8 +147,10 @@
           ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
         }),
         FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)} With returns 2 points lower it would be ${money(band.low[ev.retirement ? ev.retirement.y : rows.length - 1])}.`),
-        h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${money(band.low[band.low.length - 1])} to ${money(band.high[band.high.length - 1])}). Real returns vary from year to year, so the actual path could fall outside it.`),
-        keyAssumptions),
+        h('details', { class: 'advanced', id: 'nw-based-on' },
+          h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
+          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${money(band.low[band.low.length - 1])} to ${money(band.high[band.high.length - 1])}). Real returns vary from year to year, so the actual path could fall outside it.`),
+          keyAssumptions)),
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },
         h('h2', { id: 'comp-chart-h' }, 'What your net worth is made of'),
@@ -206,8 +208,7 @@
       ['Other owed', (x) => x.debts + x.shortfall],
       ['Net worth', (x) => x.netWorth],
     ];
-    return h('details', { class: 'card' },
-      h('summary', null, h('strong', null, 'Year-by-year table')),
+    return FP.dom.foldCard('year-table', 'Year-by-year table', 'Income, spending and balances for every year',
       h('p', { class: 'muted small' }, `Amounts ${moneyNote}. Flows (income, spending, left over) are for the year; balances are at the end of it.`),
       h('div', { class: 'table-scroll tall', tabindex: '0', role: 'region', 'aria-label': 'Year-by-year table' }, h('table', { class: 'data-table year-table' },
         h('thead', null, h('tr', null,
@@ -222,8 +223,7 @@
   }
 
   function notesCard(a, leftover) {
-    return h('section', { class: 'card', 'aria-labelledby': 'proj-notes-h' },
-      h('h2', { id: 'proj-notes-h' }, 'How this is worked out'),
+    return FP.dom.foldCard('proj-notes', 'How this is worked out', 'Taxes, growth, retirement and what\u2019s left out',
       h('ul', { class: 'notes' },
         h('li', null, 'Each year: your salary and bonuses rise with salary growth and are taxed with this year’s rules; spending rises with spending growth; balances grow at their own rates; the mortgage and other debts are paid down month by month.'),
         h('li', null, `Tax ${a.taxThresholds === 'inflation' ? 'thresholds rise with inflation each year' : 'thresholds stay frozen at today’s levels'}; tax rates stay as they are today. Change this in Assumptions.`),

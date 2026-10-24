@@ -7,6 +7,31 @@
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 
+  /*
+   * The planner opens up as you go, so there's only ever a little to take in:
+   *   0 - before the quick start: just the welcome (and Your data, Settings);
+   *   1 - after it: Your plan, Your figures and Today;
+   *   2 - once you've added more detail: everything.
+   */
+  const STAGE_ROUTES = [
+    ['overview', 'data', 'settings'],
+    ['overview', 'data', 'settings', 'setup', 'now'],
+    ROUTES,
+  ];
+  function stage() {
+    const p = FP.scenarios.active(workspace).profile;
+    if (!FP.summary.checklist(p).ready) return 0;
+    return FP.welcome.isRough(p) ? 1 : 2;
+  }
+
+  // Shows only the tabs and links for what's open at this stage.
+  function drawStage(s) {
+    document.body.dataset.stage = String(s);
+    document.querySelectorAll('[data-route]').forEach((a) => { a.hidden = !STAGE_ROUTES[s].includes(a.dataset.route); });
+    const tabs = document.querySelector('.tabbar');
+    tabs.hidden = tabs.querySelectorAll('a:not([hidden])').length < 2;
+  }
+
   // Theme: 'system' (no attribute, follows the device), 'light' or 'dark'.
   FP.theme = {
     get: () => (['light', 'dark'].includes(FP.store.pref('theme')) ? FP.store.pref('theme') : 'system'),
@@ -122,26 +147,33 @@
 
   const isSample = () => workspace.scenarios.some((s) => s.profile.isSample);
 
+  // The sample banner is in full on the first screen you see, then one line.
+  let bannerSeen = false;
   function drawBanner() {
     banner.hidden = !isSample();
     if (banner.hidden) return;
+    const ownFigures = () => {
+      if (!confirm('Clear the sample data (and its example scenarios) and start with an empty form?')) return;
+      workspace = FP.scenarios.fromProfile(FP.profile.blank());
+      save();
+      location.hash = '#overview';
+      route();
+    };
+    banner.classList.toggle('slim', bannerSeen);
+    if (bannerSeen) {
+      FP.dom.fill(banner, h('p', null, h('strong', null, 'Fictional example. '),
+        h('button', { type: 'button', class: 'link', onclick: ownFigures }, 'Use my own figures')));
+      return;
+    }
+    bannerSeen = true;
     FP.dom.fill(banner,
       h('p', null, h('strong', null, 'This is a fictional example household. '), 'Look around, then put in your own figures.'),
       h('div', { class: 'button-row' },
-        h('button', {
-          type: 'button', class: 'small',
-          onclick: () => {
-            if (!confirm('Clear the sample data (and its example scenarios) and start with an empty form?')) return;
-            workspace = FP.scenarios.fromProfile(FP.profile.blank());
-            save();
-            location.hash = '#setup';
-            route();
-          },
-        }, 'Start with my own figures'),
+        h('button', { type: 'button', class: 'small', onclick: ownFigures }, 'Start with my own figures'),
         h('button', {
           type: 'button', class: 'link',
           onclick: () => {
-            workspace.scenarios.forEach((s) => { s.profile.isSample = false; });
+            workspace.scenarios.forEach((sc) => { sc.profile.isSample = false; });
             save();
             drawBanner();
           },
@@ -191,7 +223,15 @@
   }
 
   function route() {
-    const { id, target } = parseHash();
+    let { id, target } = parseHash();
+    const s = stage();
+    drawStage(s);
+    if (!STAGE_ROUTES[s].includes(id)) {
+      // Not open yet: back to Your plan (the welcome, until the quick start's done).
+      history.replaceState(null, '', '#overview');
+      id = 'overview';
+      target = null;
+    }
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -201,8 +241,28 @@
     drawScenarioBar();
     main.replaceChildren();
     FP.screens[id].render(main, ctx);
+    restoreOpened();
     document.title = `${FP.screens[id].title} · Finance planner`;
     return target;
+  }
+
+  /*
+   * Sections you open or close stay that way while you move between screens
+   * (each screen is redrawn when you come back). Any <details> with an id
+   * takes part; until you touch one, its screen decides.
+   */
+  const opened = new Map();
+  main.addEventListener('click', (e) => {
+    const summary = e.target.closest && e.target.closest('summary');
+    const d = summary && summary.parentElement;
+    if (!d || d.tagName !== 'DETAILS' || !d.id) return;
+    // The click toggles it just after this handler runs.
+    setTimeout(() => opened.set(d.id, d.open));
+  });
+  function restoreOpened() {
+    main.querySelectorAll('details[id]').forEach((d) => {
+      if (opened.has(d.id)) d.open = opened.get(d.id);
+    });
   }
 
   window.addEventListener('hashchange', () => {

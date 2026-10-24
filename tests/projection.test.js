@@ -169,8 +169,9 @@ test('paying off debts faster clears the most expensive first, then passes its s
   const plain = FP.projection.project({ ...p, debts: [] }).rows[1];
   const r1 = FP.projection.project(p).rows[1];
   // Half of the leftover money is more than the debts owe after a year's
-  // interest (added monthly), so they're cleared and the rest is invested.
-  const owed = 3000 * (1 + 0.06 / 12) ** 12 + 2000 * (1 + 0.20 / 12) ** 12;
+  // interest (rates are APRs, so a year adds exactly the APR), so they're
+  // cleared and the rest is invested.
+  const owed = 3000 * 1.06 + 2000 * 1.20;
   assert.ok(plain.surplus / 2 > owed);
   close(r1.toDebts, owed);
   assert.equal(r1.debts, 0);
@@ -179,8 +180,8 @@ test('paying off debts faster clears the most expensive first, then passes its s
   p.leftover.debts = 5; p.leftover.invest = 95;
   const small = FP.projection.project(p).rows[1];
   assert.ok(small.toDebts < 2000);
-  const card = 2000 * (1 + 0.20 / 12) ** 12 - small.toDebts;
-  close(small.debts, 3000 * (1 + 0.06 / 12) ** 12 + card, 0.5);
+  const card = 2000 * 1.20 - small.toDebts;
+  close(small.debts, 3000 * 1.06 + card, 0.5);
 });
 
 test('the emergency fund share fills cash to the target, then goes to the other choices', () => {
@@ -390,4 +391,35 @@ test('what you could spend in retirement keeps every retirement year funded', ()
   const rs = FP.projection.retirementSpend(p);
   const r = FP.projection.project(p, { retirementSpending: rs.factor, maxYears: 100 });
   assert.ok(r.rows.every((row) => row.shortfall <= 0.5));
+});
+
+test('retirement need: what you’d need, what you’re on course for and how long it lasts', () => {
+  const p = FP.profile.blank();
+  p.about.age = 35;
+  p.income.grossSalary = 45000;
+  p.spending[0].monthly = 2000;
+  const n = FP.projection.retirementNeed(p);
+  assert.equal(n.goal, 2000);
+  assert.equal(n.goalIsSet, false);
+  assert.ok(n.needed > n.have && n.have > 0);
+  assert.ok(n.lastsUntil > p.assumptions.retirementAge && n.lastsUntil < n.endAge);
+  // Topping up to what's needed funds every retirement year at the goal.
+  const factor = (FP.projection.retirementSpend(p).factor * 2000) / FP.projection.retirementSpend(p).monthly;
+  const topped = FP.projection.project(p, { maxYears: 100, retirementSpending: factor, retirementBoost: n.needed - n.have + 100 });
+  assert.ok(topped.rows.every((r) => r.working !== false || r.shortfall <= 0.5));
+  // A lower goal needs less, and lasts longer.
+  p.goals.retirementIncome = 1000;
+  const lower = FP.projection.retirementNeed(p);
+  assert.ok(lower.needed < n.needed);
+  assert.ok(lower.lastsUntil == null || lower.lastsUntil > n.lastsUntil);
+});
+
+test('retirement need: nothing needed when the State Pension covers the goal', () => {
+  const p = FP.profile.blank();
+  p.about.age = 60;
+  p.spending[0].monthly = 500;
+  Object.assign(p.assumptions, { retirementAge: 67, statePensionAge: 67 });
+  const n = FP.projection.retirementNeed(p);
+  assert.equal(n.needed, 0);
+  assert.equal(n.lastsUntil, null);
 });

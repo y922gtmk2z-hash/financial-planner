@@ -1,6 +1,6 @@
 /*
  * Salary sacrifice editor: car schemes, cycle to work and other arrangements.
- * Used by Setup and the Income screen (same profile data). Each arrangement
+ * Used under Income in Your figures, which supplies the heading (#sacrifice-h). Each arrangement
  * shows what it really costs you after the tax and NI you save.
  */
 (function (FP) {
@@ -39,7 +39,6 @@
       }, label);
 
       FP.dom.fill(wrap,
-        h('h3', { id: 'sacrifice-h' }, 'Salary sacrifice'),
         h('p', { class: 'help' }, 'Schemes where you give up some salary before tax — such as an electric car or cycle to work — so you pay less income tax and National Insurance. Pension salary sacrifice is set under “How your pension is paid”. If a scheme replaces something you pay for now (like a car lease), remove that from your spending.'),
         list.length ? null : h('p', { class: 'empty' }, 'No salary sacrifice schemes added.'),
         h('ul', { class: 'sacrifice-list' }, list.map((a, i) => item(ctx, a, i, draw, changed))),
