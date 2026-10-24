@@ -526,12 +526,20 @@
     return strip;
   }
 
+  // Opens the step (and any folded sections) a box is in, then puts you in it.
+  function reveal(el) {
+    el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true }));
+    for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    const input = el.matches('input, select') ? el : el.querySelector('input, select') || el;
+    input.focus();
+    input.scrollIntoView({ block: 'center' });
+  }
+
   function calculate(ctx, root) {
+    // It may be in a step you've moved on from, so open that step first.
     const bad = root.querySelector('[aria-invalid="true"]');
     if (bad) {
-      bad.closest('details') && (bad.closest('details').open = true);
-      bad.focus();
-      bad.scrollIntoView({ block: 'center' });
+      reveal(bad);
       ctx.toast('Fix the highlighted box first.');
       return;
     }
@@ -540,13 +548,7 @@
     if (missing.length) {
       const t = missing[0].target;
       const el = root.querySelector(`[data-path="${CSS.escape(t)}"]`) || root.querySelector(`#${CSS.escape(t)}`);
-      if (el) {
-        el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true })); // opens the step it's in
-        el.closest('details') && (el.closest('details').open = true);
-        const input = el.querySelector('input') || el;
-        input.focus();
-        input.scrollIntoView({ block: 'center' });
-      }
+      if (el) reveal(el);
       ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
       return;
     }
