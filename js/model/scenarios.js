@@ -98,6 +98,23 @@
     return true;
   }
 
+  /*
+   * "Make this my plan": scenario `id` becomes the baseline, named Baseline,
+   * and the old baseline is kept as "Previous plan (<dateText>)". The new
+   * baseline is the one you're editing. Returns false for the baseline itself.
+   */
+  function makeBaseline(ws, id, dateText) {
+    const chosen = find(ws, id);
+    if (!chosen || isBaseline(ws, id)) return false;
+    const old = ws.scenarios[0];
+    const others = (except) => ({ scenarios: ws.scenarios.filter((x) => !except.includes(x)) });
+    old.name = uniqueName(others([old, chosen]), cleanName(`Previous plan (${dateText})`, 'Previous plan'));
+    chosen.name = uniqueName(others([chosen]), 'Baseline');
+    ws.scenarios = [chosen].concat(ws.scenarios.filter((x) => x !== chosen));
+    ws.activeId = chosen.id;
+    return true;
+  }
+
   function setActive(ws, id) {
     if (!find(ws, id)) return false;
     ws.activeId = id;
@@ -231,6 +248,6 @@
 
   FP.scenarios = {
     MAX_SCENARIOS, PRESETS, fromProfile, normalise, find, active, isBaseline,
-    clone, fromPreset, addProfile, rename, remove, setActive, differences,
+    clone, fromPreset, addProfile, rename, remove, setActive, makeBaseline, differences,
   };
 })(globalThis.FP = globalThis.FP || {});

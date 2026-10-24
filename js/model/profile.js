@@ -7,7 +7,10 @@
   'use strict';
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 3;
+  const SCHEMA_VERSION = 4;
+
+  // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
+  const IDEA_MARKS = ['done', 'hidden', 'applied'];
 
   const STUDENT_LOAN_PLANS = [
     { value: 'none', label: 'None' },
@@ -281,7 +284,7 @@
       goals: { retirementIncome: null },
       // estimate: everything going out a month (spending, mortgage and debt payments), or null.
       outgoings: { estimate: null },
-      // Ideas you've marked done or hidden: { [idea id]: 'done' | 'hidden' }.
+      // Ideas you've marked done, hidden or applied to your plan: { [idea id]: 'done' | 'hidden' | 'applied' }.
       ideas: {},
       spending: [newRest()],
       assumptions: FP.assumptions.defaults(),
@@ -412,7 +415,7 @@
     }
     if (src.ideas && typeof src.ideas === 'object') {
       Object.entries(src.ideas).slice(0, 40).forEach(([k, v]) => {
-        if (/^[a-zA-Z]{1,30}$/.test(k) && (v === 'done' || v === 'hidden')) p.ideas[k] = v;
+        if (/^[a-zA-Z]{1,30}$/.test(k) && IDEA_MARKS.includes(v)) p.ideas[k] = v;
       });
     }
     if (Array.isArray(src.savings)) {
@@ -469,7 +472,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
+    SCHEMA_VERSION, IDEA_MARKS, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});

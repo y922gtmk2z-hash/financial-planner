@@ -110,7 +110,7 @@ test('interest paid on a mortgage matches the mortgage calculator', () => {
   assert.equal(FP.patch.measure(p).debtFreeAge, 60);
 });
 
-test('every idea has a patch (or null), an impact and how-to steps; id, tone, title and text unchanged', () => {
+test('every idea has a patch (or null), an impact and 0 or 2 to 4 how-to steps; id, tone, title and text unchanged', () => {
   G.names().forEach((name) => {
     const r = FP.suggest.analyse(fixture(name));
     const golden = G.readGolden(name).suggest.suggestions;
@@ -118,7 +118,7 @@ test('every idea has a patch (or null), an impact and how-to steps; id, tone, ti
       golden.map(({ id, tone, title, text }) => ({ id, tone, title, text })));
     r.suggestions.forEach((s) => {
       assert.ok(s.patch === null || Array.isArray(s.patch), `${name} ${s.id}`);
-      assert.deepEqual(s.howTo, []);
+      assert.ok(Array.isArray(s.howTo) && (s.howTo.length === 0 || (s.howTo.length >= 2 && s.howTo.length <= 4)), `${name} ${s.id} howTo`);
       if (s.patch) assert.deepEqual(Object.keys(s.impact), ['before', 'after', 'change']);
       else assert.equal(s.impact, null);
     });

@@ -2715,7 +2715,11 @@
             "interest": -16.01
           }
         },
-        "howTo": []
+        "howTo": [
+          "Pay more than the minimum each month, starting with the most expensive debt.",
+          "For a credit card, consider a 0% balance transfer: check the fee and how long the 0% lasts.",
+          "Set up a direct debit for the higher amount so it’s never late."
+        ]
       },
       {
         "id": "emergencyOk",
@@ -2764,7 +2768,11 @@
             "interest": 1097.75
           }
         },
-        "howTo": []
+        "howTo": [
+          "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
+          "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
+          "Check your next payslip to see the new amount going in."
+        ]
       },
       {
         "id": "match",
@@ -2813,7 +2821,11 @@
             "interest": -15714.34
           }
         },
-        "howTo": []
+        "howTo": [
+          "Check your lender’s yearly overpayment limit first (often 10% of the balance), so you don’t pay an early repayment charge.",
+          "Ask whether overpaying shortens your term or lowers your monthly payment.",
+          "Set it up with your lender as a regular monthly amount or a lump sum."
+        ]
       },
       {
         "id": "isa",
@@ -2866,7 +2878,11 @@
             "interest": 448.17
           }
         },
-        "howTo": []
+        "howTo": [
+          "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
+          "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
+          "Set up a monthly payment on payday so it happens without thinking about it."
+        ]
       }
     ],
     "split": {

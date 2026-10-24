@@ -41,7 +41,7 @@ js/app.js                routing and wiring
 tests/*.test.js          node --test
 ```
 
-## Data model (schema v3)
+## Data model (schema v4)
 
 ```
 profile = {
@@ -59,7 +59,8 @@ profile = {
 Stage 4 wraps this in a workspace, `{ activeId, scenarios: [{ id, name, profile }] }`;
 a scenario is a full copy of the profile, so any input or assumption can differ.
 Bonuses are a list since Stage 2. Saved files carry a `schemaVersion`: 1 held one
-profile, 2 a workspace, 3 a workspace with every profile in today's shape.
+profile, 2 a workspace, 3 a workspace with every profile in today's shape, 4 the same
+with ideas that can also be marked `applied`.
 `js/model/migrate.js` upgrades older files one numbered step at a time (`{ from, to,
 up }`), so `profile.normalise` only checks and cleans today's shape. Any change to
 the saved shape adds a step and a test.

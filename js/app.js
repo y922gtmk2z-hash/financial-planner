@@ -3,7 +3,7 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'assumptions', 'data', 'settings'];
+  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'actions', 'assumptions', 'data', 'settings'];
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 
@@ -140,11 +140,21 @@
   // Back from the browser's page cache: other tabs may have saved since.
   window.addEventListener('pageshow', (e) => { if (e.persisted) reloadFromStorage(); });
 
-  function toast(msg) {
-    toastEl.textContent = msg;
+  /*
+   * A short message above the tabs. opts.action: { label, run } adds a button
+   * (for example Undo); opts.ms: how long it shows (3.5 seconds, or 10 with a button).
+   */
+  function toast(msg, opts) {
+    opts = opts || {};
+    const act = opts.action;
+    FP.dom.fill(toastEl, h('span', null, msg), act ? h('button', {
+      type: 'button', class: 'link',
+      onclick: () => { toastEl.hidden = true; act.run(); },
+    }, act.label) : null);
+    toastEl.classList.toggle('has-action', !!act);
     toastEl.hidden = false;
     clearTimeout(toast.t);
-    toast.t = setTimeout(() => { toastEl.hidden = true; }, 3500);
+    toast.t = setTimeout(() => { toastEl.hidden = true; }, opts.ms || (act ? 10000 : 3500));
   }
 
   const isSample = () => workspace.scenarios.some((s) => s.profile.isSample);

@@ -50,7 +50,7 @@
       ready && rough ? moreCard() : null,
       ready && !rough ? FP.checklist.note(p) : null,
       proj.ok && !rough ? chartCard(proj, today, a, p) : null,
-      rough ? null : nextCard(ideas, a, ctx));
+      rough ? null : nextCard(p, a, ctx));
   }
 
   // After the quick start: one clear next move.
@@ -217,11 +217,13 @@
     return Math.round(n / step) * step;
   }
 
-  function nextCard(ideas, a, ctx) {
+  function nextCard(p, a, ctx) {
+    // The same list as the Actions screen, including the suggested split.
+    const n = FP.screens.actions.openActions(p).length;
     return h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
       h('h2', { id: 'next-h' }, 'Next steps'),
       h('ul', null,
-        ideas.length ? link('#setup/ideas', `${ideas.length} ${ideas.length === 1 ? 'idea' : 'ideas'} to look at`, 'Tick them off as you go \u2014 general rules of thumb, not advice') : null,
+        n ? link('#actions', `${n} ${n === 1 ? 'action' : 'actions'} to look at`, 'Apply them, try them as a scenario, or set a reminder \u2014 general rules of thumb, not advice') : null,
         link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
         link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`)),
       h('div', { class: 'button-row backup-row' },

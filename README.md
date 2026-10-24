@@ -178,7 +178,7 @@ The same measure has the same name on every screen (the names live in one place,
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
 | **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
 | **Future** | Year-by-year projection to your end age (95 unless you change it), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), money left over each month (folded above the results) and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
 | **Settings** (More menu) | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
@@ -300,15 +300,40 @@ as a **patch** (for example "pay 3% more into your pension"), and the planner ca
 work out its **impact**: what it does to what's left over each month, what you could
 spend in retirement, your savings and pensions when you retire, the age your money
 lasts to, when you're debt-free and the total interest you pay. The one-tap what-ifs
-in Scenarios are patches too. Nothing on screen uses this yet.
+in Scenarios are patches too.
 
-Mark an idea **✓ Done** or **Not for me** and it moves into a folded list you can bring
-it back from; Overview shows how many are left and the top three.
+## Actions
+
+**Actions** (`#actions`, from **Next steps** on Your plan, once you've added more than
+the quick start) has one card per idea, ranked: ones that fix a problem first, then
+the biggest gain in what you could spend in retirement. Each card says why in one
+line, and shows up to two figures for what it would do, its main gain and what it
+costs ("+£38 a month in retirement", "£84 a month less left over now"; for the
+mortgage or a debt, "saves £15.7k interest"). If it would cost more each month than
+you have left over, the card says so. Then:
+
+- **Apply** makes the change in the scenario you're editing. A message offers
+  **Undo** for 10 seconds, and the card moves to a folded list marked **Applied**,
+  with Undo there too for the rest of your visit (as long as nothing has changed
+  since).
+- **Try as a scenario** adds a copy of the scenario you're editing with the change
+  made, and opens Scenarios to compare.
+- **✓ Done** or **Not for me** moves it to the same folded list, which you can bring
+  ideas back from.
+- **How to do it** gives two to four general steps (for example, for a pension: ask
+  payroll or HR, and ask about salary sacrifice), naming no providers or products.
+- **Remind me** downloads a calendar reminder (an `.ics` file, made in your browser,
+  nothing sent) for a date you pick, with the steps in it.
+
+**Use the suggested split** is an action too, making exactly the change **Use this
+split** makes, so the advice and your plan can't disagree. When your emergency fund
+is short, "Build your emergency fund" makes that change instead (it's the same
+split). Your plan's other screens still show ideas under Money left over each month.
 
 A **suggested split** follows from these, and always includes the emergency fund:
 80% while it's below your target (50% with 40% to expensive debts if you have both),
 then 10% to keep it topped up, with 70% to paying off expensive debts if you have any.
-**Use this split** applies it. This used to be the "surplus split" in Assumptions;
+**Use this split** applies it (the same change as the action). This used to be the "surplus split" in Assumptions;
 existing saved splits carry over.
 
 ## Regular savings
@@ -497,7 +522,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-250 tests cover:
+262 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -518,6 +543,12 @@ npm test   # Node 18+, no dependencies to install
   nothing, a path changes only the years and rates it gives (fees still apply),
   the projection runs to your end age when asked, and 1,000 projections of the
   sample household take under 3 seconds.
+- **Actions:** how-to steps for each kind of idea (2 to 4, no providers), the
+  suggested split as an action (for the sample household it puts 70% towards its
+  debts, and does exactly what Use this split did), ranking (problems first, then
+  the biggest gain), the two figures on each card, the Applied mark (and saves from
+  version 3 loading), making a scenario your plan, and the calendar file (dates,
+  escaping, 75-octet lines).
 - **Money formatting:** today's figures to the pound, figures five or more years
   ahead to three significant figures (£1.20m, £292k, £3,800), and the shared measure
   names used by the detail panels.
