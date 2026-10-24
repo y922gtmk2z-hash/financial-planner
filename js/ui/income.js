@@ -255,5 +255,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.income = { title: 'Income', render };
+  FP.screens.income = { title: 'Income', render, parts: { taxYearNotice, resultsView, yourPayCard } };
 })(globalThis.FP = globalThis.FP || {});

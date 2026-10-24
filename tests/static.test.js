@@ -77,6 +77,8 @@ test('navigation: every route has a screen; Setup is in the header, views are ta
   assert.match(header, /href="#setup"/);
   assert.doesNotMatch(tabs, /href="#setup"/);
   const tabRoutes = [...tabs.matchAll(/data-route="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(tabRoutes, ['overview', 'today', 'income', 'future', 'scenarios', 'assumptions']);
+  assert.deepEqual(tabRoutes, ['overview', 'now', 'future', 'scenarios']);
+  assert.match(header, /href="#assumptions"/);
+  assert.match(header, /href="#data"/);
   tabRoutes.forEach((r) => assert.ok(routes.includes(r)));
 });

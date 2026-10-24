@@ -3,7 +3,9 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['overview', 'today', 'setup', 'income', 'future', 'scenarios', 'assumptions', 'data'];
+  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'assumptions', 'data'];
+  // Older links: Today and Income are now parts of Now.
+  const ALIASES = { today: 'now/own', income: 'now/pay' };
 
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
@@ -31,6 +33,13 @@
       clearTimeout(saveTimer);
       status.textContent = 'Saving…';
       saveTimer = setTimeout(save, 300);
+    },
+    // Replace the scenario you're editing with a changed copy (from a detail panel).
+    replaceProfile(p) {
+      const sc = FP.scenarios.active(workspace);
+      sc.profile = FP.profile.normalise({ ...p, isSample: sc.profile.isSample });
+      ctx.changed();
+      route();
     },
     replaceWorkspace(ws) {
       workspace = ws;
@@ -119,7 +128,10 @@
   // "#setup/about.age" or "#setup/leftover": a screen, then optionally a
   // field (by its profile path) or a section (by id) to scroll to.
   function parseHash() {
-    const [name, ...rest] = (location.hash || '#overview').slice(1).split('/');
+    const raw = (location.hash || '#overview').slice(1);
+    const alias = ALIASES[raw.split('/')[0]];
+    if (alias) history.replaceState(null, '', `#${alias}`);
+    const [name, ...rest] = (alias || raw).split('/');
     return { id: ROUTES.includes(name) ? name : 'overview', target: rest.length ? decodeURIComponent(rest.join('/')) : null };
   }
 
@@ -142,6 +154,7 @@
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
     });
+    document.getElementById('header-menu').open = false;
     drawBanner();
     drawScenarioBar();
     main.replaceChildren();
@@ -168,6 +181,12 @@
     lastY = y;
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
+  // The "More" menu closes when you tap elsewhere or press Escape.
+  const menu = document.getElementById('header-menu');
+  document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });
+  menu.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+  });
   // Lets things pinned under the header (Setup's steps) sit just below it.
   const setHeaderHeight = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
   window.addEventListener('resize', setHeaderHeight);

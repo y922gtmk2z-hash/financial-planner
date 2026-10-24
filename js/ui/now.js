@@ -1,0 +1,61 @@
+/*
+ * Now: where you stand today, in three parts you switch between: this month
+ * (cash flow), what you own and owe, and your pay and tax.
+ */
+(function (FP) {
+  'use strict';
+
+  const { h } = FP.dom;
+  const VIEWS = [
+    { id: 'month', label: 'This month' },
+    { id: 'own', label: 'Own and owe' },
+    { id: 'pay', label: 'Pay and tax' },
+  ];
+
+  function render(root, ctx) {
+    const p = ctx.profile();
+    const a = p.assumptions;
+    const pay = FP.tax.forProfile(p);
+    const s = FP.summary.compute(p, pay.takeHomeMonthly);
+    const T = FP.screens.today.parts;
+    const I = FP.screens.income.parts;
+    const target = location.hash.split('/')[1];
+    let view = VIEWS.some((v) => v.id === target) ? target : (FP.store.pref('nowView') || 'month');
+    if (!VIEWS.some((v) => v.id === view)) view = 'month';
+
+    const body = h('div', { id: 'now-view' });
+    const nav = h('div', { class: 'segmented', role: 'tablist', 'aria-label': 'Now' });
+
+    function draw() {
+      FP.dom.fill(nav, VIEWS.map((v) => h('button', {
+        type: 'button', role: 'tab', id: `now-tab-${v.id}`, 'aria-selected': String(v.id === view), 'aria-controls': 'now-view',
+        tabindex: v.id === view ? '0' : '-1',
+        onclick: () => { view = v.id; FP.store.pref('nowView', view); draw(); },
+        onkeydown: (e) => {
+          const i = VIEWS.findIndex((x) => x.id === view);
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          view = VIEWS[(i + (e.key === 'ArrowRight' ? 1 : VIEWS.length - 1)) % VIEWS.length].id;
+          FP.store.pref('nowView', view);
+          draw();
+          nav.querySelector('[aria-selected="true"]').focus();
+        },
+      }, v.label)));
+      body.setAttribute('role', 'tabpanel');
+      body.setAttribute('aria-labelledby', `now-tab-${view}`);
+      FP.dom.fill(body,
+        view === 'month' ? T.cashFlowCard(s, a, p, pay) : null,
+        view === 'own' ? [T.netWorthCard(s), T.chartCard(s), T.homeCard(s, a, p)] : null,
+        view === 'pay' ? [I.taxYearNotice(), I.resultsView(p), I.yourPayCard(p)] : null);
+    }
+
+    FP.dom.add(root,
+      h('h1', null, 'Now'),
+      s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>
+        h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
+      nav, body);
+    draw();
+  }
+
+  FP.screens = FP.screens || {};
+  FP.screens.now = { title: 'Now', render };
+})(globalThis.FP = globalThis.FP || {});

@@ -37,34 +37,45 @@ form, or **edit this example as mine** to keep the sample figures.
 
 ## Screens
 
-**How it's laid out:** the header at the top (with **Setup** and **Your data**) stays
-pinned, slides away as you scroll down and comes back as soon as you scroll up, so
-you can get back to Setup at any time. The first time, Setup takes you **step by step**
-(You and your pay → What you own → Mortgage and debts → Monthly spending → Saving and
-your leftover money), with a step bar showing what's done; once the essentials are in,
-it opens as one page for quick edits, and you can switch either way. A strip pinned
-above the tabs shows your take-home pay and what's left over as you type. **See my
-plan** takes you to the **Overview**, and the tabs at the bottom drill into each part
-of your plan. Every figure has one place to enter it, in Setup: other screens link
-straight to the field (for example `#setup/income.grossSalary`).
+**How it's laid out:** four tabs at the bottom (**Your plan**, **Now**, **Future**,
+**Scenarios**) and a header that stays pinned, slides away as you scroll down and
+comes back as soon as you scroll up, with **Setup** and a **More** menu (Assumptions,
+Your data).
 
-Until your age and monthly spending are entered, Overview, Future and Scenarios show
-a **Finish your plan** checklist instead of a projection: without spending, everything
-you take home would look like savings.
+**Your journey:**
 
-The disclaimer is shown in full on your first visit, then as one line you can open.
-The scenario picker appears once you have more than one scenario.
+1. **Quick start.** The first time, Setup asks for just a few figures: your age, when
+   you'd like to retire, salary, what you spend in a month (one total is fine), cash,
+   pensions, investments and your mortgage. **See my plan** shows your answer;
+   **Add more detail** opens the full Setup (step by step, or everything on one page).
+2. **Your plan** answers four questions, each with a verdict and its top
+   recommendation: **Each month** (take-home, what's left over, emergency fund),
+   **Debt-free** (mortgage, student loan, other debts), **Retirement** (what you could
+   spend against your goal, pension pot) and **Next steps**.
+3. **Tap any figure** to open its detail panel: the result and a chart, the inputs
+   and assumptions that drive it (change them right there), a before-and-after
+   comparison as you type, the changes that would help most (**Try it**), and the
+   recommendations for it. **Apply to my plan**, **Save as a scenario**, or undo.
+   Nothing changes in your plan until you choose; closing a panel with changes you
+   haven't applied or saved asks first.
+
+Every figure has one home in Setup; other screens link straight to the field (for
+example `#setup/income.grossSalary`). Until your age and monthly spending are entered,
+Your plan, Future and Scenarios show a **Finish your plan** checklist instead of a
+projection. The disclaimer is shown in full on your first visit, then as one line you
+can open. The scenario picker appears once you have more than one scenario.
 
 | Screen | What it does |
 | --- | --- |
-| **Overview** (first tab) | Your plan at a glance: net worth, take-home pay, what's left over each month, **what you could spend in retirement** so your money lasts to your end age, net worth and pension at retirement, when the mortgage and student loan end, the **ideas** still to look at, any notes, and a net-worth chart. Every figure links to the tab with the detail. |
-| **Today** | Net worth, a chart of what you own vs what you owe (with a table view), home equity and loan-to-value, mortgage payment and payoff date (with and without overpayments), and monthly cash flow: take-home pay − spending − mortgage − other debts = surplus. |
-| **Setup** (header) | Enter everything once, step by step or on one page: age, assets (home, cash, ISA, other investments, pensions, other), mortgage (balance, rate, remaining term, monthly overpayment), other debts, income (salary, pension %, student loan plan, balance and the year you were first due to repay, any number of bonuses with the month each is paid, salary sacrifice schemes), monthly spending by category, **regular savings**, and **your leftover money** (what's left each month, what to do with it, and suggestions). Ends with **See my plan**. |
-| **Income** | UK take-home pay: income tax by band (rest of UK or Scotland), National Insurance, pension (net pay, salary sacrifice or relief at source) and student loan. Shows a regular month and each bonus month, how much of your next £100 pay rise you'd keep, and your student loan: interest, repayments, write-off date and when it should be repaid. A **Based on** list shows the figures used, each with a link to change it in Setup. Feeds Today's cash flow automatically. |
+| **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
+| **Now** | Where you stand today, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
+| **Setup** (header) | Quick start, then everything in full, step by step or on one page: your age and goal, assets, mortgage, other debts, income (salary, pension, student loan, bonuses, salary sacrifice), monthly spending (one total or categories), **regular savings** and **your leftover money**. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, your leftover money (folded above the results) and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), or copy it and change any input or assumption, and compare up to 8 scenarios side by side in a table and an overlay chart. The scenario picker under the header shows which scenario every screen is editing. |
-| **Assumptions** | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (mortgage rate, pension %) link there. |
-| **Your data** (header link) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
+| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8 side by side in a table and an overlay chart. |
+| **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (retirement age, mortgage rate, pension %) link there. |
+| **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
+
+Old links to `#today` and `#income` open the matching part of **Now**.
 
 Basic inputs are shown first; less common ones are under **Advanced**. Every input
 is checked as you type, with plain-English errors. Blank boxes count as £0.
@@ -111,6 +122,8 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
+| Retirement goal (in Setup) | what you spend now (or a monthly amount you set) |
+| Monthly spending (new plan) | one total; add categories if you like |
 | Leftover money (your choice, in Setup) | 10% emergency fund (target: 3 months of outgoings), 0% paying off debts faster, 20% cash, 50% investments, 10% mortgage overpayment, 10% pension |
 
 ## Tax rules — check every tax year
@@ -239,6 +252,14 @@ uses your inflation assumption as RPI from September 2027, plus the plan's margi
 with no cap. Entering your own rate in Setup overrides both. Without a balance,
 repayments simply carry on until you retire.
 
+**Extra payments** (optional, a month) are voluntary payments on top of what comes out
+of your pay. They're paid from your take-home pay, so they come out of what's left over
+each month (shown on Now with your debt payments), and stop once the loan is repaid or
+written off. The student loan panel shows the effect: when you'd repay the loan anyway,
+"Pay £100 a month extra" shows how much sooner it ends and how much less you repay;
+when it's likely to be written off, extra payments aren't suggested, because you'd be
+paying money that would otherwise be written off.
+
 ## How the projection works
 
 Each year, in order:
@@ -288,7 +309,9 @@ js/model/sample.js         fictional sample household and example scenarios
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
-js/ui/*.js                 one file per screen, plus field, chart, checklist and DOM helpers
+js/calc/outcomes.js        the results you can tap into: drivers, levers, before/after
+js/ui/*.js                 one file per screen, plus field, chart, checklist, panel
+                           (sheet.js, explore.js) and DOM helpers
 js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
 docs/PLAN.md               build plan
@@ -304,7 +327,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-136 tests cover:
+145 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
@@ -335,6 +358,9 @@ npm test   # Node 18+, no dependencies to install
   equity, and debts being paid off.
 - **Scenarios:** copying, the limit, rename and delete, differences, comparison,
   one-tap what-ifs, upgrading older data.
+- **Detail panels:** every outcome evaluates and lists drivers that exist, changes on a
+  copy show before and after without touching your plan, levers report their effect,
+  your retirement goal, moving leftover shares, and ideas grouped by outcome.
 - **Data handling:** parsing and validation, cleaning up imported data (including ideas
   you've ticked off), export/import round trips, and the "Finish your plan" checklist.
 - **Checks on the source:** no code can make network requests, every script is
@@ -343,7 +369,7 @@ npm test   # Node 18+, no dependencies to install
 
 ## Accessibility
 
-Checked with axe-core on every screen in light and dark mode (WCAG 2.1 AA, no
+Checked with axe-core on every screen and in an open detail panel, in light and dark mode (WCAG 2.1 AA, no
 violations). Inputs have labels and help text, errors are announced, charts have a
 table or keyboard readout (arrow keys), colour is never the only signal, and the layout
 works from 320px wide with no sideways scrolling.

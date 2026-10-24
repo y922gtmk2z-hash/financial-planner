@@ -36,11 +36,16 @@
   // Fields under `assumptions.` are the same values shown in the Assumptions panel.
   const SECTIONS = [
     {
-      id: 'about', title: 'About you',
-      intro: 'Used to work out how many years until retirement.',
+      id: 'about', title: 'About you and your goal',
+      intro: 'Your age, and what you\u2019re aiming for in retirement.',
       fields: [
         { path: 'about.age', label: 'Your age', type: 'int', min: 16, max: 100, suffix: 'years', nullable: true,
           help: 'Your age today, in whole years.' },
+        { path: 'assumptions.retirementAge', label: 'When you\u2019d like to retire', type: 'int', min: 40, max: 80, suffix: 'years old',
+          help: 'When your salary and workplace pension contributions stop.', shared: true },
+        { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
+          nullPlaceholder: 'Same as now',
+          help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
       ],
     },
     {
@@ -93,6 +98,8 @@
           help: 'The April after you left your course. Used to work out when any balance left is written off.' },
         { path: 'income.studentLoanRate', label: 'Your own interest rate (optional)', type: 'pct', min: 0, max: 20, nullable: true, suffix: '% a year', group: 'studentLoan',
           help: 'Leave blank to use your plan\u2019s current rate (Plan 2 depends on income). Whether it stays the same or follows inflation in future years is set in Assumptions.' },
+        { path: 'income.studentLoanOverpayment', label: 'Extra payments (optional)', type: 'money', suffix: 'a month', group: 'studentLoan',
+          help: 'Voluntary payments on top of what comes out of your pay, from your take-home pay. They stop when the loan is repaid or written off. If it\u2019s likely to be written off, extra payments may be money you\u2019d never have had to pay.' },
         { path: 'assumptions.employerPensionPct', label: 'Employer pension contribution', type: 'pct', min: 0, max: 100, suffix: '% of salary',
           help: 'Shared with the Assumptions panel.', shared: true, advanced: true },
         { path: 'income.pensionMethod', label: 'How your pension is paid', type: 'select', options: PENSION_METHODS, advanced: true,
@@ -180,10 +187,8 @@
     { key: 'monthly', label: 'Per month', type: 'money' },
   ];
 
-  const DEFAULT_SPENDING_CATEGORIES = [
-    'Bills & utilities', 'Council tax', 'Groceries', 'Transport', 'Childcare',
-    'Insurance', 'Eating out & leisure', 'Holidays', 'Other',
-  ];
+  // One total to start with; you can split it into categories if that helps.
+  const DEFAULT_SPENDING_CATEGORIES = ['Everything'];
 
   let idCounter = 0;
   function newId(prefix) {
@@ -201,10 +206,12 @@
       debts: [],
       income: {
         grossSalary: 0, bonuses: [], sacrifices: [], studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
-        studentLoanRate: null, region: 'rUK', pensionMethod: 'netPay',
+        studentLoanRate: null, studentLoanOverpayment: 0, region: 'rUK', pensionMethod: 'netPay',
       },
       savings: [],
       leftover: { ...LEFTOVER_DEFAULT },
+      // What you're aiming for. retirementIncome: a month in today's money, or null for "what you spend now".
+      goals: { retirementIncome: null },
       // Ideas you've marked done or hidden: { [idea id]: 'done' | 'hidden' }.
       ideas: {},
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),

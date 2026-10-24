@@ -134,3 +134,9 @@ test('ideas you mark done or hidden are kept; anything else is dropped', () => {
   assert.deepEqual(p.ideas, { isa: 'done', match: 'hidden' });
   assert.deepEqual(FP.profile.blank().ideas, {});
 });
+
+test('a new plan starts with one spending category', () => {
+  const p = FP.profile.blank();
+  assert.equal(p.spending.length, 1);
+  assert.equal(p.spending[0].monthly, 0);
+});

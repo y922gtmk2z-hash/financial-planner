@@ -198,6 +198,8 @@
       let slRepaid = slDue;
       let slInterest = 0;
       let slWrittenOff = 0;
+      let slExtra = 0; // voluntary payments, from take-home pay
+      const slExtraMonthly = profile.income.studentLoanOverpayment || 0;
       if (slTracked) {
         slRepaid = 0;
         const override = profile.income.studentLoanRate;
@@ -218,12 +220,14 @@
           const rate = FP.studentLoan.publishedRatesApply(year, month, cfgY) ? ratePublished : rateFuture;
           const interest = slBal * rate / 100 / 12;
           const paid = Math.min(slBal + interest, slDue / 12);
-          slBal = slBal + interest - paid;
+          const extra = Math.min(slBal + interest - paid, slExtraMonthly);
+          slBal = slBal + interest - paid - extra;
           slInterest += interest;
-          slRepaid += paid;
+          slRepaid += paid + extra;
+          slExtra += extra;
         }
         if (slBal <= 0.5) slBal = 0;
-        takeHome += slDue - slRepaid;
+        takeHome += slDue - (slRepaid - slExtra);
       }
       const statePension = startAge >= a.statePensionAge ? (a.statePension || 0) * priceFactor : 0;
       const statePensionTax = FP.tax.incomeTaxOnly(statePension, region, cfgY);
@@ -283,7 +287,7 @@
       } else if (saved.overCashLimit) {
         warnOnce('cashIsaLimit', `From ${startYear + y} (age ${age0 + y}) your cash ISA savings are more than the ${fmt(a.cashIsaLimit)} cash ISA limit for under-65s. The extra is saved as ordinary cash.`);
       }
-      const surplus = netIncome - spending - mortgagePaid - debtPaid - saved.total;
+      const surplus = netIncome - spending - mortgagePaid - debtPaid - slExtra - saved.total;
 
       // Regular savings go in first (so they take ISA allowance before the leftover money is shared out).
       cash += saved.cash;
@@ -383,7 +387,7 @@
 
       rows.push(snapshot(y, {
         working, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
-        studentLoanRepaid: slRepaid, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
+        studentLoanRepaid: slRepaid, studentLoanExtra: slExtra, studentLoanInterest: slInterest, studentLoanWrittenOff: slWrittenOff,
         netIncome, spending, mortgagePaid, debtPaid, surplus, ...flow,
       }));
     }
@@ -444,7 +448,7 @@
   // A row's money values in today's money.
   const MONEY_KEYS = [
     'home', 'mortgage', 'equity', 'cash', 'isa', 'gia', 'pension', 'other', 'debts', 'studentLoan', 'shortfall', 'assets',
-    'studentLoanRepaid', 'studentLoanInterest', 'studentLoanWrittenOff',
+    'studentLoanRepaid', 'studentLoanExtra', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
     'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',

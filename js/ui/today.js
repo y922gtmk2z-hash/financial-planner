@@ -113,7 +113,7 @@
     return h('section', { class: 'card', 'aria-labelledby': 'cf-h' },
       h('h2', { id: 'cf-h' }, 'Monthly cash flow'),
       dl([
-        ['Take-home pay', h('a', { href: '#income' }, money(cf.takeHomeMonthly))],
+        ['Take-home pay', h('a', { href: '#now/pay' }, money(cf.takeHomeMonthly))],
       ]),
       pay.bonusPayments.length ? h('p', { class: 'muted small' },
         'A regular month, without bonuses paid in a particular month. After deductions, bonuses add ',
@@ -122,8 +122,9 @@
       dl([
         ['Spending', money(cf.spendingMonthly)],
         ['Mortgage (incl. overpayment)', money(cf.mortgageMonthly)],
-        ['Other debt payments', money(cf.debtMonthly)],
-      ]),
+        ['Other debt payments', money(cf.debtMonthly - cf.studentLoanExtraMonthly)],
+        cf.studentLoanExtraMonthly > 0 ? ['Extra student loan payments', money(cf.studentLoanExtraMonthly)] : null,
+      ].filter(Boolean)),
       h('div', { class: 'total-row' }, h('span', null, 'Total going out'), h('strong', null, money(cf.outgoings))),
       cf.savingsMonthly > 0 ? [
         h('div', { class: 'total-row' }, h('span', null, 'Left after spending and debts'), h('strong', null, money(cf.available))),
@@ -162,5 +163,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.today = { title: 'Today', render };
+  FP.screens.today = { title: 'Today', render, parts: { netWorthCard, chartCard, homeCard, cashFlowCard } };
 })(globalThis.FP = globalThis.FP || {});

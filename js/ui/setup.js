@@ -20,9 +20,70 @@
     return FP.summary.checklist(p).blocking.filter((i) => ids.includes(i.id));
   }
 
+  // Quick start: the few figures that give you a first answer.
+  const QUICK = [
+    'about.age', 'assumptions.retirementAge', 'income.grossSalary', 'spending.0.monthly',
+    'assets.cashSavings', 'assets.pension', 'assets.isa',
+    'mortgage.balance', 'assumptions.mortgageRate', 'mortgage.remainingTermYears',
+  ];
+  const MORTGAGE_DETAIL = ['assumptions.mortgageRate', 'mortgage.remainingTermYears'];
+
+  function quickStart(root, ctx, setMode) {
+    const p = ctx.profile();
+    const mortgageDetail = [];
+    const field = (path) => {
+      let f = FP.profile.fieldFor(path);
+      if (path === 'spending.0.monthly') {
+        f = { path, label: 'What you spend in a month', type: 'money', suffix: 'a month',
+          help: 'Everything except your mortgage and debt payments. A rough total is fine \u2014 you can split it into categories later.' };
+      }
+      if (path === 'assets.isa') f = { ...f, label: 'Investments (ISAs and others)', help: 'Stocks & shares ISAs and other investment accounts, not pensions.' };
+      const el = FP.field.render(f, {
+        value: FP.profile.get(p, path),
+        onChange: (v) => {
+          ctx.update(path, v);
+          if (path === 'mortgage.balance') mortgageDetail.forEach((m) => { m.hidden = !(v > 0); });
+        },
+      });
+      if (MORTGAGE_DETAIL.includes(path)) { el.hidden = !(p.mortgage.balance > 0); mortgageDetail.push(el); }
+      return el;
+    };
+    // Several spending categories already: show the total and send you to them.
+    const spendField = p.spending.length === 1 ? Object.assign(field('spending.0.monthly'), { id: 'spending' })
+      : h('p', null, `Monthly spending: ${money(p.spending.reduce((t, r) => t + (r.monthly || 0), 0))} across ${p.spending.length} categories. `,
+        h('button', { type: 'button', class: 'link', onclick: () => setMode('all') }, 'Change them'));
+    FP.dom.add(root,
+      h('h1', null, 'Quick start'),
+      h('p', { class: 'lead' }, 'A few figures give you a first answer. You can add detail \u2014 bonuses, debts, your student loan, regular savings \u2014 at any time.'),
+      h('section', { class: 'card', 'aria-labelledby': 'qs-you' },
+        h('h2', { id: 'qs-you' }, 'You and your pay'),
+        field('about.age'), field('assumptions.retirementAge'), field('income.grossSalary'), spendField),
+      h('section', { class: 'card', 'aria-labelledby': 'qs-own' },
+        h('h2', { id: 'qs-own' }, 'What you have'),
+        h('p', { class: 'muted' }, 'Leave anything that doesn\u2019t apply blank.'),
+        field('assets.cashSavings'), field('assets.pension'), field('assets.isa'),
+        field('mortgage.balance'), field('assumptions.mortgageRate'), field('mortgage.remainingTermYears')),
+      h('div', { class: 'step-footer' }, h('div', { class: 'button-row' },
+        h('button', { type: 'button', class: 'secondary', onclick: () => setMode('steps') }, 'Add more detail'),
+        h('button', { type: 'button', onclick: () => calculate(ctx, root) }, 'See my plan'))));
+    const strip = liveStrip(ctx, root);
+    let timer = null;
+    root.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(strip.refresh, 200); });
+    root.appendChild(strip);
+  }
+
   function render(root, ctx) {
     const p = ctx.profile();
-    let mode = FP.store.pref('setupMode') || (FP.summary.checklist(p).ready ? 'all' : 'steps');
+    let mode = FP.store.pref('setupMode') || (FP.summary.checklist(p).ready ? 'all' : 'quick');
+    // A link to a field that isn't in the quick start opens the full Setup.
+    const target = (location.hash.split('/')[1] || '');
+    if (mode === 'quick' && target && !QUICK.includes(decodeURIComponent(target)) && target !== 'spending') mode = 'all';
+    const switchMode = (m) => {
+      FP.store.pref('setupMode', m);
+      ctx.rerender();
+      window.scrollTo(0, 0);
+    };
+    if (mode === 'quick') { quickStart(root, ctx, switchMode); return; }
     let current = Math.min(STEPS.length - 1, Number(FP.store.pref('setupStep')) || 0);
     const visited = new Set((FP.store.pref('setupVisited') || '').split(',').filter(Boolean));
 
@@ -59,12 +120,7 @@
       }
     }
 
-    function setMode(m) {
-      mode = m;
-      FP.store.pref('setupMode', m);
-      draw();
-      window.scrollTo(0, 0);
-    }
+    const setMode = switchMode;
 
     function draw() {
       const steps = mode === 'steps';
@@ -90,8 +146,10 @@
         h('p', { class: 'lead' }, steps
           ? `Step ${current + 1} of ${STEPS.length}. Changes save automatically on this device. Leave anything that doesn\u2019t apply blank.`
           : 'Enter your numbers once \u2014 every screen uses them. Changes save automatically on this device. Blank boxes count as \u00a30.'),
-        h('button', { type: 'button', class: 'link', onclick: () => setMode(steps ? 'all' : 'steps') },
-          steps ? 'Show everything on one page' : 'Go step by step'));
+        h('span', { class: 'mode-links' },
+          h('button', { type: 'button', class: 'link', onclick: () => setMode(steps ? 'all' : 'steps') },
+            steps ? 'Show everything on one page' : 'Go step by step'),
+          h('button', { type: 'button', class: 'link', onclick: () => setMode('quick') }, 'Quick start')));
       groups.forEach((g, i) => { g.hidden = steps && i !== current; });
       calc.hidden = steps;
       footer.hidden = !steps;
@@ -215,7 +273,7 @@
       const p = ctx.profile();
       FP.dom.fill(card,
         h('h2', { id: 'sec-spend' }, 'Monthly spending'),
-        h('p', { class: 'muted' }, 'Typical monthly spend by category. Don’t include your mortgage or debt payments — those are added from above.'),
+        h('p', { class: 'muted' }, 'What you typically spend in a month. One total is fine, or add categories if it helps you work it out. Don\u2019t include your mortgage or debt payments \u2014 those are added from above.'),
         h('div', { class: 'spend-list' }, p.spending.map((r, i) => h('div', { class: 'spend-row' },
           FP.field.render(FP.profile.SPENDING_FIELDS[0], {
             value: r.category, compact: true,

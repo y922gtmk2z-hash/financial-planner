@@ -97,7 +97,7 @@
     return { lastExport, lastChange, changedSince, due: changedSince && old };
   }
 
-  // A gentle reminder on Overview, which you can put off for 30 days.
+  // A gentle reminder on Your plan, which you can put off for 30 days.
   function nudge(ctx) {
     const until = FP.store.pref('backupNudgeUntil');
     if (!status().due || (until && Date.now() < Date.parse(until))) return null;

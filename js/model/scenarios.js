@@ -201,6 +201,14 @@
     },
   ];
 
+  // Adds `profile` as a new scenario without switching to it. Returns it, or null at the limit.
+  function addProfile(ws, profile, name) {
+    if (ws.scenarios.length >= MAX_SCENARIOS) return null;
+    const sc = { id: newId(), name: uniqueName(ws, cleanName(name, 'What if')), profile: FP.profile.normalise({ ...profile, isSample: false }) };
+    ws.scenarios.push(sc);
+    return sc;
+  }
+
   // Adds a what-if as a copy of the baseline, keeping the scenario you're on. Returns it, or null.
   function fromPreset(ws, presetId) {
     const preset = PRESETS.find((x) => x.id === presetId);
@@ -216,6 +224,6 @@
 
   FP.scenarios = {
     MAX_SCENARIOS, PRESETS, fromProfile, normalise, find, active, isBaseline,
-    clone, fromPreset, rename, remove, setActive, differences,
+    clone, fromPreset, addProfile, rename, remove, setActive, differences,
   };
 })(globalThis.FP = globalThis.FP || {});
