@@ -535,6 +535,21 @@
       ctx.toast('Fix the highlighted box first.');
       return;
     }
+    // Without these, Your plan goes back to the quick start, so point to them here.
+    const missing = FP.summary.checklist(ctx.profile()).blocking;
+    if (missing.length) {
+      const t = missing[0].target;
+      const el = root.querySelector(`[data-path="${CSS.escape(t)}"]`) || root.querySelector(`#${CSS.escape(t)}`);
+      if (el) {
+        el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true })); // opens the step it's in
+        el.closest('details') && (el.closest('details').open = true);
+        const input = el.querySelector('input') || el;
+        input.focus();
+        input.scrollIntoView({ block: 'center' });
+      }
+      ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
+      return;
+    }
     ctx.go('overview');
   }
 

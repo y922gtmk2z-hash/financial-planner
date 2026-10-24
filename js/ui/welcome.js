@@ -48,6 +48,15 @@
       h('button', { type: 'button', class: 'quick-go', onclick: () => {
         const bad = card.querySelector('[aria-invalid="true"]');
         if (bad) { bad.focus(); ctx.toast('Fix the highlighted box first.'); return; }
+        // Your plan shows this page again until these are in, so say what's missing.
+        const missing = FP.summary.checklist(ctx.profile()).blocking;
+        if (missing.length) {
+          const first = missing[0].id === 'spending' ? SPEND_FIELD.path : missing[0].target;
+          const input = card.querySelector(`[data-path="${CSS.escape(first)}"] input`);
+          if (input) input.focus();
+          ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
+          return;
+        }
         ctx.go('overview');
       } }, 'See my plan'));
     (root || card).addEventListener('input', (e) => {
