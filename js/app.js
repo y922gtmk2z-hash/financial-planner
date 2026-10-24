@@ -32,6 +32,13 @@
       status.textContent = 'Saving…';
       saveTimer = setTimeout(save, 300);
     },
+    // Replace the scenario you're editing with a changed copy (from a detail panel).
+    replaceProfile(p) {
+      const sc = FP.scenarios.active(workspace);
+      sc.profile = FP.profile.normalise({ ...p, isSample: sc.profile.isSample });
+      ctx.changed();
+      route();
+    },
     replaceWorkspace(ws) {
       workspace = ws;
       save();

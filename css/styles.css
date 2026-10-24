@@ -642,3 +642,75 @@ fieldset.row-card { min-width: 0; }
 .ideas-put-away .ideas { margin-top: 4px; }
 .ideas-put-away .idea { opacity: 0.8; }
 .preset-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Detail panels (sheet) ---------- */
+html.sheet-open { overflow: hidden; }
+.sheet {
+  position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: 100%;
+  max-height: 92vh; max-height: 92dvh; padding: 0; border: 0; border-radius: 16px 16px 0 0;
+  background: var(--bg); color: var(--text); box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column;
+}
+.sheet:not([open]) { display: none; }
+.sheet::backdrop { background: rgba(0, 0, 0, 0.45); }
+@media (min-width: 900px) {
+  .sheet { inset: 0 0 0 auto; width: 460px; max-height: 100vh; height: 100vh; border-radius: 16px 0 0 16px; }
+}
+.sheet-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px var(--gutter) 10px; border-bottom: 1px solid var(--border);
+}
+.sheet-head h2 { margin: 0; font-size: 1.1rem; }
+.sheet-close { font-size: 1.5rem; }
+.sheet-body { overflow-y: auto; padding: 12px var(--gutter) calc(24px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
+.sheet-headline { font-size: 1.5rem; font-weight: 700; margin: 0 0 2px; font-variant-numeric: tabular-nums; }
+.sheet-metrics { margin: 10px 0; }
+.sheet-chart { margin: 8px 0 4px; }
+.delta { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+.delta.better { color: var(--good); }
+.delta.worse { color: var(--danger); }
+.delta.changed { color: var(--text-2); }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 12px; padding: 12px; border-radius: var(--radius); background: var(--accent-soft); }
+.sheet-drivers .field { margin-bottom: 10px; }
+.sheet-drivers h3, .sheet-levers h3, .sheet-ideas h3 { margin-top: 18px; }
+.lever-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lever-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+}
+.lever-list li > span { display: flex; flex-direction: column; min-width: 0; }
+.lever-list button { flex: none; }
+
+/* ---------- Outcome cards (Overview) ---------- */
+.outcome h2 { margin-bottom: 6px; }
+.verdict { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; margin: 0 0 10px; }
+.verdict-icon {
+  flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; margin-top: 1px;
+  border-radius: 50%; font-size: 0.8rem; font-weight: 700;
+}
+.verdict.ok .verdict-icon { background: var(--good); color: var(--bg); }
+.verdict.warn .verdict-icon { background: var(--warn-bg); color: var(--warn-ink); }
+.verdict.info .verdict-icon { background: var(--surface-2); color: var(--text-2); }
+.outcome-rows { list-style: none; margin: 0; padding: 0; }
+.outcome-rows li + li { border-top: 1px solid var(--border); }
+.outcome-row {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  min-height: 52px; padding: 8px 28px 8px 0; border: 0; background: none; color: inherit; font: inherit;
+  text-align: left; text-decoration: none; cursor: pointer;
+}
+.outcome-row:hover strong { color: var(--accent); }
+.outcome-row .row-label { display: flex; flex-direction: column; min-width: 0; }
+.outcome-row .row-label small { font-size: 0.78rem; color: var(--text-2); }
+.outcome-row strong { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.outcome-row .go { right: 2px; font-size: 1.3rem; }
+.card-idea {
+  display: flex; gap: 10px; align-items: flex-start; width: 100%; margin-top: 10px; padding: 10px 12px;
+  border: 0; border-radius: 10px; background: var(--surface-2); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.card-idea.warn { background: var(--warn-bg); }
+.card-idea > span:last-child { display: flex; flex-direction: column; }
+.card-idea > span:last-child span { font-size: 0.85rem; color: var(--text-2); }
+.card-idea .idea-icon { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid currentColor; font-size: 0.75rem; font-weight: 700; }
+.card-idea.warn .idea-icon, .card-idea.warn strong { color: var(--warn-ink); }
+.sheet-titles { min-width: 0; }
+.sheet-status { margin: 2px 0 0; font-size: 0.9rem; font-weight: 600; }

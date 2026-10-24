@@ -17,6 +17,7 @@ const FILES = [
   'js/calc/projection.js',
   'js/calc/compare.js',
   'js/calc/suggest.js',
+  'js/calc/outcomes.js',
 ];
 
 FILES.forEach((f) => require(path.join(__dirname, '..', f)));

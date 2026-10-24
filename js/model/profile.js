@@ -36,11 +36,16 @@
   // Fields under `assumptions.` are the same values shown in the Assumptions panel.
   const SECTIONS = [
     {
-      id: 'about', title: 'About you',
-      intro: 'Used to work out how many years until retirement.',
+      id: 'about', title: 'About you and your goal',
+      intro: 'Your age, and what you\u2019re aiming for in retirement.',
       fields: [
         { path: 'about.age', label: 'Your age', type: 'int', min: 16, max: 100, suffix: 'years', nullable: true,
           help: 'Your age today, in whole years.' },
+        { path: 'assumptions.retirementAge', label: 'When you\u2019d like to retire', type: 'int', min: 40, max: 80, suffix: 'years old',
+          help: 'When your salary and workplace pension contributions stop.', shared: true },
+        { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
+          nullPlaceholder: 'Same as now',
+          help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
       ],
     },
     {
@@ -203,6 +208,8 @@
       },
       savings: [],
       leftover: { ...LEFTOVER_DEFAULT },
+      // What you're aiming for. retirementIncome: a month in today's money, or null for "what you spend now".
+      goals: { retirementIncome: null },
       // Ideas you've marked done or hidden: { [idea id]: 'done' | 'hidden' }.
       ideas: {},
       spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),

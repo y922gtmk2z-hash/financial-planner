@@ -46,7 +46,7 @@
         inputmode: numeric ? (field.type === 'int' ? 'numeric' : 'decimal') : null,
         autocomplete: 'off',
         spellcheck: numeric ? 'false' : null,
-        placeholder: field.placeholder || (numeric ? (field.nullable ? opts.nullPlaceholder || 'Not set' : '0') : ''),
+        placeholder: field.placeholder || (numeric ? (field.nullable ? opts.nullPlaceholder || field.nullPlaceholder || 'Not set' : '0') : ''),
         value: FP.dom.inputText(field, opts.value),
         'aria-describedby': `${helpId} ${errId}`,
         maxlength: numeric ? 16 : 60,
