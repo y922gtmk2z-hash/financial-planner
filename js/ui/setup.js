@@ -526,13 +526,30 @@
     return strip;
   }
 
+  // Opens the step (and any folded sections) a box is in, then puts you in it.
+  function reveal(el) {
+    el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true }));
+    for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    const input = el.matches('input, select') ? el : el.querySelector('input, select') || el;
+    input.focus();
+    input.scrollIntoView({ block: 'center' });
+  }
+
   function calculate(ctx, root) {
+    // It may be in a step you've moved on from, so open that step first.
     const bad = root.querySelector('[aria-invalid="true"]');
     if (bad) {
-      bad.closest('details') && (bad.closest('details').open = true);
-      bad.focus();
-      bad.scrollIntoView({ block: 'center' });
+      reveal(bad);
       ctx.toast('Fix the highlighted box first.');
+      return;
+    }
+    // Without these, Your plan goes back to the quick start, so point to them here.
+    const missing = FP.summary.checklist(ctx.profile()).blocking;
+    if (missing.length) {
+      const t = missing[0].target;
+      const el = root.querySelector(`[data-path="${CSS.escape(t)}"]`) || root.querySelector(`#${CSS.escape(t)}`);
+      if (el) reveal(el);
+      ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
       return;
     }
     ctx.go('overview');

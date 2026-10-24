@@ -12,9 +12,11 @@
   const SPEND_FIELD = { path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month',
     help: 'Apart from your mortgage and debt payments. A rough figure is fine.' };
 
+  const spendTotal = (p) => p.spending.reduce((t, r) => t + (Number(r.monthly) || 0), 0);
   // Spending already split into categories is edited in Setup, not here.
+  const splitSpending = (p) => p.spending.length > 1 && spendTotal(p) > 0;
   function quickPaths(p) {
-    return QUICK.filter((path) => path !== SPEND_FIELD.path || p.spending.length <= 1);
+    return QUICK.filter((path) => path !== SPEND_FIELD.path || !splitSpending(p));
   }
   const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
   const questionCount = (p) => COUNT_WORDS[quickPaths(p).length];
@@ -32,6 +34,8 @@
   function quickStart(ctx, root) {
     const p = ctx.profile();
     if (!p.spending.length) p.spending.push(FP.profile.newSpending());
+    // Older plans started with nine empty categories: make them one line to fill in.
+    if (p.spending.length > 1 && !splitSpending(p)) p.spending = [{ ...FP.profile.newSpending(), category: 'Everything' }];
     const paths = quickPaths(p);
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
       h('h1', { id: 'quick-h' }, 'Quick start'),
@@ -48,6 +52,15 @@
       h('button', { type: 'button', class: 'quick-go', onclick: () => {
         const bad = card.querySelector('[aria-invalid="true"]');
         if (bad) { bad.focus(); ctx.toast('Fix the highlighted box first.'); return; }
+        // Your plan shows this page again until these are in, so say what's missing.
+        const missing = FP.summary.checklist(ctx.profile()).blocking;
+        if (missing.length) {
+          const first = missing[0].id === 'spending' ? SPEND_FIELD.path : missing[0].target;
+          const input = card.querySelector(`[data-path="${CSS.escape(first)}"] input`);
+          if (input) input.focus();
+          ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
+          return;
+        }
         ctx.go('overview');
       } }, 'See my plan'));
     (root || card).addEventListener('input', (e) => {
