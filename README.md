@@ -44,10 +44,16 @@ Your data).
 
 **Your journey:**
 
-1. **Quick start.** The first time, Setup asks for just a few figures: your age, when
-   you'd like to retire, salary, what you spend in a month (one total is fine), cash,
-   pensions, investments and your mortgage. **See my plan** shows your answer;
-   **Add more detail** opens the full Setup (step by step, or everything on one page).
+1. **Setup**, in four sections (section by section the first time, then on one page):
+   - **About you:** your age, when you'd like to retire, what you'd like to spend in
+     retirement, and your salary. **More about your pay** (folded away) has your
+     pension, bonuses, salary sacrifice, **workplace benefits** (private medical
+     insurance or another taxable benefit) and **other income**.
+   - **What you spend and save:** one question on what you spend in a month (split it
+     into categories if you like), one on what you save each month, then **your
+     leftover money**.
+   - **Assets:** what you own today.
+   - **Debts:** what you owe: mortgage, student loan and other debts.
 2. **Your plan** answers four questions, each with a verdict and its top
    recommendation: **Each month** (take-home, what's left over, emergency fund),
    **Debt-free** (mortgage, student loan, other debts), **Retirement** (what you could
@@ -69,7 +75,7 @@ can open. The scenario picker appears once you have more than one scenario.
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Now** | Where you stand today, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Setup** (header) | Quick start, then everything in full, step by step or on one page: your age and goal, assets, mortgage, other debts, income (salary, pension, student loan, bonuses, salary sacrifice), monthly spending (one total or categories), **regular savings** and **your leftover money**. A strip above the tabs shows take-home and what's left over as you type. |
+| **Setup** (header) | Four sections: **About you** (age, retirement goal, salary, and folded away: pension, bonuses, salary sacrifice, workplace benefits, other income), **What you spend and save** (spending as one total or categories, regular savings, your leftover money), **Assets** and **Debts** (mortgage, student loan, other debts). Section by section the first time, then one page. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, your leftover money (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8 side by side in a table and an overlay chart. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (retirement age, mortgage rate, pension %) link there. |
@@ -124,7 +130,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
 | Retirement goal (in Setup) | what you spend now (or a monthly amount you set) |
 | Monthly spending (new plan) | one total; add categories if you like |
-| Leftover money (your choice, in Setup) | 10% emergency fund (target: 3 months of outgoings), 0% paying off debts faster, 20% cash, 50% investments, 10% mortgage overpayment, 10% pension |
+| Leftover money (your choice, in Setup) | nothing chosen, so nothing saved (emergency fund target: 3 months of outgoings). The sample household uses 10% emergency fund, 20% cash, 50% investments, 10% mortgage, 10% pension |
 
 ## Tax rules — check every tax year
 
@@ -153,10 +159,12 @@ more. You then choose what to do with it: your **emergency fund**, **paying off 
 faster** (most expensive first), **cash savings**, **investments** (ISA first),
 **mortgage overpayments** or **extra pension contributions**. Each choice shows what it
 comes to in £ a month, and the projection shares out each year's leftover money the
-same way. Anything you don't allocate goes to cash.
+same way. **Nothing is saved until you choose:** a new plan starts with nothing chosen,
+and any part you don't allocate is treated as spent, not put into savings. Your plan
+says when you haven't chosen yet, and the suggested split is one tap away.
 
 When a choice can't take its share in a year, the share goes to your other choices in
-proportion (or to cash if there are none): the emergency fund once it's full, debts and
+proportion (and isn't saved if none of them can take it): the emergency fund once it's full, debts and
 the mortgage once they're paid off, pension contributions once you retire, and
 mortgage overpayments above your lender's limit (10% of the balance a year by default;
 you can turn this off in Assumptions).
@@ -205,6 +213,20 @@ pay. They:
 
 Anything left over after regular savings is shared out as you choose under **Your
 leftover money**.
+
+## Workplace benefits and other income
+
+Under **About you → More about your pay**:
+
+- **Workplace benefits:** private medical insurance or another taxable benefit, with its
+  yearly taxable value (from your P11D or payslip). It's taxed as income with your pay,
+  with no employee National Insurance, and the editor shows what it costs you in tax a
+  month. In the projection it rises with prices.
+- **Other income:** other taxable income a year (for example rental profit or
+  self-employment; income tax is worked out with your salary, but National Insurance
+  and student loan on it aren't modelled) and tax-free income, and whether it carries
+  on after you retire. Both rise with prices; after you retire they're taxed together
+  with your State Pension and any pension you draw.
 
 ## Salary sacrifice
 
@@ -327,16 +349,20 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-145 tests cover:
+152 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
   bonuses spread evenly or paid in a month, and thresholds raised with inflation.
+- **Workplace benefits and other income:** medical insurance taxed with no NI, other
+  income taxed with your salary (into the higher rate), tax-free income, bonus months
+  still adding up, carrying on after retirement only when chosen, and import checks.
 - **Leftover money and suggestions:** what's left, each suggestion's trigger
   (shortfall, emergency fund, expensive debts, higher rate, the 60% band, mortgage, ISA
   room, student loan write-off), the suggested splits always adding up to 100% and
   including the emergency fund (and debts when they're expensive), the fund filling to
-  your target then passing its share on, and older saved splits carrying over.
+  your target then passing its share on, leftover money not saved until you choose,
+  and older saved splits carrying over.
 - **Regular savings:** totals by type, contributions to the right balances, the ISA
   allowance and cash ISA limit (from April 2027, not for over-65s), amounts rising
   with pay, savings reducing the surplus, stopping at retirement, and import checks.
