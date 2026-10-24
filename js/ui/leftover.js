@@ -137,7 +137,9 @@
             : h('button', {
               type: 'button', class: 'secondary small',
               onclick: () => {
-                FP.projection.setSplitFromPct(p.leftover, r.split, left);
+                // The same change as "Use the suggested split" on Actions.
+                const act = FP.suggest.splitAction(p, r);
+                if (act) Object.assign(p.leftover, FP.patch.applyPatch(p, act.patch).leftover);
                 ctx.changed();
                 drawFields();
                 refresh();
@@ -209,7 +211,7 @@
         put.length ? h('li', { class: 'ideas-put-away' }, h('details', null,
           h('summary', null, `${put.length} done or hidden`),
           h('ul', { class: 'ideas' }, put.map((s) => idea(s, h('div', { class: 'idea-actions' },
-            h('span', { class: 'muted small' }, marks[s.id] === 'done' ? '\u2713 Done' : 'Hidden'),
+            h('span', { class: 'muted small' }, marks[s.id] === 'done' ? '\u2713 Done' : marks[s.id] === 'applied' ? '\u2713 Applied' : 'Hidden'),
             h('button', { type: 'button', class: 'link', onclick: () => mark(s.id, null) }, 'Bring back'))))))) : null);
     }
 

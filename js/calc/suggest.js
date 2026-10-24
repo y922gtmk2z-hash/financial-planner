@@ -57,19 +57,8 @@
     // The plan as it is now, for working out each idea's impact later.
     let asNow = null;
     const add = (id, tone, title, text, patch) => {
-      const idea = { id, tone, title, text, patch: patch || null };
-      if (idea.patch && !asNow) asNow = JSON.parse(JSON.stringify(profile));
-      const from = asNow;
-      let impact;
-      Object.defineProperty(idea, 'impact', {
-        enumerable: true,
-        get: () => {
-          if (impact === undefined) impact = idea.patch ? FP.patch.impact(from, idea.patch) : null;
-          return impact;
-        },
-      });
-      idea.howTo = [];
-      out.push(idea);
+      if (patch && !asNow) asNow = JSON.parse(JSON.stringify(profile));
+      out.push(makeIdea(asNow, id, tone, title, text, patch));
     };
 
     // Nothing left over: that comes first.
@@ -164,6 +153,117 @@
     return { left, essentials, emergency, suggestions: out, split, splitReason: reason, pay, today };
   }
 
+  /*
+   * An idea: { id, tone, title, text, patch, impact, howTo }. impact re-runs the
+   * plan (from `from`, the plan as it was), so it's only worked out when read.
+   */
+  function makeIdea(from, id, tone, title, text, patch) {
+    const idea = { id, tone, title, text, patch: patch || null };
+    let impact;
+    Object.defineProperty(idea, 'impact', {
+      enumerable: true,
+      get: () => {
+        if (impact === undefined) impact = idea.patch ? FP.patch.impact(from, idea.patch) : null;
+        return impact;
+      },
+    });
+    idea.howTo = (HOW_TO[id] || []).slice();
+    return idea;
+  }
+
+  /*
+   * How to make each kind of change, in a few plain steps. General: no
+   * providers or products.
+   */
+  const PENSION_STEPS = [
+    'Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.',
+    'If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.',
+    'Check your next payslip to see the new amount going in.',
+  ];
+  const HOW_TO = {
+    relief: PENSION_STEPS,
+    taper: PENSION_STEPS,
+    isa: [
+      'Decide between a cash ISA and a stocks & shares ISA (for money you won\u2019t need for at least five years).',
+      'Open one, or top up one you already have. The allowance runs from 6 April to 5 April.',
+      'Set up a monthly payment on payday so it happens without thinking about it.',
+    ],
+    mortgage: [
+      'Check your lender\u2019s yearly overpayment limit first (often 10% of the balance), so you don\u2019t pay an early repayment charge.',
+      'Ask whether overpaying shortens your term or lowers your monthly payment.',
+      'Set it up with your lender as a regular monthly amount or a lump sum.',
+    ],
+    debt: [
+      'Pay more than the minimum each month, starting with the most expensive debt.',
+      'For a credit card, consider a 0% balance transfer: check the fee and how long the 0% lasts.',
+      'Set up a direct debit for the higher amount so it\u2019s never late.',
+    ],
+  };
+
+  /*
+   * The suggested split as an action, so the advice and the plan can't disagree:
+   * applying its patch does exactly what "Use this split" does. Null when
+   * there's no suggestion or you're already using it.
+   */
+  function splitAction(profile, r) {
+    r = r || analyse(profile);
+    if (!r.split) return null;
+    const left = Math.max(0, r.left || 0);
+    const now = FP.projection.splitAsPct(profile.leftover, left);
+    if (FP.projection.SPLIT_KEYS.every((k) => Math.abs((now[k] || 0) - r.split[k]) < 0.5)) return null;
+    const next = FP.projection.setSplitFromPct({ ...profile.leftover }, r.split, left);
+    const patch = FP.projection.SPLIT_KEYS.map((k) => ({ path: `leftover.${k}`, op: 'set', value: next[k] }));
+    // Nothing chosen yet means nothing is saved: that's a problem to fix, not a tip.
+    const tone = FP.projection.splitShares(profile.leftover, left).total === 0 ? 'warn' : 'tip';
+    return makeIdea(JSON.parse(JSON.stringify(profile)), 'split', tone, 'Use the suggested split',
+      `${FP.projection.SPLIT_KEYS.filter((k) => r.split[k] > 0).map((k) => `${r.split[k]}% ${SPLIT_NAMES[k]}`).join(', ')}. ${r.splitReason}`, patch);
+  }
+  const SPLIT_NAMES = { emergency: 'emergency fund', debts: 'paying off debts', cash: 'cash savings', invest: 'investments', mortgage: 'mortgage', pension: 'pension' };
+
+  /*
+   * Actions in order: ones that fix a problem (tone 'warn') first, then the
+   * biggest gain in what you could spend in retirement. Ideas with no change to
+   * make go last. Reads each impact, so it re-runs the plan for each.
+   */
+  function rankActions(list) {
+    const gain = (x) => {
+      const c = x.impact && x.impact.change.retirementSpend;
+      return Number.isFinite(c) ? c : -Infinity;
+    };
+    return list.map((x, i) => ({ x, i, g: gain(x) })).sort((p, q) => (p.x.tone === 'warn' ? 0 : 1) - (q.x.tone === 'warn' ? 0 : 1)
+      || (q.x.patch ? 1 : 0) - (p.x.patch ? 1 : 0) || q.g - p.g || p.i - q.i).map((e) => e.x);
+  }
+
+  /*
+   * Up to two figures that say what an action does: its main gain, then what it
+   * costs: less left over each month now, or else whatever gets worse (less to
+   * spend in retirement, more interest, debt-free later), or else its next gain.
+   * The main gain is the interest saved for a change to the mortgage or debts,
+   * else more to spend in retirement, then debt-free sooner, money lasting
+   * longer or more in savings and pensions when you retire.
+   * Returns [{ key, value }]: value is the size of the change (always positive).
+   */
+  function highlights(idea) {
+    const impact = idea && idea.impact;
+    if (!impact) return [];
+    const c = impact.change;
+    const onDebt = idea.patch.some((x) => /^(mortgage|debts)\./.test(x.path));
+    const spend = c.retirementSpend >= 1 ? { key: 'retirementSpend', value: c.retirementSpend } : null;
+    const saved = c.interest <= -1 ? { key: 'interestSaved', value: -c.interest } : null;
+    const gains = (onDebt ? [saved, spend] : [spend, saved]).concat([
+      c.debtFreeAge < 0 ? { key: 'debtFreeSooner', value: -c.debtFreeAge } : null,
+      c.lastsTo > 0 ? { key: 'lastsLonger', value: c.lastsTo } : null,
+      c.atRetirement >= 1 ? { key: 'atRetirement', value: c.atRetirement } : null,
+    ]).filter(Boolean);
+    const costs = [
+      c.leftover <= -1 ? { key: 'leftoverCost', value: -c.leftover } : null,
+      c.retirementSpend <= -1 ? { key: 'retirementSpendCost', value: -c.retirementSpend } : null,
+      c.interest >= 1 ? { key: 'interestCost', value: c.interest } : null,
+      c.debtFreeAge > 0 ? { key: 'debtFreeLater', value: c.debtFreeAge } : null,
+    ].filter(Boolean);
+    return [gains[0], costs[0] || gains[1]].filter(Boolean);
+  }
+
   // Pay `pct` more of your salary into your pension (up to 100%), or null.
   function pensionPatch(profile, pct) {
     const room = 100 - (profile.assumptions.employeePensionPct || 0);
@@ -222,5 +322,5 @@
     };
   }
 
-  FP.suggest = { analyse, suggestSplit, duration, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
+  FP.suggest = { analyse, suggestSplit, splitAction, rankActions, highlights, duration, HOW_TO, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
 })(globalThis.FP = globalThis.FP || {});

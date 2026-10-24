@@ -9,6 +9,7 @@
  *   2  { workspace }: a workspace of scenarios. Files saved at 2 can still
  *      hold older shapes inside a profile, so step 2 → 3 looks for each one.
  *   3  { workspace }, every profile in today's shape.
+ *   4  Ideas can also be marked 'applied' (made to your plan from Actions).
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -75,6 +76,11 @@
         });
         return data;
       },
+    },
+    {
+      from: 3, to: 4,
+      // A new mark, 'applied', for ideas. Nothing saved before it needs changing.
+      up: (data) => data,
     },
   ];
 

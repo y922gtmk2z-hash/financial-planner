@@ -93,6 +93,18 @@
             }, 'Duplicate'),
             renameBtn,
             baseline ? null : h('button', {
+              type: 'button', class: 'link',
+              onclick: () => {
+                const d = new Date();
+                const when = FP.dom.date(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                if (!confirm(`Make \u201c${sc.name}\u201d your plan? It becomes your Baseline, and \u201c${base.name}\u201d is kept as \u201cPrevious plan (${when})\u201d.`)) return;
+                S.makeBaseline(ws, sc.id, when);
+                ctx.changed();
+                ctx.rerender();
+                ctx.toast('This is now your plan. Your previous plan is kept under Scenarios.');
+              },
+            }, 'Make this my plan'),
+            baseline ? null : h('button', {
               type: 'button', class: 'link danger',
               onclick: () => {
                 if (!confirm(`Delete “${sc.name}”? This can’t be undone.`)) return;
