@@ -59,6 +59,7 @@
       const el = FP.field.render(f, {
         value: P.get(ctx.profile(), f.path),
         nullPlaceholder: f.nullPlaceholder,
+        check: FP.welcome.senseCheck(f.path, ctx.profile),
         onChange: (v) => { ctx.update(f.path, v); explain(); },
         extra: note,
       });
@@ -90,11 +91,14 @@
       groupFields(sec, id, make));
   }
 
-  // About you: what the quick start asked, plus how you feel about risk.
+  // Kept in the profile, but not asked until a later version uses it.
+  const HIDDEN = ['about.riskAppetite'];
+
+  // About you: what the quick start asked.
   function aboutCard(ctx) {
     return h('section', { class: 'card', id: 'about', 'aria-labelledby': 'sec-about' },
       h('h2', { id: 'sec-about' }, 'About you'),
-      section('about').fields.map(maker(ctx)));
+      section('about').fields.filter((f) => !HIDDEN.includes(f.path)).map(maker(ctx)));
   }
 
   /*
@@ -438,7 +442,7 @@
     const ctx = {
       ...appCtx,
       update(path, value) { P.set(appCtx.profile(), path, value); ctx.changed(); },
-      changed() { FP.summary.syncOutgoings(appCtx.profile()); appCtx.changed(); },
+      changed() { FP.summary.syncOutgoings(appCtx.profile()); appCtx.changed(); FP.field.recheckAll(root); },
     };
     const saved = FP.store.pref('setupMode');
     // Section by section unless you've chosen the one-page view.
