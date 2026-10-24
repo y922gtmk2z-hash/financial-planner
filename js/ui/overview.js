@@ -47,18 +47,19 @@
       monthCard(p, today, pay, ideas, panel, rough),
       ready && proj.ok ? debtCard(p, proj, ideas, panel) : null,
       ready && proj.ok ? retirementCard(p, proj, ideas, panel, rough) : null,
-      ready && rough ? moreCard() : null,
+      ready && rough ? moreCard(p) : null,
       ready && !rough ? FP.checklist.note(p) : null,
       proj.ok && !rough ? chartCard(proj, today, a, p) : null,
       rough ? null : nextCard(p, a, ctx));
   }
 
   // After the quick start: one clear next move.
-  function moreCard() {
+  function moreCard(p) {
     return h('section', { class: 'card more-detail', 'aria-labelledby': 'more-h' },
       h('h2', { id: 'more-h' }, 'Make it your plan'),
+      FP.checklist.meter(p),
       h('p', null, 'This uses just your quick answers. Add your savings, pensions and any debts and the planner can tell you when you\u2019ll be debt-free, what you could spend in retirement and what to do next.'),
-      h('a', { class: 'button', href: '#setup' }, 'Add your pensions and savings'),
+      h('a', { class: 'button', href: FP.checklist.nextSection(p) }, 'Add your pensions and savings'),
       h('p', { class: 'muted small' }, 'About five minutes. A rough figure is fine.'));
   }
 
@@ -222,6 +223,7 @@
     const n = FP.screens.actions.openActions(p).length;
     return h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
       h('h2', { id: 'next-h' }, 'Next steps'),
+      FP.checklist.meter(p),
       h('ul', null,
         n ? link('#actions', `${n} ${n === 1 ? 'action' : 'actions'} to look at`, 'Apply them, try them as a scenario, or set a reminder \u2014 general rules of thumb, not advice') : null,
         link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),

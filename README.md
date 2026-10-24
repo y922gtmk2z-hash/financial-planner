@@ -55,7 +55,20 @@ money, from the same calculation Your plan uses later: what the projection says
 you'd have (with the default 5% + 3% workplace pension) against what you'd need to
 spend your goal to the end of your plan. A line says it's based on your answers and
 that pensions and savings you already have aren't included yet; the button under it
-is **Add your pensions and savings**. Next steps, ideas and the net-worth chart wait
+is **Add your pensions and savings**. It opens Your figures where the gaps are: the
+first of Assets, Debts, Income (its Advanced part) and Outgoings (itemised) you
+haven't been to yet, or if you've been to them all, the first that's still empty
+(never About you, which the quick start has filled).
+
+A **plan detail meter** ("Plan detail: 3 of 6 · Next: your pension pots", with a
+bar) sits on Your plan (in that card on the first look, under Next steps after)
+and at the top of Your figures, where it follows what you type. It counts your age,
+what goes out, your salary, pension pots, cash savings and your debts (done once
+you've added any or been through Debts, so having none counts), and names the next
+one missing. Your figures also starts with **Have these to hand**: your latest
+payslip and P60 (for Income), pension statements or your provider's app (Assets),
+your mortgage statement and credit card and loan statements (Debts) and your student
+loan balance (Income). It's open the first time, then folded to one line. Next steps, ideas and the net-worth chart wait
 until you've added more (savings, pensions, debts or pay details, or been through
 Assets and Debts). The quick-start answers then live under About you in Your figures.
 

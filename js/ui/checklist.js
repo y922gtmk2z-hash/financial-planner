@@ -51,5 +51,50 @@
       h('a', { class: 'button', href: '#setup' }, 'Get started'));
   }
 
-  FP.checklist = { card, note, isEmpty, emptyCard };
+  const visited = () => (FP.store.pref('setupVisited') || '').split(',').filter(Boolean);
+
+  /*
+   * How much of your plan is in: the checklist's items, plus your debts (done
+   * once you've added any, or been through Debts, so "none" counts too).
+   * Returns { items, done, total, next } (next: the first item still missing).
+   */
+  function detail(p) {
+    const items = FP.summary.checklist(p).items.concat({
+      id: 'debts', label: 'Your debts', target: 'debts', blocking: false,
+      done: p.mortgage.balance > 0 || (p.debts || []).length > 0 || visited().includes('debts'),
+    });
+    const done = items.filter((i) => i.done).length;
+    return { items, done, total: items.length, next: items.find((i) => !i.done) || null };
+  }
+
+  // "Plan detail: 3 of 6 · Next: your pension pots", with a bar.
+  function meter(p) {
+    const d = detail(p);
+    return h('div', { class: 'detail-meter' },
+      h('p', null, h('strong', null, `Plan detail: ${d.done} of ${d.total}`),
+        d.next ? [' \u00b7 ', h('a', { href: `#setup/${d.next.target}` }, `Next: ${d.next.label.replace(/^Your /, 'your ').replace(/^What /, 'what ')}`)]
+          : ' \u00b7 Everything\u2019s in'),
+      h('div', { class: 'meter-bar', 'aria-hidden': 'true' }, h('span', { style: `width:${Math.round((d.done / d.total) * 100)}%` })));
+  }
+
+  /*
+   * Where "Add your pensions and savings" (and any "add more detail" link) opens
+   * Your figures, in this order: Assets, Debts, Income (its Advanced part) and
+   * Outgoings (itemised). The first section you haven't been to yet; if you've
+   * been to them all, the first that's still empty; otherwise Assets. Never
+   * About you, which the quick start has filled.
+   */
+  const GAPS = [
+    { step: 'assets', target: 'assets', empty: (p) => !Object.values(p.assets).some((v) => v > 0) },
+    { step: 'debts', target: 'debts', empty: (p) => !(p.mortgage.balance > 0) && !(p.debts || []).length },
+    { step: 'income', target: 'pay-details', empty: (p) => !(FP.screens.setup && FP.screens.setup.hasPayDetail(p)) },
+    { step: 'outgoings', target: 'out-bills', empty: (p) => !p.spending.some((r) => !r.rest && r.monthly > 0) },
+  ];
+  function nextSection(p) {
+    const seen = visited();
+    const gap = GAPS.find((g) => !seen.includes(g.step)) || GAPS.find((g) => g.empty(p)) || GAPS[0];
+    return `#setup/${gap.target}`;
+  }
+
+  FP.checklist = { card, note, isEmpty, emptyCard, detail, meter, nextSection };
 })(globalThis.FP = globalThis.FP || {});
