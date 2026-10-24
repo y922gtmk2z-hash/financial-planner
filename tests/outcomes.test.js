@@ -71,3 +71,10 @@ test('student loan: paying extra is a lever when you would repay the loan anyway
   Object.assign(p.income, { grossSalary: 30000, studentLoanBalance: 60000, studentLoanStartYear: 2015 });
   assert.equal(FP.outcomes.leverEffects('studentLoan', p).length, 0);
 });
+
+test('moving a share takes from money you haven’t chosen anything for first', () => {
+  const p = FP.profile.blank();
+  FP.outcomes.moveShare(p, 'pension', 10);
+  assert.equal(p.leftover.pension, 10);
+  assert.equal(p.leftover.cash, 0);
+});

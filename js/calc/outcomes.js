@@ -226,9 +226,14 @@
     return g > 0 ? g : sum(p.spending, (x) => x.monthly || 0);
   }
 
-  // Move `points` of the leftover split into `key`, taking it from the others in proportion.
+  // Move `points` of the leftover split into `key`: from money you haven't
+  // chosen anything for first, then from your other choices in proportion.
   function moveShare(p, key, points) {
     const keys = FP.projection.SPLIT_KEYS.filter((k) => k !== key);
+    const free = Math.max(0, 100 - sum(FP.projection.SPLIT_KEYS, (k) => p.leftover[k] || 0));
+    const fromFree = Math.min(points, free);
+    p.leftover[key] = Math.round(((p.leftover[key] || 0) + fromFree) * 10) / 10;
+    points -= fromFree;
     const others = sum(keys, (k) => p.leftover[k] || 0);
     const take = Math.min(points, others);
     keys.forEach((k) => {

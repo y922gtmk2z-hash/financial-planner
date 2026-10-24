@@ -154,7 +154,8 @@
     { key: 'mortgage', label: 'Mortgage overpayments', help: 'Paid off the mortgage as a yearly lump sum, within your lender\u2019s overpayment limit (see Assumptions). Anything over the limit, or once the mortgage is cleared, goes to your other choices.' },
     { key: 'pension', label: 'Extra pension contributions', help: 'With 20% basic-rate tax relief added. Once you retire, this share goes to your other choices.' },
   ].map((f) => ({ ...f, type: 'pct', min: 0, max: 100, suffix: '% of what\u2019s left' }));
-  const LEFTOVER_DEFAULT = { emergency: 10, debts: 0, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 };
+  // Nothing is saved until you choose: unchosen leftover money is treated as spent.
+  const LEFTOVER_DEFAULT = { emergency: 0, debts: 0, cash: 0, invest: 0, mortgage: 0, pension: 0, emergencyMonths: 3 };
   // How many months of essential outgoings (spending, mortgage and debts) the emergency fund aims to cover.
   const EMERGENCY_MONTHS_FIELD = {
     key: 'emergencyMonths', label: 'Emergency fund target', type: 'int', min: 1, max: 24, suffix: 'months of outgoings',

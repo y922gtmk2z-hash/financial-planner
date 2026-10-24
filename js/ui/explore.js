@@ -204,7 +204,7 @@
         .map((f) => `${split[f.key]}% ${f.label.toLowerCase()} (${money(r.left * split[f.key] / 100)})`).join(' \u00b7 ');
       FP.dom.fill(extra,
         h('h3', null, 'What you do with it'),
-        h('p', null, parts(work.leftover) || 'Nothing chosen yet: it all goes to cash savings.'),
+        h('p', null, parts(work.leftover) || 'Nothing chosen yet, so none of it is saved in your projection \u2014 it\u2019s treated as spent.'),
         using ? h('p', { class: 'small positive' }, '\u2713 That\u2019s the suggested split.') : [
           h('p', { class: 'suggested-split' }, h('strong', null, 'Suggested: '), parts(r.split), h('br'), h('span', { class: 'muted small' }, r.splitReason)),
           h('button', {

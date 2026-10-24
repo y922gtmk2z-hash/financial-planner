@@ -219,7 +219,7 @@
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
         h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before your leftover money is shared out, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),
-        h('li', null, `Your emergency fund share goes to cash until your cash savings cover ${leftover.emergencyMonths} months of that year\u2019s spending, mortgage and debt payments. Extra debt payments clear the most expensive debt first. ${a.capOverpayments === 'none' ? 'Mortgage overpayments from leftover money have no limit.' : `Mortgage overpayments from leftover money stay within ${a.overpaymentLimitPct}% of the balance a year.`} When a choice can\u2019t take its share (the fund is full, a debt is paid off, or you\u2019ve retired), the share goes to your other choices in proportion, or to cash if there are none.`),
+        h('li', null, `Your emergency fund share goes to cash until your cash savings cover ${leftover.emergencyMonths} months of that year\u2019s spending, mortgage and debt payments. Extra debt payments clear the most expensive debt first. ${a.capOverpayments === 'none' ? 'Mortgage overpayments from leftover money have no limit.' : `Mortgage overpayments from leftover money stay within ${a.overpaymentLimitPct}% of the balance a year.`} When a choice can\u2019t take its share (the fund is full, a debt is paid off, or you\u2019ve retired), the share goes to your other choices in proportion. Leftover money you haven\u2019t chosen anything for isn\u2019t saved: it\u2019s treated as spent.`),
         h('li', null, `\u201cYou could spend in retirement\u201d on Your plan is the most you could spend each month from retirement, in today\u2019s money, so that your money lasts to age ${a.endAge} (this runs past the 40-year limit of the charts). It doesn\u2019t sell your home, and your mortgage and debt payments are on top.`),
         h('li', null, 'Contributions and withdrawals happen at the end of each year, so they don’t earn growth until the next year.'),
         h('li', null, 'Not included: tax on savings and investments, inheritance, the pension lifetime lump-sum limit, student loans taken from pension income, or changes to your mortgage after the term ends.')));
@@ -232,7 +232,9 @@
     el.textContent = sh.status === 'ok'
       ? 'Adds up to 100%.'
       : sh.status === 'under'
-        ? `Adds up to ${sh.total}% \u2014 the other ${100 - sh.total}% goes to cash savings.`
+        ? (sh.total === 0
+          ? 'Nothing chosen yet, so none of it is saved \u2014 it\u2019s treated as spent. Choose below, or use the suggested split.'
+          : `Adds up to ${sh.total}% \u2014 the other ${100 - sh.total}% isn\u2019t saved (it\u2019s treated as spent).`)
         : `Adds up to ${sh.total}% \u2014 each share is scaled down to make 100%.`;
   }
 

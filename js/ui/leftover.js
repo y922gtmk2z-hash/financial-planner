@@ -81,7 +81,7 @@
 
       FP.profile.LEFTOVER_FIELDS.forEach((f) => {
         const share = f.key === 'cash' ? shares.cash : shares[f.key];
-        if (amounts[f.key]) amounts[f.key].textContent = `= ${money(left * share)} a month${f.key === 'cash' && shares.status === 'under' ? ' (including the unallocated part)' : ''}`;
+        if (amounts[f.key]) amounts[f.key].textContent = `= ${money(left * share)} a month`;
       });
       drawFund(r, shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover);
@@ -142,7 +142,7 @@
       h('h2', { id: 'leftover-h' }, 'Your leftover money'),
       headline,
       h('h3', null, 'What do you want to do with it?'),
-      h('p', { class: 'help' }, 'Choose how it’s shared out each year in your projection. Anything you don’t allocate goes to cash savings.'),
+      h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection. Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
       rows,
       status,
       suggested,

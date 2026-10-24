@@ -32,8 +32,8 @@
 
   /*
    * The leftover split ({ emergency, debts, cash, invest, mortgage, pension } in
-   * %) as fractions. Under 100% in total: the rest goes to cash. Over 100%:
-   * scaled down proportionally.
+   * %) as fractions. Under 100% in total: the rest is `unallocated` and isn't
+   * saved anywhere (it's treated as spent). Over 100%: scaled down proportionally.
    */
   function splitShares(split) {
     const src = split || {};
@@ -43,7 +43,7 @@
     const [emergency, debts, cash, invest, mortgage, pension] = raw.map((v) => v * scale);
     const remainder = total < 100 ? (100 - total) / 100 : 0;
     return {
-      emergency, debts, cash: cash + remainder, invest, mortgage, pension, total,
+      emergency, debts, cash, invest, mortgage, pension, unallocated: remainder, total,
       status: total === 100 ? 'ok' : total < 100 ? 'under' : 'over',
     };
   }
@@ -51,14 +51,16 @@
   /*
    * Shares out `total` by `shares`, where each choice can take at most caps[key]
    * (for example the mortgage once it's cleared, or the emergency fund once it's
-   * full). Whatever a choice can't take goes to the others in proportion; if
-   * none can take it, it goes to cash.
+   * full). Whatever a choice can't take goes to the others you chose, in
+   * proportion. The unallocated share, and anything none of your choices can
+   * take, is returned as `unallocated`: it isn't saved.
    */
   function allocate(total, shares, caps) {
     const out = {};
     SPLIT_KEYS.forEach((k) => { out[k] = 0; });
     let open = SPLIT_KEYS.filter((k) => shares[k] > 0);
-    let left = total;
+    const kept = total * (shares.unallocated || 0);
+    let left = total - kept;
     while (left > 1e-9 && open.length) {
       const w = sum(open, (k) => shares[k]);
       const want = {};
@@ -72,7 +74,7 @@
       full.forEach((k) => { left -= caps[k] - out[k]; out[k] = caps[k]; });
       open = open.filter((k) => !full.includes(k));
     }
-    out.cash += Math.max(0, left);
+    out.unallocated = kept + Math.max(0, left);
     return out;
   }
 
@@ -301,7 +303,7 @@
       // 6. Allocate a surplus or fund a deficit
       // The emergency fund aims to cover this much of the year's essential outgoings.
       const emergencyTarget = (profile.leftover.emergencyMonths || 0) * (spending + mortgagePaid + debtPaid) / 12;
-      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
+      const flow = { savedCash: saved.cash, savedIsa: saved.isa + saved.gia, regularSaving: saved.total, emergencyTarget, toEmergency: 0, toDebts: 0, toCash: 0, toInvest: 0, toMortgage: 0, toPension: 0, notSaved: 0, fromPension: 0, pensionTax: 0, fromCash: 0, fromInvest: 0, unfunded: 0 };
       const allowance = mStart * (a.overpaymentLimitPct || 0) / 100;
       if (surplus >= 0) {
         let s = surplus;
@@ -345,7 +347,7 @@
         const grossPension = relief < 1 ? toPension / (1 - relief) : toPension;
         pension += grossPension;
         cash += toEmergency + toCash;
-        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension });
+        Object.assign(flow, { toEmergency, toDebts, toCash, toInvest, toMortgage, toPension: grossPension, notSaved: share.unallocated });
       }
       // (Not in the year it's paid off, when the limit on a small balance means little.)
       if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
@@ -396,7 +398,9 @@
       warnings.push({
         key: 'split', level: 'info',
         text: shares.status === 'under'
-          ? `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% goes to cash savings.`
+          ? (shares.total === 0
+            ? 'You haven\u2019t chosen what to do with your leftover money, so the projection doesn\u2019t save any of it (it\u2019s treated as spent).'
+            : `What you do with your leftover money adds up to ${shares.total}%. The other ${100 - shares.total}% isn\u2019t saved (it\u2019s treated as spent).`)
           : `What you do with your leftover money adds up to ${shares.total}%, so each share is scaled down to make 100%.`,
       });
     }
@@ -451,7 +455,7 @@
     'studentLoanRepaid', 'studentLoanExtra', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax',
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
-    'toPension', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
+    'toPension', 'notSaved', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
   ];
   /*
    * How much you could spend in retirement without running short before the

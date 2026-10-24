@@ -30,6 +30,8 @@
       savings: [
         { id: 'sample-sv1', type: 'ssIsa', monthly: 75, grows: 'salary' },
       ],
+      // The example household has chosen what to do with its leftover money.
+      leftover: { emergency: 10, debts: 0, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 },
       spending: [
         { id: 'sample-s1', category: 'Bills & utilities', monthly: 260 },
         { id: 'sample-s2', category: 'Council tax', monthly: 175 },
