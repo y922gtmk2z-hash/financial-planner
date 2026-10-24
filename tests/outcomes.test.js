@@ -24,7 +24,7 @@ test('changing a driver on a copy shows what changes, and leaves the plan alone'
   const q = FP.outcomes.copy(p);
   q.income.grossSalary += 15000;
   const diff = FP.outcomes.compare(before, o('studentLoan').evaluate(q));
-  assert.equal(diff[0].label, 'Repaid at');
+  assert.equal(diff[0].label, 'Loan ends at');
   assert.ok(diff[0].after < diff[0].before);
   assert.equal(diff[0].change, 'better');
   assert.equal(p.income.grossSalary, sample().income.grossSalary);
@@ -61,4 +61,13 @@ test('ideas are grouped with their outcome', () => {
   const ids = FP.outcomes.ideasFor('retirement', p).map((s) => s.id);
   assert.ok(ids.includes('relief'));
   assert.ok(!ids.includes('debt'));
+});
+
+test('student loan: paying extra is a lever when you would repay the loan anyway', () => {
+  const p = sample();
+  const e = FP.outcomes.leverEffects('studentLoan', p).find((x) => /extra/.test(x.lever.label));
+  assert.ok(e.diff.after < e.diff.before);
+  // Likely written off: extra payments aren't offered as an improvement.
+  Object.assign(p.income, { grossSalary: 30000, studentLoanBalance: 60000, studentLoanStartYear: 2015 });
+  assert.equal(FP.outcomes.leverEffects('studentLoan', p).length, 0);
 });

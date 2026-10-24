@@ -182,7 +182,7 @@
     const cols = [
       ['Income after tax', (x) => x.netIncome, true],
       ['Spending', (x) => x.spending, true],
-      ['Mortgage & debts', (x) => x.mortgagePaid + x.debtPaid, true],
+      ['Mortgage & debts', (x) => x.mortgagePaid + x.debtPaid + (x.studentLoanExtra || 0), true],
       ['Regular savings', (x) => x.regularSaving, true],
       ['Surplus', (x) => x.surplus, true],
       ['Cash', (x) => x.cash],

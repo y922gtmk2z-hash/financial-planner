@@ -56,7 +56,8 @@ Your data).
    and assumptions that drive it (change them right there), a before-and-after
    comparison as you type, the changes that would help most (**Try it**), and the
    recommendations for it. **Apply to my plan**, **Save as a scenario**, or undo.
-   Nothing changes in your plan until you choose.
+   Nothing changes in your plan until you choose; closing a panel with changes you
+   haven't applied or saved asks first.
 
 Every figure has one home in Setup; other screens link straight to the field (for
 example `#setup/income.grossSalary`). Until your age and monthly spending are entered,
@@ -251,6 +252,14 @@ uses your inflation assumption as RPI from September 2027, plus the plan's margi
 with no cap. Entering your own rate in Setup overrides both. Without a balance,
 repayments simply carry on until you retire.
 
+**Extra payments** (optional, a month) are voluntary payments on top of what comes out
+of your pay. They're paid from your take-home pay, so they come out of what's left over
+each month (shown on Now with your debt payments), and stop once the loan is repaid or
+written off. The student loan panel shows the effect: when you'd repay the loan anyway,
+"Pay £100 a month extra" shows how much sooner it ends and how much less you repay;
+when it's likely to be written off, extra payments aren't suggested, because you'd be
+paying money that would otherwise be written off.
+
 ## How the projection works
 
 Each year, in order:
@@ -318,7 +327,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-143 tests cover:
+145 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,

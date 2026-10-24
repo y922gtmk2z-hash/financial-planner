@@ -123,7 +123,7 @@
         h('p', { class: 'help' }, 'Change anything here to see the effect. Your plan stays as it is until you apply the changes.'),
         fields.slice(0, MAIN_DRIVERS),
         fields.length > MAIN_DRIVERS ? h('details', { class: 'advanced' }, h('summary', null, `More (${fields.length - MAIN_DRIVERS})`), fields.slice(MAIN_DRIVERS)) : null,
-        h('p', { class: 'small' }, h('a', { href: `#setup/${o.drivers(work)[0]}`, onclick: () => sheet.close() }, 'See everything in Setup')));
+        h('p', { class: 'small' }, h('a', { href: `#setup/${o.drivers(work)[0]}`, onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'See everything in Setup')));
     }
 
     function draw() {
@@ -175,7 +175,7 @@
           type: 'button',
           onclick: () => {
             ctx.replaceProfile(work);
-            sheet.close();
+            sheet.close(true);
             ctx.toast('Changes applied to your plan');
           },
         }, 'Apply to my plan'),
@@ -185,7 +185,7 @@
             const sc = FP.scenarios.addProfile(ctx.workspace(), work, scenarioName(base, work, o.title));
             if (!sc) { ctx.toast(`You can have up to ${FP.scenarios.MAX_SCENARIOS} scenarios. Delete one first.`); return; }
             ctx.changed();
-            sheet.close();
+            sheet.close(true);
             ctx.rerender();
             ctx.toast(`Saved as “${sc.name}” — compare it in Scenarios`);
           },
@@ -212,7 +212,7 @@
             onclick: () => { P.LEFTOVER_FIELDS.forEach((f) => { work.leftover[f.key] = r.split[f.key]; }); draw(); },
           }, 'Use this split'),
         ],
-        h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: () => sheet.close() }, 'Change the split in Setup')));
+        h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: (e) => { sheet.close(); if (sheet.el.open) e.preventDefault(); } }, 'Change the split in Setup')));
     }
 
     function schedule() {
@@ -222,6 +222,8 @@
 
     const sheet = FP.sheet.open({
       title: o.title,
+      // Closing with changes you haven't applied or saved asks first.
+      canClose: () => !changed() || confirm('Discard your changes? They haven\u2019t been applied to your plan or saved as a scenario.'),
       body: [result, actions, extra, drivers, levers, ideas],
     });
     drawDrivers();

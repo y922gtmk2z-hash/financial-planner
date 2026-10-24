@@ -112,7 +112,7 @@
       id: 'studentLoan',
       title: 'Student loan',
       drivers: () => [
-        'income.studentLoanPlan', 'income.studentLoanBalance', 'income.studentLoanStartYear', 'income.studentLoanRate',
+        'income.studentLoanPlan', 'income.studentLoanBalance', 'income.studentLoanOverpayment', 'income.studentLoanStartYear', 'income.studentLoanRate',
         'income.grossSalary', 'assumptions.salaryGrowth', 'assumptions.studentLoanInterest', 'assumptions.inflation', 'assumptions.taxThresholds',
       ],
       ideas: ['studentLoan'],
@@ -124,13 +124,13 @@
           return { ok: true, headline: p.income.studentLoanPlan === 'none' ? 'No student loan' : 'Add your balance to see when it ends', sub: '', metrics: [], series: null };
         }
         const repaid = sum(r.rows.slice(1), (x) => x.studentLoanRepaid || 0);
+        // One label for when it ends (repaid or written off), so before and after line up.
+        // Ending sooner is only better when you repay it: a write-off costs you nothing.
         const metrics = [
-          sl.clearedRow
-            ? { label: 'Repaid at', value: sl.clearedRow.age, kind: 'age', better: 'lower' }
-            : { label: sl.writtenOffRow ? 'Written off at' : 'Still owing at', value: sl.writtenOffRow ? sl.writtenOffAge : r.rows[r.rows.length - 1].age, kind: 'age', better: null },
+          { label: 'Loan ends at', value: sl.clearedRow ? sl.clearedRow.age : sl.writtenOffRow ? sl.writtenOffAge : null, kind: 'age', better: sl.clearedRow ? 'lower' : null },
           { label: 'Total you repay', value: repaid, kind: 'money', better: 'lower' },
-          sl.writtenOff > 0 ? { label: 'Written off', value: sl.writtenOff, kind: 'money', better: null } : null,
-        ].filter(Boolean);
+          { label: 'Written off', value: sl.writtenOff || 0, kind: 'money', better: null },
+        ];
         return {
           ok: true,
           headline: sl.clearedRow ? `Repaid at ${sl.clearedRow.age}` : sl.writtenOffRow ? `Written off at ${sl.writtenOffAge}` : 'Still owing at the end',
@@ -139,7 +139,9 @@
           series: seriesOf(r, 'Student loan balance', (x) => x.studentLoan, false),
         };
       },
-      levers: [],
+      levers: [
+        { label: 'Pay £100 a month extra', applies: (p) => FP.studentLoan.tracked(p), apply: (p) => { p.income.studentLoanOverpayment = (p.income.studentLoanOverpayment || 0) + 100; } },
+      ],
     },
     {
       id: 'takeHome',

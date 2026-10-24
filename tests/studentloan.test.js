@@ -190,3 +190,28 @@ test('following inflation: higher inflation means more interest and a later payo
   // Year 1 is mostly at the published rate, so the two runs barely differ at first
   assert.ok(Math.abs(high.rows[1].studentLoan - low.rows[1].studentLoan) < 150); // one month (September) differs
 });
+
+test('extra payments: paid from take-home, clear the loan sooner and cost less interest', () => {
+  const p = FP.sampleWorkspace().scenarios[0].profile;
+  const base = FP.projection.project(p);
+  p.income.studentLoanOverpayment = 200;
+  const r = FP.projection.project(p);
+  const bSl = base.events.studentLoan;
+  const sl = r.events.studentLoan;
+  assert.ok(sl.clearedRow.age < bSl.clearedRow.age);
+  // Comes out of what's left over, not the payslip.
+  assert.ok(Math.abs(r.rows[1].takeHome - base.rows[1].takeHome) < 0.01);
+  assert.ok(Math.abs((base.rows[1].surplus - r.rows[1].surplus) - r.rows[1].studentLoanExtra) < 0.01);
+  assert.ok(Math.abs(r.rows[1].studentLoanExtra - 2400) < 0.01);
+  const interest = (x) => x.rows.reduce((t, row) => t + (row.studentLoanInterest || 0), 0);
+  assert.ok(interest(r) < interest(base));
+  // Today's cash flow counts it with debt payments.
+  const cf = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow;
+  assert.equal(cf.studentLoanExtraMonthly, 200);
+  // Stops once the loan is cleared.
+  const after = r.rows.find((row) => row.age > sl.clearedRow.age);
+  assert.equal(after.studentLoanExtra, 0);
+  // No balance entered: nothing is paid.
+  p.income.studentLoanBalance = 0;
+  assert.equal(FP.projection.project(p).rows[1].studentLoanExtra, 0);
+});

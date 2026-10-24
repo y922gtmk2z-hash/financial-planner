@@ -105,7 +105,9 @@
 
     const spendingMonthly = profile.spending.reduce((s, r) => s + num(r.monthly), 0);
     const mortgageMonthly = mortgage ? mortgage.payment + mortgage.overpayment : 0;
-    const debtMonthly = debts.reduce((s, d) => s + (d.balance > 0 ? d.payment : 0), 0);
+    // Extra student loan payments (only while there's a balance) count with your debt payments.
+    const studentLoanExtraMonthly = FP.studentLoan.tracked(profile) ? num(profile.income.studentLoanOverpayment) : 0;
+    const debtMonthly = debts.reduce((s, d) => s + (d.balance > 0 ? d.payment : 0), 0) + studentLoanExtraMonthly;
     const outgoings = spendingMonthly + mortgageMonthly + debtMonthly;
     // Regular savings come out of what's left after spending and debts.
     const saving = FP.savings.monthlyTotals(profile.savings);
@@ -134,6 +136,7 @@
         spendingMonthly,
         mortgageMonthly,
         debtMonthly,
+        studentLoanExtraMonthly,
         outgoings,
         // Left after spending and debts, before regular savings.
         available: hasTakeHome ? takeHomeMonthly - outgoings : null,

@@ -122,8 +122,9 @@
       dl([
         ['Spending', money(cf.spendingMonthly)],
         ['Mortgage (incl. overpayment)', money(cf.mortgageMonthly)],
-        ['Other debt payments', money(cf.debtMonthly)],
-      ]),
+        ['Other debt payments', money(cf.debtMonthly - cf.studentLoanExtraMonthly)],
+        cf.studentLoanExtraMonthly > 0 ? ['Extra student loan payments', money(cf.studentLoanExtraMonthly)] : null,
+      ].filter(Boolean)),
       h('div', { class: 'total-row' }, h('span', null, 'Total going out'), h('strong', null, money(cf.outgoings))),
       cf.savingsMonthly > 0 ? [
         h('div', { class: 'total-row' }, h('span', null, 'Left after spending and debts'), h('strong', null, money(cf.available))),

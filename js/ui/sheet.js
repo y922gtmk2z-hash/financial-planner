@@ -8,7 +8,9 @@
   const { h } = FP.dom;
 
   /*
-   * opts: { title, body (node), onClose }
+   * opts: { title, body (node), onClose, canClose() }
+   * canClose: asked before the panel closes by its × button, the backdrop or
+   * Escape; return false to keep it open. close(true) skips it.
    * Returns { el, close, setTitle, setStatus(nodes) } (status: a line under the title that stays in view).
    */
   function open(opts) {
@@ -18,10 +20,15 @@
     const dlg = h('dialog', { class: 'sheet', 'aria-labelledby': 'sheet-h' },
       h('div', { class: 'sheet-head' }, h('div', { class: 'sheet-titles' }, title, status), closeBtn),
       h('div', { class: 'sheet-body' }, opts.body));
-    const close = () => { if (dlg.open) dlg.close(); };
-    closeBtn.addEventListener('click', close);
+    const close = (force) => {
+      if (!dlg.open) return;
+      if (force !== true && opts.canClose && !opts.canClose()) return;
+      dlg.close();
+    };
+    closeBtn.addEventListener('click', () => close());
     // A tap on the dimmed backdrop (outside the panel) closes it.
     dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
+    dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); }); // Escape
     dlg.addEventListener('close', () => {
       dlg.remove();
       document.documentElement.classList.remove('sheet-open');
