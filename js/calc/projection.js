@@ -539,7 +539,8 @@
     if (!(now > 0)) return null;
     const lasts = (factor) => {
       const r = project(profile, { ...opts, retirementSpending: factor });
-      return r.rows[r.rows.length - 1].shortfall <= 0.5;
+      // Every retirement year, not just the last: a gap repaid later is still a gap.
+      return r.rows.every((row) => row.working !== false || row.shortfall <= 0.5);
     };
     let lo = 0;
     let hi = 1;

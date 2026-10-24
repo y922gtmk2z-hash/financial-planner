@@ -9,7 +9,7 @@
     fileInput.addEventListener('change', () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
-      if (file.size > 1024 * 1024) { ctx.toast('That file is too large to be a planner export.'); return; }
+      if (file.size > 1024 * 1024) { fileInput.value = ''; ctx.toast('That file is too large to be a planner export.'); return; }
       const reader = new FileReader();
       reader.onload = () => {
         const r = FP.store.importJson(String(reader.result));
@@ -38,6 +38,7 @@
             onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } } }, 'Import a file'),
           fileInput),
         h('p', { class: 'muted' }, 'Exports are plain JSON files containing your figures for every scenario. Keep them somewhere private.'),
+        unreadCopy(),
         h('p', { class: 'muted small' }, 'If you use this planner on a github.io address, its browser storage is shared with other sites under the same github.io account name. Another site there could read your saved figures, so export a backup and clear your data on shared or unfamiliar setups.')),
       h('section', { class: 'card' },
         h('h2', null, 'Start again'),
@@ -89,6 +90,28 @@
           h('button', { type: 'button', class: 'secondary', onclick: () => { document.getElementById('clear-confirm').hidden = true; } }, 'Cancel'))));
   }
 
+  // Saved data the planner couldn't use (see FP.store.load), kept so it isn't lost.
+  function unreadCopy() {
+    const raw = FP.store.unreadBackup();
+    if (!raw) return null;
+    // Readable copies get the export label, so Import accepts them later.
+    let text = raw;
+    try { text = JSON.stringify({ ...JSON.parse(raw), app: 'uk-finance-planner' }, null, 2); } catch (e) { /* keep it exactly as saved */ }
+    return h('p', { class: 'notice warn' },
+      'Some saved data couldn\u2019t be used by this version of the planner, so a copy was kept. ',
+      h('button', { type: 'button', class: 'link', onclick: () => download(text, `finance-planner-export-kept-${new Date().toISOString().slice(0, 10)}.json`) }, 'Download the kept copy'),
+      text === raw ? '. It may be damaged, so the planner may not be able to import it.' : '. Import it once you have the latest version of the planner.');
+  }
+
+  function download(text, name) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = h('a', { href: url, download: name });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function backupStatus() {
     const b = FP.backup.status();
     return h('p', { class: b.due ? 'notice info' : 'muted' },
@@ -98,17 +121,11 @@
   }
 
   function exportFile(ctx) {
-    const blob = new Blob([FP.store.exportJson(ctx.workspace())], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = h('a', { href: url, download: `finance-planner-export-${new Date().toISOString().slice(0, 10)}.json` });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    download(FP.store.exportJson(ctx.workspace()), `finance-planner-export-${new Date().toISOString().slice(0, 10)}.json`);
     FP.store.pref('lastExport', new Date().toISOString());
     FP.store.pref('backupNudgeUntil', null);
     FP.store.pref('editsSinceExport', null);
     ctx.rerender();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   const DAY = 24 * 60 * 60 * 1000;

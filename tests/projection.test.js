@@ -378,3 +378,16 @@ test('£ split within £1 of what’s left counts as all of it', () => {
   close(sh.invest + sh.pension, 1);
   close(sh.invest / sh.pension, 30 / 14);
 });
+
+test('what you could spend in retirement keeps every retirement year funded', () => {
+  // Retire at 52 with no savings: the pension can't be drawn until 57, and a
+  // large State Pension from 60 would otherwise repay the gap by the end.
+  const p = FP.profile.blank();
+  p.about.age = 50;
+  p.income.grossSalary = 40000;
+  p.spending[0].monthly = 1500;
+  Object.assign(p.assumptions, { retirementAge: 52, pensionAccessAge: 57, statePensionAge: 60, statePension: 40000 });
+  const rs = FP.projection.retirementSpend(p);
+  const r = FP.projection.project(p, { retirementSpending: rs.factor, maxYears: 100 });
+  assert.ok(r.rows.every((row) => row.shortfall <= 0.5));
+});

@@ -31,6 +31,11 @@ to a screen, such as `…/#future`, work and need no server rules. The `/docs` f
 holds the build plan only, not the site, so don't choose it as the Pages folder.
 `npm test` checks that every path in `index.html` stays relative.
 
+**Privacy on github.io:** browser storage belongs to the whole `<user>.github.io`
+origin, so every Pages site under the same account can read and change the
+planner's saved figures. Publish it from an account with no other Pages sites, or
+use a custom domain, if that matters to you.
+
 **Publishing an update:** every script and the stylesheet in `index.html` end in the
 same `?v=` version (for example `?v=2026-10-24.1`). Change it in every tag when you
 publish, so browsers fetch the new files instead of a cached copy (GitHub Pages lets

@@ -134,3 +134,11 @@ test('every suggested split adds up to 100%', () => {
     { emergency: { short: false }, expensive: true },
   ].forEach((s) => assert.equal(sum(FP.suggest.suggestSplit(s).split), 100));
 });
+
+test('a reduced tax code alone does not trigger the £100k taper tip', () => {
+  const p = profile({ salary: 30000 });
+  p.income.taxCode = '1100L';
+  assert.ok(!ids(FP.suggest.analyse(p)).includes('taper'));
+  p.income.grossSalary = 110000;
+  assert.ok(ids(FP.suggest.analyse(p)).includes('taper'));
+});

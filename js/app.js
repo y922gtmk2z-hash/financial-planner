@@ -70,7 +70,7 @@
     rerender: () => route(),
     // Save now and go to a screen (used by Setup's Calculate button).
     go(id) {
-      save();
+      flush();
       if (location.hash === `#${id}`) route(); else location.hash = `#${id}`;
     },
     toast,
@@ -88,6 +88,30 @@
     status.textContent = ok ? 'Saved on this device' : 'Not saved — browser storage unavailable';
     status.classList.toggle('bad', !ok);
   }
+
+  // Saves only if there's an edit waiting, so a tab you haven't changed never
+  // writes its older copy over what another tab saved.
+  function flush() {
+    if (changedSinceLoad) save();
+  }
+
+  // Another tab saved (or cleared) the planner: show what it saved.
+  function reloadFromStorage() {
+    clearTimeout(saveTimer);
+    changedSinceLoad = false;
+    const fresh = FP.store.load();
+    workspace = fresh.workspace;
+    status.textContent = fresh.source === 'saved' ? 'Saved on this device' : '';
+    route();
+  }
+  window.addEventListener('storage', (e) => {
+    if (e.key !== FP.store.KEY && e.key !== null) return;
+    document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+    reloadFromStorage();
+    toast('Updated with changes from another tab');
+  });
+  // Back from the browser's page cache: other tabs may have saved since.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) reloadFromStorage(); });
 
   function toast(msg) {
     toastEl.textContent = msg;
@@ -148,7 +172,9 @@
     const alias = ALIASES[raw.split('/')[0]];
     if (alias) history.replaceState(null, '', `#${alias}`);
     const [name, ...rest] = (alias || raw).split('/');
-    return { id: ROUTES.includes(name) ? name : 'overview', target: rest.length ? decodeURIComponent(rest.join('/')) : null };
+    let target = null;
+    try { target = rest.length ? decodeURIComponent(rest.join('/')) : null; } catch (e) { /* malformed link: just open the screen */ }
+    return { id: ROUTES.includes(name) ? name : 'overview', target };
   }
 
   function goToTarget(target) {
@@ -180,7 +206,7 @@
   }
 
   window.addEventListener('hashchange', () => {
-    save();
+    flush();
     const target = route();
     window.scrollTo(0, 0);
     header.classList.remove('is-hidden');
@@ -222,7 +248,7 @@
   const setHeaderHeight = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
   window.addEventListener('resize', setHeaderHeight);
   setHeaderHeight();
-  window.addEventListener('pagehide', save);
+  window.addEventListener('pagehide', flush);
 
   // The full disclaimer shows on your first visit; after that it's one line (tap for more).
   const disclaimer = document.getElementById('disclaimer');

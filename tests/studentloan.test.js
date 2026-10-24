@@ -193,9 +193,9 @@ test('following inflation: higher inflation means more interest and a later payo
 
 test('extra payments: paid from take-home, clear the loan sooner and cost less interest', () => {
   const p = FP.sampleWorkspace().scenarios[0].profile;
-  const base = FP.projection.project(p);
+  const base = project(p);
   p.income.studentLoanOverpayment = 200;
-  const r = FP.projection.project(p);
+  const r = project(p);
   const bSl = base.events.studentLoan;
   const sl = r.events.studentLoan;
   assert.ok(sl.clearedRow.age < bSl.clearedRow.age);
@@ -213,5 +213,5 @@ test('extra payments: paid from take-home, clear the loan sooner and cost less i
   assert.equal(after.studentLoanExtra, 0);
   // No balance entered: nothing is paid.
   p.income.studentLoanBalance = 0;
-  assert.equal(FP.projection.project(p).rows[1].studentLoanExtra, 0);
+  assert.equal(project(p).rows[1].studentLoanExtra, 0);
 });

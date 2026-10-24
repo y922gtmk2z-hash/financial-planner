@@ -90,3 +90,14 @@ test('levers move leftover money in the unit you entered it in', () => {
   assert.equal(p.leftover.unit, 'gbp');
   assert.ok(Math.abs(p.leftover.pension - before - left * 0.1) <= 1);
 });
+
+test('levers never offer a change past a field limit', () => {
+  const p = sample();
+  p.assumptions.retirementAge = 80;
+  p.assumptions.employeePensionPct = 100;
+  assert.ok(!o('retirement').levers[0].applies(p));
+  assert.ok(!o('retirement').levers[1].applies(p));
+  assert.ok(!o('takeHome').levers[1].applies(p));
+  p.assumptions.retirementAge = 79;
+  assert.ok(o('retirement').levers[0].applies(p));
+});
