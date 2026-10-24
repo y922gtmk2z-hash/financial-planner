@@ -55,7 +55,9 @@
   // Whole-year figures, treating pay as spread evenly over 12 months.
   // input.bonus here is the year's total bonus; input.otherSacrifice is the
   // year's non-pension salary sacrifice (car, cycle...) and
-  // input.benefitInKind the taxable benefit from it (e.g. a car).
+  // input.benefitInKind taxable benefits (a salary-sacrifice car, private medical
+  // insurance...). input.otherIncome is other taxable income a year (income tax
+  // only, no NI or student loan) and input.taxFreeIncome income that isn't taxed.
   function yearly(input, cfg) {
     const salary = Math.max(0, input.salary || 0);
     const bonus = Math.max(0, input.bonus || 0);
@@ -97,6 +99,10 @@
     payForTax += benefitInKind - otherSacrifice;
     payForNi -= otherSacrifice;
     adjustedNetIncome += benefitInKind - otherSacrifice;
+    const otherIncome = Math.max(0, input.otherIncome || 0);
+    const taxFreeIncome = Math.max(0, input.taxFreeIncome || 0);
+    payForTax += otherIncome;
+    adjustedNetIncome += otherIncome;
 
     const allowance = personalAllowance(adjustedNetIncome, cfg);
     const taxable = Math.max(0, payForTax - allowance);
@@ -105,7 +111,7 @@
     // Student loan is based on pay after salary sacrifice, but before other pension.
     const sl = studentLoan(payForNi, input.studentLoanPlan, cfg);
     const sacrificed = sacrificedPension;
-    const net = gross - sacrificed - otherSacrifice - pensionFromPay - tax.total - ni - sl;
+    const net = gross - sacrificed - otherSacrifice - pensionFromPay - tax.total - ni - sl + otherIncome + taxFreeIncome;
 
     return {
       taxYear: cfg.taxYear,
@@ -129,13 +135,15 @@
       employerPension: round2(employerPension),
       salarySacrifice: round2(otherSacrifice),
       benefitInKind: round2(benefitInKind),
+      // Other income you receive (taxable and tax-free), before its tax.
+      otherIncome: round2(otherIncome + taxFreeIncome),
       takeHome: round2(net),
       takeHomeMonthly: round2(net / 12),
       niablePay: payForNi,
     };
   }
 
-  const PAYSLIP_KEYS = ['gross', 'salarySacrifice', 'pensionFromPay', 'incomeTax', 'nationalInsurance', 'studentLoan', 'takeHome'];
+  const PAYSLIP_KEYS = ['gross', 'otherIncome', 'salarySacrifice', 'pensionFromPay', 'incomeTax', 'nationalInsurance', 'studentLoan', 'takeHome'];
 
   function payslip(values) {
     const out = {};
@@ -198,11 +206,11 @@
       const sl = studentLoan(monthPay * 12, input.studentLoanPlan, cfg) / 12;
       const tax = reg.incomeTax + extraTax * (l.amount / lumpTotal);
       const gross = reg.gross + l.amount;
-      const net = gross - reg.salarySacrifice - reg.pensionFromPay - tax - ni - sl;
+      const net = gross + reg.otherIncome - reg.salarySacrifice - reg.pensionFromPay - tax - ni - sl;
       return {
         month: l.month,
         amount: l.amount,
-        pay: payslip({ gross, salarySacrifice: reg.salarySacrifice, pensionFromPay: reg.pensionFromPay, incomeTax: tax, nationalInsurance: ni, studentLoan: sl, takeHome: net }),
+        pay: payslip({ gross, otherIncome: reg.otherIncome, salarySacrifice: reg.salarySacrifice, pensionFromPay: reg.pensionFromPay, incomeTax: tax, nationalInsurance: ni, studentLoan: sl, takeHome: net }),
         // Extra take-home that month compared with a regular month.
         extra: round2(net - reg.takeHome),
       };
@@ -247,14 +255,22 @@
     return { sacrifice, benefitInKind };
   }
 
+  // Taxable benefits in kind (private medical insurance, other) a year.
+  function benefitsTotal(list) {
+    return (list || []).reduce((t, b) => t + Math.max(0, b.yearly || 0), 0);
+  }
+
   function inputFromProfile(profile) {
+    const inc = profile.income;
     return {
-      salary: profile.income.grossSalary,
-      bonuses: profile.income.bonuses,
+      salary: inc.grossSalary,
+      bonuses: inc.bonuses,
       ...(() => {
-        const ss = sacrificeForYear(profile.income.sacrifices, 0);
-        return { otherSacrifice: ss.sacrifice, benefitInKind: ss.benefitInKind };
+        const ss = sacrificeForYear(inc.sacrifices, 0);
+        return { otherSacrifice: ss.sacrifice, benefitInKind: ss.benefitInKind + benefitsTotal(inc.benefits) };
       })(),
+      otherIncome: inc.otherIncome || 0,
+      taxFreeIncome: inc.taxFreeIncome || 0,
       employeePensionPct: profile.assumptions.employeePensionPct,
       employerPensionPct: profile.assumptions.employerPensionPct,
       pensionMethod: profile.income.pensionMethod,
@@ -269,7 +285,7 @@
 
   FP.tax = {
     personalAllowance, incomeTax, nationalInsurance, studentLoan,
-    MONTHS, bonusList, sacrificeForYear, takeHome, keepOfNext, inputFromProfile, forProfile,
+    MONTHS, bonusList, sacrificeForYear, benefitsTotal, takeHome, keepOfNext, inputFromProfile, forProfile,
   };
 })(globalThis.FP = globalThis.FP || {});
 
