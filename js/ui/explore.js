@@ -100,6 +100,7 @@
     const drivers = h('div', { class: 'sheet-drivers' });
     const levers = h('div', { class: 'sheet-levers' });
     const ideas = h('div', { class: 'sheet-ideas' });
+    const extra = h('div', { class: 'sheet-extra' });
     const actions = h('div', { class: 'sheet-actions' });
     let timer = null;
 
@@ -154,6 +155,8 @@
           }, 'Try it')))),
       ] : null);
 
+      if (id === 'leftover') drawSplit(after);
+
       const list = after.ok ? O.ideasFor(id, work).filter((s) => !(work.ideas || {})[s.id]) : [];
       FP.dom.fill(ideas, list.length ? [
         h('h3', null, 'Recommendations'),
@@ -192,6 +195,26 @@
       actions.hidden = !isChanged;
     }
 
+    // Left over each month: what you do with it, and the suggested split.
+    function drawSplit(after) {
+      const r = FP.suggest.analyse(work);
+      if (!after.ok || !r.split) { FP.dom.fill(extra); return; }
+      const using = P.LEFTOVER_FIELDS.every((f) => work.leftover[f.key] === r.split[f.key]);
+      const parts = (split) => P.LEFTOVER_FIELDS.filter((f) => split[f.key] > 0)
+        .map((f) => `${split[f.key]}% ${f.label.toLowerCase()} (${money(r.left * split[f.key] / 100)})`).join(' \u00b7 ');
+      FP.dom.fill(extra,
+        h('h3', null, 'What you do with it'),
+        h('p', null, parts(work.leftover) || 'Nothing chosen yet: it all goes to cash savings.'),
+        using ? h('p', { class: 'small positive' }, '\u2713 That\u2019s the suggested split.') : [
+          h('p', { class: 'suggested-split' }, h('strong', null, 'Suggested: '), parts(r.split), h('br'), h('span', { class: 'muted small' }, r.splitReason)),
+          h('button', {
+            type: 'button', class: 'secondary small',
+            onclick: () => { P.LEFTOVER_FIELDS.forEach((f) => { work.leftover[f.key] = r.split[f.key]; }); draw(); },
+          }, 'Use this split'),
+        ],
+        h('p', { class: 'small' }, h('a', { href: '#setup/leftover', onclick: () => sheet.close() }, 'Change the split in Setup')));
+    }
+
     function schedule() {
       clearTimeout(timer);
       timer = setTimeout(draw, 250);
@@ -199,7 +222,7 @@
 
     const sheet = FP.sheet.open({
       title: o.title,
-      body: [result, actions, drivers, levers, ideas],
+      body: [result, actions, extra, drivers, levers, ideas],
     });
     drawDrivers();
     draw();
