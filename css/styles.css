@@ -973,10 +973,11 @@ a.button { text-decoration: none; }
   :root, :root[data-theme="dark"], :root:not([data-theme="light"]) { color-scheme: light only !important; }
   html, body { background: #fff !important; }
   body { color: #000 !important; padding: 0 !important; display: block !important; font-size: 10pt; line-height: 1.35; }
-  /* Only the summary: no header, tabs, banners, notices or buttons. */
+  /* No header, tabs, banners or toasts on paper. */
   body > :not(main), .tabbar, .toast, .app-header, .app-footer { display: none !important; }
   main { max-width: none !important; margin: 0 !important; padding: 0 !important; }
-  main > :not(.print-summary) { display: none !important; }
+  /* On Your plan, only the summary (other screens print as they are). */
+  main:has(> .print-summary) > :not(.print-summary) { display: none !important; }
   .print-summary { display: block !important; color: #000; }
   .print-summary h1 { font-size: 16pt; margin: 0 0 2pt; }
   .print-summary h2 { font-size: 11pt; margin: 10pt 0 4pt; }
