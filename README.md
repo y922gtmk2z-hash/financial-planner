@@ -45,7 +45,8 @@ The first time you open it, it starts **empty**, on a **front page**: the app's 
 three steps (answer five quick questions, see your first plan, add detail when you're
 ready), a **Get started** button, links to a fictional example or to import a backup,
 and the not-advice notice. It has no header, tabs or footer. Get started opens the
-**Quick start**: your age, salary, monthly spending, retirement
+**Quick start**: your age, salary, everything going out each month (including
+mortgage, bills and debt payments; an estimate is fine), retirement
 age and (optionally) what you'd like to spend in retirement. Those answers give a
 **first look** at Your plan: what you take home and have left each month, and for
 retirement how much you'd need in savings and pensions when you retire, how much you're
@@ -95,8 +96,13 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
      loan** (repaid from your pay, so it lives here rather than under Debts),
      bonuses, salary sacrifice, **workplace benefits**, tax code and where you live,
      and other income.
-   - **Outgoings:** what you spend in a month (split it into categories if you
-     like), what you save each month, then **money left over each month**: a
+   - **Outgoings:** your estimate of everything going out each month, then three
+     folds to itemise it: **Bills**, **Debt payments** (your mortgage payment and
+     each other debt's name and payment, which show under Debts too) and
+     **Other**. Whatever of your estimate isn't itemised yet counts as other
+     spending ("Rest of your estimate"); if you itemise more than your estimate,
+     what you've itemised is used. A debt payment counts once its debt has a
+     balance under Debts. Then what you save each month, then **money left over each month**: a
      suggested split to use in one tap, with your own split and ideas folded away.
    - **Assets:** what you own today.
    - **Debts:** your mortgage and other debts. For each, give the **balance** and
@@ -134,7 +140,7 @@ one-line "So what" under it.
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
+| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
@@ -191,7 +197,7 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
 | Retirement goal (in Your figures) | what you spend now (or a monthly amount you set) |
-| Monthly spending (new plan) | one total; add categories if you like |
+| Outgoings (new plan) | one estimate of everything going out; itemise it if you like |
 | Money left over each month (your choice, in Your figures) | nothing chosen, so nothing saved (emergency fund target: 3 months of outgoings). The sample household uses 10% emergency fund, 20% cash, 50% investments, 10% mortgage, 10% pension |
 
 ## Tax rules — check every tax year

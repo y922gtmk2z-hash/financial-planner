@@ -18,7 +18,7 @@
     yearly: P11D,
   };
   // Key figures where a blank box is worth pointing out (it still counts as £0).
-  const KEY_FIELDS = ['income.grossSalary', 'spending.0.monthly'];
+  const KEY_FIELDS = ['income.grossSalary'];
 
   const whereFor = (field) => {
     const w = WHERE[field.path] || (field.key === 'carValue' ? WHERE.carValue : null)

@@ -41,8 +41,8 @@
 
   /*
    * Your figures fields, in five sections: About you, Income, Outgoings
-   * (spending, saving and money left over, which have their own editors),
-   * Assets and Debts. `path` is where the value lives in the profile. Fields
+   * (your estimate here; bills, debt payments, other spending, saving and
+   * money left over have their own editors), Assets and Debts. `path` is where the value lives in the profile. Fields
    * under `assumptions.` are the same values shown in the Assumptions panel.
    * Fields with a `group` sit under that group's heading; in Income every
    * group is folded under Advanced, beneath your salary.
@@ -98,6 +98,14 @@
       ],
     },
     {
+      id: 'outgoings', title: 'Outgoings',
+      fields: [
+        { path: 'outgoings.estimate', label: 'Everything going out each month', type: 'money', suffix: 'a month', nullable: true,
+          nullPlaceholder: 'Not set',
+          help: 'All of it: rent or mortgage, bills, loan and card payments, food, travel and the rest (not what you save). An estimate is fine \u2014 you can refine it later.' },
+      ],
+    },
+    {
       id: 'assets', title: 'Assets',
       intro: 'What you own today. Leave anything that doesn\u2019t apply blank.',
       fields: [
@@ -128,7 +136,7 @@
           help: 'How long until it\u2019s paid off, from your statement.' },
         { path: 'mortgage.monthlyPayment', label: 'Monthly payment', type: 'money', suffix: 'a month', group: 'mortgage', needsMortgage: true, nullable: true,
           nullPlaceholder: 'Not sure',
-          help: 'Your normal payment, without overpayments.' },
+          help: 'Your normal payment, without overpayments. Also under Debt payments in Outgoings.' },
         { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true, needsMortgage: true,
           help: 'Extra paid on top of your normal payment each month. Most lenders allow up to 10% of the balance a year without a charge.' },
       ],
@@ -229,13 +237,24 @@
     { key: 'month', label: 'Paid in', type: 'select', options: BONUS_MONTHS },
   ];
 
+  // Spending under Outgoings is in two folds: bills, and everything else.
+  const SPENDING_GROUPS = [
+    { value: 'other', label: 'Other' },
+    { value: 'bills', label: 'Bills' },
+  ];
   const SPENDING_FIELDS = [
     { key: 'category', label: 'Category', type: 'text', placeholder: 'e.g. Groceries' },
     { key: 'monthly', label: 'Per month', type: 'money' },
+    { key: 'group', label: 'Kind', type: 'select', options: SPENDING_GROUPS },
   ];
 
-  // One total to start with; you can split it into categories if that helps.
-  const DEFAULT_SPENDING_CATEGORIES = ['Everything'];
+  /*
+   * The rest of your estimate: a spending row of its own (rest: true) holding
+   * whatever of your estimate of everything going out isn't itemised yet.
+   * FP.summary.syncOutgoings keeps it up to date.
+   */
+  const REST_CATEGORY = 'Rest of your estimate';
+  const newRest = () => ({ id: newId('s'), category: REST_CATEGORY, monthly: 0, group: 'other', rest: true });
 
   let idCounter = 0;
   function newId(prefix) {
@@ -259,9 +278,11 @@
       leftover: { ...LEFTOVER_DEFAULT },
       // What you're aiming for. retirementIncome: a month in today's money, or null for "what you spend now".
       goals: { retirementIncome: null },
+      // estimate: everything going out a month (spending, mortgage and debt payments), or null.
+      outgoings: { estimate: null },
       // Ideas you've marked done or hidden: { [idea id]: 'done' | 'hidden' }.
       ideas: {},
-      spending: DEFAULT_SPENDING_CATEGORIES.map((c) => ({ id: newId('s'), category: c, monthly: 0 })),
+      spending: [newRest()],
       assumptions: FP.assumptions.defaults(),
     };
   }
@@ -408,7 +429,23 @@
         .map((x) => normaliseRow(x, SAVING_FIELDS, 'sv'));
     }
     if (Array.isArray(src.spending)) {
-      p.spending = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40).map((s) => normaliseRow(s, SPENDING_FIELDS, 's'));
+      const rows = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40);
+      const restAt = rows.findIndex((s) => s.rest === true);
+      p.spending = rows.map((s, i) => {
+        const row = normaliseRow(s, SPENDING_FIELDS, 's');
+        if (i === restAt) Object.assign(row, { rest: true, group: 'other', category: REST_CATEGORY });
+        return row;
+      });
+      // Saved before the estimate: one total (which left out mortgage and debt
+      // payments) becomes your estimate, with the payments added back in.
+      const only = p.spending.length === 1 && p.spending[0];
+      if (!src.outgoings && only && !only.rest && (only.category === 'Everything' || !only.category)) {
+        Object.assign(only, { rest: true, group: 'other', category: REST_CATEGORY });
+        if (only.monthly > 0 && FP.summary) {
+          const cf = FP.summary.compute(p).cashFlow;
+          p.outgoings.estimate = Math.round(cf.outgoings * 100) / 100;
+        }
+      }
     }
     return p;
   }
@@ -446,12 +483,12 @@
     return { id: newId('b'), amount: 0, month: 'spread' };
   }
 
-  function newSpending() {
-    return { id: newId('s'), category: '', monthly: 0 };
+  function newSpending(group) {
+    return { id: newId('s'), category: '', monthly: 0, group: group || 'other' };
   }
 
   FP.profile = {
-    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending,
+    SCHEMA_VERSION, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
+    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});
