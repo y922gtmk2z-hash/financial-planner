@@ -196,6 +196,21 @@
     lastY = y;
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
+  // On touch screens, typing in a field hides the tab bar so the keyboard
+  // leaves room for the form. A short delay on blur stops it flickering as you
+  // move between fields.
+  const touch = window.matchMedia('(hover: none) and (pointer: coarse)');
+  const typing = (el) => el && el.matches && el.matches('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not([type="range"]), select, textarea');
+  let kbdTimer = null;
+  document.addEventListener('focusin', (e) => {
+    if (!touch.matches || !typing(e.target)) return;
+    clearTimeout(kbdTimer);
+    document.body.classList.add('kbd-open');
+  });
+  document.addEventListener('focusout', () => {
+    clearTimeout(kbdTimer);
+    kbdTimer = setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kbd-open'); }, 150);
+  });
   // The "More" menu closes when you tap elsewhere or press Escape.
   const menu = document.getElementById('header-menu');
   document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });

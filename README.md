@@ -47,7 +47,8 @@ data → Load sample data** loads a clearly fictional household (with a banner s
 **How it's laid out:** four tabs at the bottom (**Your plan**, **Now**, **Future**,
 **Scenarios**) and a header that stays pinned, slides away as you scroll down and
 comes back as soon as you scroll up, with **Setup** and a **More** menu (Assumptions,
-Your data).
+Your data). On a phone the tabs step aside while you type in a field, so the keyboard
+has room. From 900px wide the tabs become a side menu next to a wider page.
 
 **Your journey:**
 

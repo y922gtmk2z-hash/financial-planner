@@ -215,6 +215,38 @@ main:focus, main:focus-visible { outline: none; }
   .toast { bottom: calc(var(--tabbar-h) + 16px); }
 }
 
+/* Phones: while the on-screen keyboard is up (a field has focus), the tab bar steps aside. */
+@media (max-width: 899px) {
+  body.kbd-open { padding-bottom: 0; }
+  .kbd-open .tabbar { display: none; }
+  .kbd-open .live-strip { bottom: 8px; }
+  .kbd-open .toast { bottom: 16px; }
+}
+
+@media (min-width: 900px) {
+  /* Wide screens: the same four links become a side nav beside a wider column. */
+  :root { --tabbar-h: 0px; }
+  body {
+    display: grid; column-gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 190px minmax(0, 1040px) minmax(0, 1fr);
+    grid-auto-rows: auto;
+  }
+  body > * { grid-column: 3; }
+  body > .app-header { grid-column: 1 / -1; }
+  .app-header-inner { max-width: 1254px; }
+  .disclaimer, .sample-banner, .scenario-bar, main, .app-footer { max-width: none; width: 100%; }
+  .disclaimer, .sample-banner { margin-top: 8px; }
+  .tabbar {
+    grid-column: 2; grid-row: 2 / span 6; align-self: start;
+    position: sticky; top: calc(var(--header-h, 56px) + 8px); left: auto; right: auto; bottom: auto;
+    display: flex; flex-direction: column; gap: 4px; height: auto; padding: 8px 0;
+    background: none; border: 0;
+  }
+  .tabbar a { flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 10px; font-size: 0.95rem; }
+  .tabbar a:hover { background: var(--surface-2); }
+  .tabbar a[aria-current="page"] { background: var(--accent-soft); }
+}
+
 /* ---------- Cards ---------- */
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
