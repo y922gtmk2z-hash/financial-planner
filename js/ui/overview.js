@@ -18,6 +18,8 @@
 
   function render(root, ctx) {
     const p = ctx.profile();
+    // Nothing entered yet: say what this is and how to start.
+    if (FP.checklist.isEmpty(p)) { FP.welcome.render(root); return; }
     const pay = FP.tax.forProfile(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
     const ready = FP.summary.checklist(p).ready;

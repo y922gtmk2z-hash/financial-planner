@@ -27,16 +27,19 @@
     return FP.scenarios.normalise(data.workspace || { profile: data.profile });
   }
 
-  // Returns { workspace, source: 'saved' | 'sample', error? }
+  const fresh = () => FP.scenarios.fromProfile(FP.profile.blank());
+
+  // Returns { workspace, source: 'saved' | 'new', error? }. A first visit
+  // starts empty: the sample household is only loaded if you ask for it.
   function load() {
     const s = storage();
-    if (!s) return { workspace: FP.sampleWorkspace(), source: 'sample', error: 'Browser storage is unavailable, so changes won’t be saved.' };
+    if (!s) return { workspace: fresh(), source: 'new', error: 'Browser storage is unavailable, so changes won’t be saved.' };
     const raw = s.getItem(KEY);
-    if (!raw) return { workspace: FP.sampleWorkspace(), source: 'sample' };
+    if (!raw) return { workspace: fresh(), source: 'new' };
     try {
       return { workspace: workspaceFrom(JSON.parse(raw)), source: 'saved' };
     } catch (e) {
-      return { workspace: FP.sampleWorkspace(), source: 'sample', error: 'Saved data could not be read, so sample data was loaded.' };
+      return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. Import a backup in Your data if you have one.' };
     }
   }
 

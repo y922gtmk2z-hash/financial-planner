@@ -61,6 +61,7 @@
   }
 
   function resultsView(p, view) {
+    if (FP.checklist.isEmpty(p)) return FP.checklist.emptyCard('your projection');
     const missing = FP.checklist.card(p);
     if (missing) return missing;
     const r = FP.projection.project(p);

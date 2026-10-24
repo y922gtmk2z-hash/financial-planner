@@ -31,9 +31,16 @@ to a screen, such as `…/#future`, work and need no server rules. The `/docs` f
 holds the build plan only, not the site, so don't choose it as the Pages folder.
 `npm test` checks that every path in `index.html` stays relative.
 
-The first time you open it, it shows a **clearly fictional sample household** with two
-example scenarios. Use **Start with my own figures** in the banner to begin with an empty
-form, or **edit this example as mine** to keep the sample figures.
+**Publishing an update:** every script and the stylesheet in `index.html` end in the
+same `?v=` version (for example `?v=2026-10-24.1`). Change it in every tag when you
+publish, so browsers fetch the new files instead of a cached copy (GitHub Pages lets
+browsers keep files for about 10 minutes). `npm test` checks they all match.
+
+The first time you open it, it starts **empty**, with a short welcome that says what
+the planner does, how it works and that your data stays in your browser, and a **Get
+started** button into Setup. Until you add figures, every screen says to add them to
+see results; no illustrative data is used. If you'd like to look around first, **Your
+data → Load sample data** loads a clearly fictional household (with a banner saying so).
 
 ## Screens
 
@@ -371,7 +378,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-160 tests cover:
+162 tests cover:
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,
@@ -416,7 +423,8 @@ npm test   # Node 18+, no dependencies to install
 - **Data handling:** parsing and validation, cleaning up imported data (including ideas
   you've ticked off), export/import round trips, and the "Finish your plan" checklist.
 - **Checks on the source:** no code can make network requests, every script is
-  loaded, every path stays relative (for GitHub Pages), and every route has a screen,
+  loaded, every path stays relative (for GitHub Pages), every asset carries the same
+  version, and every route has a screen,
   with Setup in the header and the views as tabs.
 
 ## Accessibility
