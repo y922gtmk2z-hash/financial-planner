@@ -32,8 +32,6 @@
     ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
       .map((m) => ({ value: m.slice(0, 3).toLowerCase(), label: m })));
 
-  // Setup screen fields. `path` is where the value lives in the profile.
-  // Fields under `assumptions.` are the same values shown in the Assumptions panel.
   // Setup screen fields, in four sections. `path` is where the value lives in
   // the profile. Fields under `assumptions.` are the same values shown in the
   // Assumptions panel. Fields with a `group` sit under that group's heading;

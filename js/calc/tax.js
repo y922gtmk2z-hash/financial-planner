@@ -228,6 +228,8 @@
       takeHome: round2(net),
       takeHomeMonthly: round2(net / 12),
       niablePay: payForNi,
+      // For the £100k allowance taper (whatever the tax code says).
+      adjustedNetIncome,
     };
   }
 

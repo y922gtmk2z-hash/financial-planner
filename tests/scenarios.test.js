@@ -122,3 +122,16 @@ test('what-if presets copy the baseline with one change, keeping the scenario yo
   base.profile.mortgage.balance = 0;
   assert.equal(FP.scenarios.fromPreset(ws, 'overpay'), null);
 });
+
+test('what-if presets stay within assumption limits', () => {
+  const ws = FP.scenarios.fromProfile(FP.sampleWorkspace().scenarios[0].profile);
+  const p = ws.scenarios[0].profile;
+  const preset = (id) => FP.scenarios.PRESETS.find((x) => x.id === id);
+  p.assumptions.investmentReturn = -19;
+  assert.ok(!preset('weakerMarkets').applies(p));
+  p.assumptions.retirementAge = 79;
+  assert.ok(!preset('workLonger').applies(p));
+  p.assumptions.retirementAge = 41;
+  p.about.age = 30;
+  assert.ok(!preset('retireEarlier').applies(p));
+});

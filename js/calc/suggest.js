@@ -69,7 +69,10 @@
     }
 
     const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
-    const inTaper = pay.personalAllowance < FP.taxConfig.personalAllowance && pay.personalAllowance > 0;
+    // Judged on income, not the allowance: a reduced tax code also lowers the allowance.
+    const cfg = FP.taxConfig;
+    const taperTop = cfg.taperThreshold + cfg.personalAllowance / cfg.taperRate;
+    const inTaper = pay.adjustedNetIncome > cfg.taperThreshold && pay.adjustedNetIncome < taperTop;
     const m = today.mortgage;
     const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && a.mortgageRate > a.savingsRate), expensive: expensive.length > 0 });
 

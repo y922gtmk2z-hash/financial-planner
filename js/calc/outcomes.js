@@ -71,8 +71,8 @@
         };
       },
       levers: [
-        { label: 'Retire 1 year later', applies: (p) => p.assumptions.retirementAge < p.assumptions.endAge - 1, apply: (p) => { p.assumptions.retirementAge += 1; } },
-        { label: 'Pay 1% more of your salary into your pension', applies: (p) => (p.income.grossSalary || 0) > 0, apply: (p) => { p.assumptions.employeePensionPct += 1; } },
+        { label: 'Retire 1 year later', applies: (p) => p.assumptions.retirementAge < Math.min(p.assumptions.endAge - 1, within('retirementAge', 1)), apply: (p) => { p.assumptions.retirementAge += 1; } },
+        { label: 'Pay 1% more of your salary into your pension', applies: (p) => (p.income.grossSalary || 0) > 0 && p.assumptions.employeePensionPct < within('employeePensionPct', 1), apply: (p) => { p.assumptions.employeePensionPct += 1; } },
         { label: 'Put 10% more of your leftover money into your pension', applies: (p) => cashFlow(p).surplus > 0 && splitPct(p).pension <= 90, apply: (p) => moveShare(p, 'pension', 10) },
       ],
     },
@@ -166,7 +166,7 @@
       },
       levers: [
         { label: 'Pay your pension by salary sacrifice', applies: (p) => p.income.pensionMethod !== 'salarySacrifice' && (p.assumptions.employeePensionPct || 0) > 0, apply: (p) => { p.income.pensionMethod = 'salarySacrifice'; } },
-        { label: 'Pay 1% more of your salary into your pension', applies: (p) => (p.income.grossSalary || 0) > 0, apply: (p) => { p.assumptions.employeePensionPct += 1; } },
+        { label: 'Pay 1% more of your salary into your pension', applies: (p) => (p.income.grossSalary || 0) > 0 && p.assumptions.employeePensionPct < within('employeePensionPct', 1), apply: (p) => { p.assumptions.employeePensionPct += 1; } },
       ],
     },
     {
@@ -219,6 +219,11 @@
       ],
     },
   ];
+
+  // The highest value an assumption can take before adding `step` would go past its limit.
+  function within(key, step) {
+    return FP.assumptions.def(key).max - step + 1e-9;
+  }
 
   // Your retirement goal a month (today's money): what you set, or what you spend now.
   function goalMonthly(p) {

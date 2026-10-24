@@ -160,6 +160,7 @@
     return out;
   }
 
+  const limit = (key) => FP.assumptions.def(key);
   const gbp = (n) => `\u00a3${Math.round(n).toLocaleString('en-GB')}`;
 
   /*
@@ -169,13 +170,13 @@
   const PRESETS = [
     {
       id: 'retireEarlier', label: 'Retire 2 years earlier',
-      applies: (p) => p.about.age != null && p.assumptions.retirementAge - 2 > p.about.age,
+      applies: (p) => p.about.age != null && p.assumptions.retirementAge - 2 > p.about.age && p.assumptions.retirementAge - 2 >= limit('retirementAge').min,
       name: (p) => `Retire at ${p.assumptions.retirementAge - 2}`,
       apply: (p) => { p.assumptions.retirementAge -= 2; },
     },
     {
       id: 'workLonger', label: 'Work 2 years longer',
-      applies: (p) => p.about.age != null && p.assumptions.retirementAge + 2 < p.assumptions.endAge,
+      applies: (p) => p.about.age != null && p.assumptions.retirementAge + 2 < p.assumptions.endAge && p.assumptions.retirementAge + 2 <= limit('retirementAge').max,
       name: (p) => `Retire at ${p.assumptions.retirementAge + 2}`,
       apply: (p) => { p.assumptions.retirementAge += 2; },
     },
@@ -199,7 +200,7 @@
     },
     {
       id: 'weakerMarkets', label: 'Weaker markets (returns 2 points lower)',
-      applies: () => true,
+      applies: (p) => p.assumptions.investmentReturn - 2 >= limit('investmentReturn').min && p.assumptions.pensionGrowth - 2 >= limit('pensionGrowth').min,
       name: () => 'Weaker markets',
       apply: (p) => {
         p.assumptions.investmentReturn -= 2;

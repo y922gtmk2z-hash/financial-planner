@@ -29,6 +29,14 @@
 
   const fresh = () => FP.scenarios.fromProfile(FP.profile.blank());
 
+  // Saved data this version can't use safely (unreadable, or from a newer
+  // version) is copied here before anything can overwrite it.
+  const BACKUP_KEY = 'ukfp.unreadBackup';
+
+  function keepBackup(s, raw) {
+    try { s.setItem(BACKUP_KEY, raw); } catch (e) { /* storage full */ }
+  }
+
   // Returns { workspace, source: 'saved' | 'new', error? }. A first visit
   // starts empty: the sample household is only loaded if you ask for it.
   function load() {
@@ -36,11 +44,29 @@
     if (!s) return { workspace: fresh(), source: 'new', error: 'Browser storage is unavailable, so changes won’t be saved.' };
     const raw = s.getItem(KEY);
     if (!raw) return { workspace: fresh(), source: 'new' };
+    let data;
     try {
-      return { workspace: workspaceFrom(JSON.parse(raw)), source: 'saved' };
+      data = JSON.parse(raw);
     } catch (e) {
-      return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. Import a backup in Your data if you have one.' };
+      keepBackup(s, raw);
+      return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. A copy is kept: download it from Your data.' };
     }
+    if (data && typeof data.schemaVersion === 'number' && data.schemaVersion > STORE_VERSION) {
+      keepBackup(s, raw);
+      return { workspace: workspaceFrom(data), source: 'saved', error: 'Your figures were saved by a newer version of the planner. Reload the page to get it; a copy of what was saved is kept in Your data.' };
+    }
+    try {
+      return { workspace: workspaceFrom(data), source: 'saved' };
+    } catch (e) {
+      keepBackup(s, raw);
+      return { workspace: fresh(), source: 'new', error: 'Saved data could not be read, so the planner has started empty. A copy is kept: download it from Your data.' };
+    }
+  }
+
+  // The kept copy of saved data that couldn't be used, or null.
+  function unreadBackup() {
+    const s = storage();
+    try { return s ? s.getItem(BACKUP_KEY) : null; } catch (e) { return null; }
   }
 
   function save(workspace) {
@@ -105,5 +131,5 @@
     return null;
   }
 
-  FP.store = { KEY, STORE_VERSION, load, save, clear, exportJson, importJson, pref };
+  FP.store = { KEY, STORE_VERSION, load, save, clear, exportJson, importJson, pref, unreadBackup };
 })(globalThis.FP = globalThis.FP || {});
