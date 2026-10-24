@@ -12,24 +12,30 @@
   const SPEND_FIELD = { path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month',
     help: 'Apart from your mortgage and debt payments. A rough figure is fine.' };
 
+  // Spending already split into categories is edited in Setup, not here.
+  function quickPaths(p) {
+    return QUICK.filter((path) => path !== SPEND_FIELD.path || p.spending.length <= 1);
+  }
+  const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
+  const questionCount = (p) => COUNT_WORDS[quickPaths(p).length];
+
   function quickField(path) {
     if (path === SPEND_FIELD.path) return SPEND_FIELD;
     return FP.profile.SECTIONS.flatMap((sec) => sec.fields).find((f) => f.path === path);
   }
 
   /*
-   * Quick start: four answers, then a first look at your plan. Where the same
+   * Quick start: up to five answers, then a first look at your plan. Where the same
    * fields also appear further down the page (Setup), typing in one copy
    * updates the other.
    */
   function quickStart(ctx, root) {
     const p = ctx.profile();
     if (!p.spending.length) p.spending.push(FP.profile.newSpending());
-    // Spending already split into categories is edited in Setup, not here.
-    const paths = QUICK.filter((path) => path !== SPEND_FIELD.path || p.spending.length === 1);
+    const paths = quickPaths(p);
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
       h('h1', { id: 'quick-h' }, 'Quick start'),
-      h('p', { class: 'muted' }, 'Five questions for a first look at your plan. You can add detail afterwards.'),
+      h('p', { class: 'muted' }, `${questionCount(p).replace(/^./, (c) => c.toUpperCase())} questions for a first look at your plan. You can add detail afterwards.`),
       paths.map((path) => {
         const f = quickField(path);
         return FP.field.render(f, {
@@ -65,8 +71,8 @@
     if (started) quickStartPage(root, ctx); else frontPage(root, ctx);
   }
 
-  const STEPS = [
-    ['Answer five quick questions', 'Your age, pay, spending and when you’d like to retire. About a minute; rough figures are fine.'],
+  const steps = (p) => [
+    [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, spending and when you’d like to retire. About a minute; rough figures are fine.'],
     ['See your first plan', 'What’s left each month, and how much you’d need for retirement.'],
     ['Add detail when you’re ready', 'Savings, pensions and debts sharpen the picture and unlock your next steps.'],
   ];
@@ -82,13 +88,12 @@
   }
 
   function frontPage(root, ctx) {
-    document.body.dataset.gate = '';
     FP.dom.add(root,
       h('section', { class: 'gate', 'aria-labelledby': 'gate-h' },
         h('span', { class: 'gate-mark', 'aria-hidden': 'true' }, '£'),
         h('h1', { id: 'gate-h' }, 'Finance planner'),
         h('p', { class: 'gate-tag' }, 'Plan your money, privately. A UK planner for your pay, spending, debts and retirement.'),
-        h('ol', { class: 'gate-steps' }, STEPS.map(([title, text]) => h('li', null, h('strong', null, title), h('span', null, text)))),
+        h('ol', { class: 'gate-steps' }, steps(ctx.profile()).map(([title, text]) => h('li', null, h('strong', null, title), h('span', null, text)))),
         h('button', {
           type: 'button', class: 'gate-go',
           onclick: () => {
@@ -104,9 +109,11 @@
         }, 'Get started'),
         otherWays(ctx),
         h('p', { class: 'gate-note' }, 'Everything stays in this browser: no accounts, nothing sent anywhere.'),
+        h('p', { class: 'gate-note' }, h('a', { href: '#data' }, 'Your data'), ' · ', h('a', { href: '#settings' }, 'Settings')),
         h('details', { class: 'gate-notice', open: true },
           h('summary', null, 'A planning illustration, not financial advice'),
-          h('p', null, 'Results depend on the assumptions you set, and projections are not guaranteed. Figures are estimates based on your inputs and the assumptions you can see and change. Investments can fall as well as rise. Consider speaking to a regulated financial adviser before making decisions.'))));
+          // Same wording as the notice under the header, kept in one place (index.html).
+          h('p', null, document.querySelector('#disclaimer p').textContent))));
   }
 
   function quickStartPage(root, ctx) {
