@@ -31,7 +31,7 @@
       h('h2', { id: 'nw-h', class: 'eyebrow' }, 'Net worth'),
       h('p', { class: 'hero-number' + (s.netWorth < 0 ? ' negative' : '') }, money(s.netWorth)),
       h('p', { class: 'muted' }, `${money(s.assets.total)} owned − ${money(s.liabilities.total)} owed`),
-      chips(['Today’s values from Setup', 'No growth applied']));
+      chips(['Today’s values from Your figures', 'No growth applied']));
   }
 
   function chartCard(s) {
@@ -50,7 +50,7 @@
     return h('section', { class: 'card', 'aria-labelledby': 'al-h' },
       h('h2', { id: 'al-h' }, 'What you own vs what you owe'),
       empty
-        ? h('p', { class: 'muted' }, 'Add your assets and debts in Setup to see this chart.')
+        ? h('p', { class: 'muted' }, 'Add your assets and debts in Your figures to see this chart.')
         : [
           FP.chart.stackedBars([
             { label: 'Assets', total: s.assets.total, segments: assetSegs },
@@ -104,7 +104,7 @@
     return h('section', { class: 'card', 'aria-labelledby': 'home-h' },
       h('h2', { id: 'home-h' }, 'Home equity'),
       s.home.value === 0 && s.home.mortgageBalance === 0
-        ? h('p', { class: 'muted' }, 'No home or mortgage entered. If you own a home, add it in Setup.')
+        ? h('p', { class: 'muted' }, 'No home or mortgage entered. If you own a home, add it in Your figures.')
         : body,
       m ? chips([
         `Mortgage rate ${pct(a.mortgageRate, 2)}`,
@@ -150,7 +150,7 @@
       h('p', { class: 'muted small' }, cf.savingsMonthly > 0
         ? 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments \u2212 regular savings.'
         : 'Left over = take-home pay \u2212 spending \u2212 mortgage \u2212 other debt payments.',
-        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with suggestions) at the end of Setup.'),
+        ' ', h('a', { href: '#setup/leftover' }, 'Choose what to do with it'), ' (with suggestions) at the end of Your figures.'),
       chips([
         `Tax year ${pay.taxYear}`,
         region,

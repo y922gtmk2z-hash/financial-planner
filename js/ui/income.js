@@ -48,8 +48,8 @@
       h('h2', { id: 'inc-in' }, 'Based on'),
       h('dl', { class: 'facts' }, rows.map(([label, value, target]) => h('div', null,
         h('dt', null, label),
-        h('dd', null, value, ' ', h('a', { href: `#setup/${target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Setup` }, 'Change'))))),
-      h('p', { class: 'muted small' }, 'Your figures are all entered in Setup, so there\u2019s one place to change them.'));
+        h('dd', null, value, ' ', h('a', { href: `#setup/${target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Your figures` }, 'Change'))))),
+      h('p', { class: 'muted small' }, 'Everything is entered in Your figures, so there\u2019s one place to change it.'));
   }
 
   function taxYearNotice() {
@@ -71,7 +71,7 @@
     const cfg = FP.taxConfig;
 
     if (r.gross <= 0) {
-      return h('section', { class: 'card' }, h('p', { class: 'muted' }, 'Enter your gross salary in Setup to see your take-home pay.'), h('a', { href: '#setup/income.grossSalary' }, 'Add your salary'));
+      return h('section', { class: 'card' }, h('p', { class: 'muted' }, 'Enter your gross salary in Your figures to see your take-home pay.'), h('a', { href: '#setup/income.grossSalary' }, 'Add your salary'));
     }
 
     // Take-home in a month with no bonus at all, when bonuses are spread evenly.
@@ -214,7 +214,7 @@
         ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
       ].filter(Boolean).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
       r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
-      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Setup to project when it ends.'),
+      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Your figures to project when it ends.'),
       chips([
         followInflation
           ? `Current rates until August 2027, then your ${pct(p.assumptions.inflation, 1)} inflation as RPI + plan margin`

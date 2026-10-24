@@ -40,7 +40,7 @@ The first time you open it, it starts **empty**, with a short welcome that says 
 the planner does and a **Quick start**: your age, salary, monthly spending and
 retirement age. Those four answers give a first look at Your plan, marked "Based on 4
 answers" until you add savings, pensions or debts. The same four questions sit at the
-top of Setup until they're answered. You can also go through Setup in full, or **Load
+top of Your figures until they're answered. You can also fill in all your figures, or **Load
 sample data** (a clearly fictional household, with a banner saying so) from the
 welcome screen or Your data. Until you add figures, every screen says to add them to
 see results; no illustrative data is used.
@@ -49,13 +49,13 @@ see results; no illustrative data is used.
 
 **How it's laid out:** four tabs at the bottom (**Your plan**, **Today**, **Future**,
 **Scenarios**) and a header that stays pinned, slides away as you scroll down and
-comes back as soon as you scroll up, with **Setup** and a **More** menu (Assumptions,
+comes back as soon as you scroll up, with **Your figures** and a **More** menu (Assumptions,
 Your data). On a phone the tabs step aside while you type in a field, so the keyboard
 has room. From 900px wide the tabs become a side menu next to a wider page.
 
 **Your journey:**
 
-1. **Setup**, in four sections (section by section the first time, then on one page):
+1. **Your figures**, in four sections (section by section the first time, then on one page):
    - **About you:** your age, when you'd like to retire, what you'd like to spend in
      retirement, your salary and (optionally) your **tax code**. **More about your pay** (folded away) has your
      pension, bonuses, salary sacrifice, **workplace benefits** (private medical
@@ -76,25 +76,25 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
    Nothing changes in your plan until you choose; closing a panel with changes you
    haven't applied or saved asks first.
 
-Every figure has one home in Setup; other screens link straight to the field (for
+Every figure has one home in Your figures; other screens link straight to the field (for
 example `#setup/income.grossSalary`). Until your age and monthly spending are entered,
 Your plan, Future and Scenarios show a **Finish your plan** checklist instead of a
 projection. The disclaimer is shown in full on your first visit, then as one line you
 can open. The scenario picker appears once you have more than one scenario. Each tab
 opens with a one-line subtitle (Your plan: "Four questions, answered"; Today: "Where you
 stand this month"; Future: "Year by year"; Scenarios: "What if…"), and Your plan,
-Today and Future have an **Edit your figures** button into Setup. Each chart has a
+Today and Future have an **Edit your figures** button. Each chart has a
 one-line "So what" under it.
 
 | Screen | What it does |
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Setup** (header) | Four sections: **About you** (age, retirement goal, salary, and folded away: pension, bonuses, salary sacrifice, workplace benefits, other income), **What you spend and save** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, student loan, other debts). Section by section the first time, then one page. A strip above the tabs shows take-home and what's left over as you type. |
+| **Your figures** (header, `#setup`) | Four sections, plus **Projections** (show amounts in today's or future money): **About you** (age, retirement goal, salary, and folded away: pension, bonuses, salary sacrifice, workplace benefits, other income), **What you spend and save** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, student loan, other debts). Section by section the first time, then one page. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
-| **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Setup (retirement age, mortgage rate, pension %) link there. |
-| **Settings** (More menu) | Theme (System, Light or Dark) and whether projections open in today's money or future money. Saved in this browser only. |
+| **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
+| **Settings** (More menu) | Theme (System, Light or Dark), saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
 
 Old links to `#today` and `#income` open the matching part of **Today** (its link is still `#now`).
@@ -146,9 +146,9 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Pension access age | 57 |
 | ISA allowance | £20,000 a year |
 | Cash ISA limit (from 6 April 2027, under-65s) | £12,000 a year |
-| Retirement goal (in Setup) | what you spend now (or a monthly amount you set) |
+| Retirement goal (in Your figures) | what you spend now (or a monthly amount you set) |
 | Monthly spending (new plan) | one total; add categories if you like |
-| Money left over each month (your choice, in Setup) | nothing chosen, so nothing saved (emergency fund target: 3 months of outgoings). The sample household uses 10% emergency fund, 20% cash, 50% investments, 10% mortgage, 10% pension |
+| Money left over each month (your choice, in Your figures) | nothing chosen, so nothing saved (emergency fund target: 3 months of outgoings). The sample household uses 10% emergency fund, 20% cash, 50% investments, 10% mortgage, 10% pension |
 
 ## Tax rules — check every tax year
 
@@ -171,7 +171,7 @@ tax year in the file. To update:
 
 ## Money left over each month
 
-At the end of Setup (and on Future), **Money left over each month** shows how much is left
+At the end of Your figures (and on Future), **Money left over each month** shows how much is left
 each month after spending, mortgage and debts, and regular savings. Bonus months add
 more. You then choose what to do with it: your **emergency fund**, **paying off debts
 faster** (most expensive first), **cash savings**, **investments** (ISA first),
@@ -218,7 +218,7 @@ existing saved splits carry over.
 
 ## Regular savings
 
-Under **Regular savings** in Setup, add monthly amounts into **cash savings**, a
+Under **Regular savings** in Your figures, add monthly amounts into **cash savings**, a
 **cash ISA** or a **stocks & shares ISA**. Each can stay the same or rise with your
 pay. They:
 
@@ -274,7 +274,7 @@ Under **About you → More about your pay**:
 ## Salary sacrifice
 
 Add car schemes, cycle to work and other schemes (e.g. tech or extra holiday) under
-**Salary sacrifice** in Setup or on Income. Give each a monthly amount and, optionally,
+**Salary sacrifice** in Your figures or on Income. Give each a monthly amount and, optionally,
 the months left. The sacrificed pay comes off before income tax, National Insurance
 and student loan, so each scheme shows what it **really costs you a month** after
 those savings. A car scheme also takes the car's list price (P11D value) and
@@ -299,7 +299,7 @@ the loan is repaid, repayments stop and your take-home pay rises. Any balance le
 the scenario comparison show when it ends. The loan counts as a debt in your net
 worth until then.
 
-Choose your plan under **Student loan** in Setup or on Income (the help text says
+Choose your plan under **Student loan** in Your figures or on Income (the help text says
 which plan you're likely to be on). Interest is RPI plus a margin:
 
 | Plan | Interest |
@@ -314,7 +314,7 @@ temporary 6% cap on Plan 2 and postgraduate loans. **By default the projection k
 these current rates** (Plan 2 still moves with your income). In Assumptions you can
 instead choose **Student loan interest in future years → Follow inflation**. That
 uses your inflation assumption as RPI from September 2027, plus the plan's margin,
-with no cap. Entering your own rate in Setup overrides both. Without a balance,
+with no cap. Entering your own rate in Your figures overrides both. Without a balance,
 repayments simply carry on until you retire.
 
 **Extra payments** (optional, a month) are voluntary payments on top of what comes out
@@ -439,7 +439,7 @@ npm test   # Node 18+, no dependencies to install
 - **Checks on the source:** no code can make network requests, every script is
   loaded, every path stays relative (for GitHub Pages), every asset carries the same
   version, and every route has a screen,
-  with Setup in the header and the views as tabs.
+  with Your figures in the header and the views as tabs.
 
 ## Accessibility
 

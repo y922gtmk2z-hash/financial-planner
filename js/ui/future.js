@@ -66,7 +66,7 @@
     if (missing) return missing;
     const r = FP.projection.project(p);
     if (!r.ok) {
-      return h('section', { class: 'card' }, h('p', null, r.message), h('a', { href: '#setup' }, 'Go to Setup'));
+      return h('section', { class: 'card' }, h('p', null, r.message), h('a', { href: '#setup' }, 'Go to Your figures'));
     }
     const a = p.assumptions;
     const real = view === 'real';
@@ -169,7 +169,7 @@
   function mixSoWhat(series, y, rows) {
     const pos = series.filter((s) => s.values[y] > 0);
     const total = pos.reduce((t, s) => t + s.values[y], 0);
-    if (!pos.length || !(total > 0)) return 'nothing you own is projected to grow yet. Add your savings and pensions in Setup.';
+    if (!pos.length || !(total > 0)) return 'nothing you own is projected to grow yet. Add your savings and pensions in Your figures.';
     const top = pos.reduce((a, b) => (b.values[y] > a.values[y] ? b : a));
     return `at ${rows[y].age}, ${top.label.toLowerCase()} makes up ${Math.round((top.values[y] / total) * 100)}% of what you own, so its growth assumption matters most.`;
   }

@@ -45,7 +45,7 @@
     const value = v == null ? 'Not set' : d.unit === 'money' ? FP.dom.money(v) : `${v}${A.UNIT_SUFFIX[d.unit] ? ` ${A.UNIT_SUFFIX[d.unit]}`.replace(' %', '%') : ''}`;
     return h('div', { class: 'field in-setup' },
       h('dl', { class: 'facts' }, h('div', null, h('dt', null, d.label),
-        h('dd', null, value, ' ', h('a', { href: `#setup/assumptions.${d.key}`, class: 'edit-link', 'aria-label': `Change ${d.label.toLowerCase()} in Setup` }, 'Change in Setup')))),
+        h('dd', null, value, ' ', h('a', { href: `#setup/assumptions.${d.key}`, class: 'edit-link', 'aria-label': `Change ${d.label.toLowerCase()} in Your figures` }, 'Change in Your figures')))),
       h('p', { class: 'help' }, d.help),
       h('p', { class: 'meta' }, `Default ${defaultText(d)} \u00b7 set ${FP.dom.date(d.setOn)}`));
   }

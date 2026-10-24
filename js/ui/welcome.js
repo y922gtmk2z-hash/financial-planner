@@ -67,7 +67,7 @@
       quickStart(ctx),
       h('section', { class: 'card', 'aria-label': 'Other ways to start' },
         h('div', { class: 'button-row' },
-          h('a', { class: 'button secondary', href: '#setup' }, 'Go through Setup in full'),
+          h('a', { class: 'button secondary', href: '#setup' }, 'Fill in all your figures'),
           h('button', {
             type: 'button', class: 'secondary',
             onclick: () => { ctx.replaceWorkspace(FP.sampleWorkspace()); ctx.toast('Sample data loaded'); },
@@ -76,7 +76,7 @@
       h('section', { class: 'card', 'aria-labelledby': 'welcome-how' },
         h('h2', { id: 'welcome-how' }, 'How it works'),
         h('ol', { class: 'welcome-steps' },
-          h('li', null, h('strong', null, 'Setup'), ' takes about five minutes, in four short sections: About you, What you spend and save, Assets, and Debts. A rough figure is fine — you can change anything later.'),
+          h('li', null, h('strong', null, 'Your figures'), ' takes about five minutes, in four short sections: About you, What you spend and save, Assets, and Debts. A rough figure is fine — you can change anything later.'),
           h('li', null, h('strong', null, 'Your plan'), ' answers the questions above, each with a clear verdict.'),
           h('li', null, h('strong', null, 'Tap any result'), ' to see what drives it, try changes and see the effect straight away.')),
         h('p', { class: 'muted' }, 'Useful to have to hand: a recent payslip (with your tax code), your savings, investment and pension balances, and your mortgage and any loan statements.')),
