@@ -1,0 +1,178 @@
+UX and accessibility improvements: instructions for Claude Code
+
+Repo: y922gtmk2z-hash/financial-planner (UK personal finance planner, static site on GitHub Pages).
+Live: https://y922gtmk2z-hash.github.io/financial-planner/
+
+0. How to work
+
+Read README.md, index.html and css/styles.css first. Then work through the phases below in order, one phase per commit. Run npm test after each phase and fix anything that breaks.
+
+Hard constraints (do not break)
+
+	•	Plain HTML, CSS and JS only. No framework, no build step, no network calls, no new dependencies.
+	•	Scripts are classic scripts sharing the FP namespace. Do not convert to ES modules (the page must work from file://).
+	•	The CSP in index.html stays as is (connect-src 'none', script-src 'self'). No inline scripts, no external fonts or CDNs.
+	•	All paths stay relative (GitHub Pages serves from /financial-planner/).
+	•	When you change any asset, bump the ?v= query string on EVERY script and stylesheet tag in index.html to the same new value. npm test checks they match.
+	•	Do not change anything under js/calc/ or js/config/tax-2026-27.js. This work is UI and CSS only. If a UI change needs a model change, stop and flag it.
+	•	Keep both themes working (light, and dark via prefers-color-scheme) and keep 320px width with no horizontal scroll.
+	•	Keep the existing a11y baseline: skip link, labelled inputs, 3px focus ring, reduced-motion handling, announced errors, chart table alternatives.
+	•	Plain-English UK copy, no jargon added. Money formatted as £ with tabular-nums.
+
+Evidence status
+
+The review below came from reading the source and computing contrast. I could not run the app in a browser. Items marked VERIFY must be confirmed in a real browser (use Playwright or a headless Chrome screenshot at 375px and 1280px, light and dark) before and after the fix. If you can't screenshot, say so in your summary.
+
+Phase 1: Visual bugs and quick wins
+
+1.1 Tab bar grid (VERIFY first)
+
+	•	css/styles.css sets .tabbar { grid-template-columns: repeat(6, 1fr) } but index.html has only 4 tab links. The tabs likely sit in the left two-thirds with an empty strip on the right.
+	•	Fix: repeat(4, 1fr). If JS adds more tabs at runtime, derive the column count from the DOM instead (grid-auto-flow: column; grid-auto-columns: 1fr).
+	•	Acceptance: four tabs evenly fill the width at 320, 375, 768 and 1280px.
+
+1.2 Replace Unicode glyph icons with inline SVG
+
+	•	Currently ◉ ◎ ↗ ⇄ (tabs) and ✎ (Setup) are text glyphs. They render differently per platform and ◉ vs ◎ are nearly identical.
+	•	Replace with small inline SVG icons (24px viewBox, currentColor, aria-hidden="true"), distinct shapes: Your plan = home/summary, Now = wallet/clock, Future = trending-up, Scenarios = split/compare, Setup = pencil/sliders.
+	•	Keep them in JS-free markup in index.html. No external icon files needed (CSP allows data: images, but inline SVG is simpler).
+
+1.3 Tab label size
+
+	•	.tabbar a is 0.7rem (about 11px) and drops to about 10px under 420px and 360px. Raise the base to at least 0.75rem (12px), icon above label. Remove the narrower overrides if labels still fit ("Your plan" / "Now" / "Future" / "Scenarios" fit at 320px in 4 columns once 1.1 is done).
+	•	Rename "Now" to "Today" and "Your plan" to "Plan" only if labels are too long. Route ids stay unchanged.
+
+1.4 Footer duplicate disclaimer
+
+	•	Disclaimer appears in a collapsible banner and in full in the footer. Keep the banner and the short privacy line. Cut the footer disclaimer to one sentence: "Planning illustration only, not financial advice. Data stays in this browser." with a link that opens the banner details.
+	•	Keep the full text once, in the banner's <details>, and show it expanded on first visit as now.
+
+Phase 2: Accessibility and contrast
+
+2.1 Chart colour contrast (WCAG 1.4.11, 3:1 for graphics)
+
+Computed against the light surface (#fcfcfb):
+
+	•	series-2 #eb6834 = 3.12 (borderline), series-3 #1baf7a = 2.74, series-4 #eda100 = 2.11, series-5 #e87ba4 = 2.62 (all fail).
+	•	Adjacent stacked areas series-1 vs series-3 = 1.57, series-3 vs series-6 = 1.76.
+Dark mode passes, except series-6 #008300 at 3.52 (passes narrowly).
+
+Fix (do all three):
+
+	1.	Darken light-mode series tokens until each is at least 3:1 against --surface. Keep hues distinguishable. Re-run the computation script in section 6 and paste the table into your summary.
+	2.	Add a 2px --surface stroke between stacked areas and bars (the .area rule already has a 1px stroke; raise it).
+	3.	Add direct labels or end-of-line labels on the net-worth and stacked charts so colour is never the only way to tell series apart.
+	•	Check the Scenarios overlay chart (up to 8 lines): add dash patterns for series 5-8 (.line.dashed exists) and keep the legend swatches matching line style.
+
+2.2 Tap targets
+
+Target 44x44px for anything used repeatedly on a phone. Minimum 36px only for secondary controls with 8px spacing.
+
+	•	.header-link (More) is about 33px high. Set min-height: 40px, padding: 0 14px. .header-setup is 38px, make it 40px.
+	•	button.link has min-height: 0 and padding 4px. Used for idea "Done" and "Not for me", edit links, and so on. Give it min-height: 44px with display: inline-flex; align-items: center (keep the visual look, enlarge the hit area with padding).
+	•	.idea-actions .link is min-height: 32px, raise to 44px.
+	•	.icon-btn is 40px wide, make it 44px.
+	•	button.small is 36px, make it 40px.
+
+2.3 Minimum text size
+
+	•	Anything under 0.8rem (12.8px) that carries information should go to at least 0.8rem: .save-status, .badge (0.68rem), .chip (0.75rem), .step-chip, .tile small, chart .tick (11px SVG text). Decorative or redundant labels can stay.
+	•	Do not break 320px layouts; check .step-nav (4 chips) and .live-strip.
+
+2.4 Focus indicator on fields
+
+	•	.input-wrap:focus-within replaces the outline with a border and a 35% shadow. Check that the border colour change meets 3:1 against the unfocused border and surface. If not, keep the 2px border in --focus and drop the translucent shadow.
+
+2.5 Spend-category rows
+
+	•	.spend-row .field label is visually hidden for every row. Make sure each row still has an accessible name (label text such as "Groceries amount") and that the visible first column input is labelled "Category name". Add aria-label where the hidden label is not tied to the input via for/id.
+
+2.6 Theme toggle
+
+	•	Dark mode follows the OS only (the data-theme hook exists in CSS). Add a three-way Theme control (System / Light / Dark) in Your data or the More menu. Persist the choice in localStorage, wrapped in try/catch, and set document.documentElement.dataset.theme. System must remove the attribute.
+
+Phase 3: Mobile layout pressure
+
+3.1 Keyboard and fixed bars
+
+	•	The fixed tab bar (64px) plus the sticky Setup .live-strip (about 56px) take about 120px of a phone screen, much worse with the on-screen keyboard open.
+	•	Hide the tab bar while any input, select or textarea has focus, and restore on blur (use focusin and focusout on document, with a small delay on blur so tapping between fields does not flicker). Use a class on <body> such as kbd-open, and set .kbd-open .tabbar { display: none }, .kbd-open { padding-bottom: 0 }.
+	•	Move the live strip's bottom offset to 8px when the tab bar is hidden.
+
+3.2 Wide screens
+
+	•	At 900px and above, the 760px centred column with a bottom tab bar looks like a phone app. Add a left side nav at min-width: 900px using the same four links (reuse the tab bar markup, restyle with position: sticky; top: 0 in a two-column grid), widen main to about 1040px, keep the detail panel as a side sheet. If this grows too large, do 3.1 only and note 3.2 as a follow-up.
+
+Phase 4: Flow and content (from the UX review)
+
+Make each change small and testable. Do not change calculations.
+
+4.1 Faster first result: quick start
+
+	•	Add a "Quick start" path on the welcome screen (js/ui/welcome.js) and at the top of Setup: age, salary, monthly spending, retirement age. After those four fields, show a provisional Your plan with a clear "Based on 4 answers: add more detail to sharpen this" banner and a link to continue Setup.
+	•	Reuse existing fields and ids in js/ui/field.js and js/ui/setup.js, no new storage keys. The "Finish your plan" checklist already gates results on age and monthly spending, so reuse that logic.
+	•	Put "Load sample data" on the welcome screen as a secondary button (it is currently under Your data).
+
+4.2 Reduce jargon
+
+	•	In the Setup and Now screens: keep tax code, salary sacrifice, P11D value, workplace benefits and student loan plan behind the existing "Advanced" / "More about your pay" folds. Add a one-line "Where do I find this?" help under: tax code (payslip, P60, HMRC app), P11D value, student loan plan, State Pension.
+	•	Replace "surplus" and "leftover" mixed terms with one term, "left over each month", throughout the UI (grep js/ui/*.js and the README screens table).
+
+4.3 Leftover money allocation (hardest screen)
+
+	•	In js/ui/leftover.js add a single stacked bar showing the allocation across choices, a running total, and a persistent notice when under 100%: "£X a month is not allocated and is treated as spent."
+	•	Keep the % / £ switch and "Use this split". Show the unit not being edited as the small secondary figure (already described in the README).
+
+4.4 Navigation clarity
+
+	•	"Your plan" and "Now" overlap. Rename Now to "Today" (route id stays now, so old links work) and add a one-line subtitle at the top of each tab: Plan = "Four questions, answered", Today = "Where you stand this month", Future = "Year by year", Scenarios = "What if…".
+	•	Give Setup a persistent "Edit your figures" button on Plan, Today and Future (it already exists in the header; add the secondary placement on the page for discoverability on mobile where the header hides on scroll).
+
+4.5 Explain outputs
+
+	•	Under each chart, add a one-line "so what" in plain English (js/ui/future.js, overview.js, now.js).
+	•	First time a user sees the shaded range on the net-worth chart, add a tooltip or inline note: "Shaded area: returns 2 points lower or higher."
+	•	Next to "What you could spend in retirement", add a "How is this worked out?" link that opens the relevant Assumptions section.
+
+4.6 Scenarios
+
+	•	Make the comparison default to deltas against Baseline: show +/- £ and +/- years with a green/red delta using the existing .delta.better/.worse classes, not eight raw columns first. Keep the full table behind "Show all figures".
+	•	Explain the 8-scenario limit in the UI when it is reached instead of silently disabling the add button.
+
+4.7 Data safety
+
+	•	Add an "Export backup" button on Your plan (not only in Your data). Prompt for a backup after meaningful edits, not just the 30-day timer, but respect "Not now" for 30 days.
+	•	"Clear all data": require typing DELETE (or a clear two-step confirm) and show what will be removed.
+	•	Add a visible note near Export about GitHub Pages storage being shared across <user>.github.io project sites.
+
+4.8 Validation polish
+
+	•	Flag blank key fields (salary, monthly spending) as "Not entered yet: counts as £0" in the field help rather than silently treating as £0. Keep the README rule that blank counts as £0 for the calculation.
+	•	Add inputmode="decimal" (or numeric where whole numbers) on all money and percentage inputs, and format with thousands separators on blur (parse back on focus). Keep autocomplete="off".
+
+5. Tests and verification
+
+	•	Add or extend tests in tests/ for source-level checks: tab link count equals the tab bar column count; every .tabbar a has an accessible name; no CSS font-size below 0.8rem on informational selectors listed in 2.3 (or an allowlist); every script and stylesheet tag has the same ?v=.
+	•	Run npm test (Node 18+). All existing tests must pass.
+	•	Run axe-core on each screen (Plan, Today, Future, Scenarios, Setup, Assumptions, Your data) in light and dark and in an open detail panel. Zero violations.
+	•	Take screenshots at 320, 375, 768, 1280px for each screen in light and dark. Attach before/after for items 1.1, 1.2, 2.1, 3.1.
+	•	Manual keyboard pass: tab through Setup and open a detail panel; focus order sensible, focus never lost when a panel closes.
+	•	Bump ?v= once at the end (or per phase), format YYYY-MM-DD.N, in every tag.
+	•	Update the README screens table and the Accessibility section for anything you changed (theme toggle, quick start, tab names).
+
+6. Contrast check script (run before and after Phase 2)
+
+def L(h):
+    h=h.lstrip('#'); r=[int(h[i:i+2],16)/255 for i in (0,2,4)]
+    f=lambda c:c/12.92 if c<=.03928 else ((c+.055)/1.055)**2.4
+    r=[f(c) for c in r]; return .2126*r[0]+.7152*r[1]+.0722*r[2]
+def C(a,b):
+    x,y=sorted([L(a),L(b)],reverse=True); return round((x+.05)/(y+.05),2)
+# text needs >= 4.5, UI/graphics need >= 3.0
+print(C('#1baf7a','#fcfcfb'))  # 2.74 today, must reach >= 3.0
+
+7. Deliverable
+
+Reply with: what changed per phase, files touched, before/after contrast table, test and axe results, screenshots, anything you skipped and why, and any item that needed a model change (do not make it, just list it).
+
+Priority if time is short: 1.1, 2.1, 2.2, 3.1, 4.1, 4.3, then the rest.
