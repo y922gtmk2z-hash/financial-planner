@@ -1,18 +1,11 @@
 /*
- * Welcome: what this planner is, shown on Your plan until you've added any
- * figures (a first visit, or after clearing your data).
+ * Welcome: the front page (the app's name, what happens next and Get
+ * started), then the quick start, shown on Your plan until it's done.
  */
 (function (FP) {
   'use strict';
 
   const { h } = FP.dom;
-
-  const ANSWERS = [
-    ['Each month', 'What you take home after tax, and what’s left after spending and debts.'],
-    ['Debt-free', 'When your mortgage, student loan and other debts will be paid off.'],
-    ['Retirement', 'How much you’d need when you retire, and how long your money would last.'],
-    ['What to do next', 'Ideas based on your figures, and the changes that would make the biggest difference.'],
-  ];
 
   // The answers behind a first, rough plan. Same profile fields as Your figures.
   const QUICK = ['about.age', 'income.grossSalary', 'spending.0.monthly', 'assumptions.retirementAge', 'goals.retirementIncome'];
@@ -35,8 +28,8 @@
     // Spending already split into categories is edited in Setup, not here.
     const paths = QUICK.filter((path) => path !== SPEND_FIELD.path || p.spending.length === 1);
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
-      h('h2', { id: 'quick-h' }, 'Quick start'),
-      h('p', { class: 'muted' }, 'A few questions for a first look at your plan. You can add detail afterwards.'),
+      h('h1', { id: 'quick-h' }, 'Quick start'),
+      h('p', { class: 'muted' }, 'Five questions for a first look at your plan. You can add detail afterwards.'),
       paths.map((path) => {
         const f = quickField(path);
         return FP.field.render(f, {
@@ -59,33 +52,61 @@
     return card;
   }
 
+  /*
+   * Until you start: a front page with the app's name, what happens next and
+   * one button. Then the quick start on its own. Someone who has already
+   * entered something goes straight to the quick start.
+   */
   function render(root, ctx) {
+    const started = FP.store.pref('started') === '1' || !FP.checklist.isEmpty(ctx.profile());
+    if (started) quickStartPage(root, ctx); else frontPage(root, ctx);
+  }
+
+  const STEPS = [
+    ['Answer five quick questions', 'Your age, pay, spending and when you’d like to retire. About a minute; rough figures are fine.'],
+    ['See your first plan', 'What’s left each month, and how much you’d need for retirement.'],
+    ['Add detail when you’re ready', 'Savings, pensions and debts sharpen the picture and unlock your next steps.'],
+  ];
+
+  // Ways in other than the quick start: the sample household, or a backup.
+  function otherWays(ctx) {
+    return h('p', { class: 'gate-other' }, 'Just looking? ',
+      h('button', {
+        type: 'button', class: 'link',
+        onclick: () => { ctx.replaceWorkspace(FP.sampleWorkspace()); ctx.toast('Sample data loaded'); },
+      }, 'See a fictional example'),
+      ' · Used it before? ', h('a', { href: '#data' }, 'Import a backup'));
+  }
+
+  function frontPage(root, ctx) {
+    document.body.dataset.gate = '';
     FP.dom.add(root,
-      h('section', { class: 'welcome', 'aria-labelledby': 'welcome-h' },
-        h('h1', { id: 'welcome-h' }, 'Plan your money, privately'),
-        h('p', { class: 'lead' }, 'A UK personal finance planner. Start with a few questions; everything stays in this browser.')),
-      quickStart(ctx),
-      h('section', { class: 'card', 'aria-labelledby': 'welcome-see' },
-        h('h2', { id: 'welcome-see' }, 'What you\u2019ll see'),
-        h('ul', { class: 'welcome-answers' }, ANSWERS.map(([title, text]) => h('li', null, h('strong', null, title), h('span', null, text))))),
-      h('section', { class: 'card', 'aria-label': 'Other ways to start' },
-        h('p', { class: 'muted small' }, 'Just looking? ',
-          h('button', {
-            type: 'button', class: 'link',
-            onclick: () => { ctx.replaceWorkspace(FP.sampleWorkspace()); ctx.toast('Sample data loaded'); },
-          }, 'Load a fictional example household'),
-          '. Used the planner before on another device? ', h('a', { href: '#data' }, 'Import your backup file'), '.')),
-      h('section', { class: 'card', 'aria-labelledby': 'welcome-how' },
-        h('h2', { id: 'welcome-how' }, 'How it works'),
-        h('ol', { class: 'welcome-steps' },
-          h('li', null, h('strong', null, 'Your figures'), ' takes about five minutes, in short sections: About you, Income, Outgoings, Assets and Debts. A rough figure is fine — you can change anything later.'),
-          h('li', null, h('strong', null, 'Your plan'), ' answers those questions. With just the quick start it\u2019s a first look; it fills in as you add detail.'),
-          h('li', null, h('strong', null, 'Tap any result'), ' to see what drives it, try changes and see the effect straight away.')),
-        h('p', { class: 'muted' }, 'Useful to have to hand: a recent payslip (with your tax code), your savings, investment and pension balances, and your mortgage and any loan statements.')),
-      h('section', { class: 'card', 'aria-labelledby': 'welcome-private' },
-        h('h2', { id: 'welcome-private' }, 'Your data stays with you'),
-        h('p', null, 'Everything is saved in this browser on this device. Nothing is sent anywhere, and there are no accounts. You can export a backup or clear everything at any time in Your data.'),
-        h('p', { class: 'muted' }, 'This is a planning illustration, not financial advice. Results depend on your figures and the assumptions you can see and change.')));
+      h('section', { class: 'gate', 'aria-labelledby': 'gate-h' },
+        h('span', { class: 'gate-mark', 'aria-hidden': 'true' }, '£'),
+        h('h1', { id: 'gate-h' }, 'Finance planner'),
+        h('p', { class: 'gate-tag' }, 'Plan your money, privately. A UK planner for your pay, spending, debts and retirement.'),
+        h('ol', { class: 'gate-steps' }, STEPS.map(([title, text]) => h('li', null, h('strong', null, title), h('span', null, text)))),
+        h('button', {
+          type: 'button', class: 'gate-go',
+          onclick: () => {
+            FP.store.pref('started', '1');
+            // The front page has just shown the notice, so the bar stays one line.
+            document.getElementById('disclaimer').open = false;
+            ctx.rerender();
+            window.scrollTo(0, 0);
+            const head = document.getElementById('quick-h');
+            if (head) { head.setAttribute('tabindex', '-1'); head.focus({ preventScroll: true }); }
+          },
+        }, 'Get started'),
+        otherWays(ctx),
+        h('p', { class: 'gate-note' }, 'Everything stays in this browser: no accounts, nothing sent anywhere.'),
+        h('details', { class: 'gate-notice' },
+          h('summary', null, 'A planning illustration, not financial advice'),
+          h('p', null, 'Results depend on the assumptions you set, and projections are not guaranteed. Figures are estimates based on your inputs and the assumptions you can see and change. Investments can fall as well as rise. Consider speaking to a regulated financial adviser before making decisions.'))));
+  }
+
+  function quickStartPage(root, ctx) {
+    FP.dom.add(root, quickStart(ctx), h('section', { class: 'card', 'aria-label': 'Other ways to start' }, otherWays(ctx)));
   }
 
   /*

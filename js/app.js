@@ -240,6 +240,7 @@
     drawBanner();
     drawScenarioBar();
     main.replaceChildren();
+    delete document.body.dataset.gate; // the front page sets it again
     FP.screens[id].render(main, ctx);
     restoreOpened();
     document.title = `${FP.screens[id].title} · Finance planner`;

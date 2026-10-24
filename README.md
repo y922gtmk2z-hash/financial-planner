@@ -41,8 +41,11 @@ same `?v=` version (for example `?v=2026-10-24.1`). Change it in every tag when 
 publish, so browsers fetch the new files instead of a cached copy (GitHub Pages lets
 browsers keep files for about 10 minutes). `npm test` checks they all match.
 
-The first time you open it, it starts **empty**, with a short welcome that says what
-the planner does and a **Quick start**: your age, salary, monthly spending, retirement
+The first time you open it, it starts **empty**, on a **front page**: the app's name,
+three steps (answer five quick questions, see your first plan, add detail when you're
+ready), a **Get started** button, links to a fictional example or to import a backup,
+and the not-advice notice. It has no header, tabs or footer. Get started opens the
+**Quick start**: your age, salary, monthly spending, retirement
 age and (optionally) what you'd like to spend in retirement. Those answers give a
 **first look** at Your plan: what you take home and have left each month, and for
 retirement how much you'd need in savings and pensions when you retire, how much you're
