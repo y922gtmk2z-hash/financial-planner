@@ -102,6 +102,7 @@
    *   series: [{ label, color, values: [] }]   (area: stacked in order; negatives stack downward)
    *   markers: [{ index, label }]        (dashed vertical lines)
    *   band: { label, color, low: [], high: [] }   (line only: a shaded range behind the lines)
+   *   directLabels: true                 (write series names on the chart)
    *   ariaLabel
    * }
    */
@@ -241,6 +242,8 @@
         }
       });
 
+      if (opts.directLabels) drawLabels(svg, x, y, W - m.r, m.l, m.t, m.t + ph);
+
       // Hover layer
       const cross = s('line', { y1: m.t, y2: m.t + ph, class: 'crosshair', visibility: 'hidden' });
       svg.appendChild(cross);
@@ -307,6 +310,53 @@
       if (active != null) show(active);
     }
 
+    /*
+     * Series names written on the chart, so colour isn't the only way to tell
+     * them apart: lines are named at their last point, areas where they are
+     * thickest (skipped if too thin or if they'd overlap another label).
+     */
+    function drawLabels(svg, x, y, right, left, top, bottom) {
+      const LH = 14;
+      const placed = [];
+      opts.series.forEach((ser, si) => {
+        const pts = stacks[si];
+        const w = ser.label.length * 7.2;
+        let i;
+        let ly;
+        let anchor;
+        if (opts.type === 'area') {
+          let best = -1;
+          for (let k = 0; k < n; k += 1) {
+            const t = Math.abs(y(pts[k][0]) - y(pts[k][1]));
+            if (best === -1 || t > Math.abs(y(pts[best][0]) - y(pts[best][1]))) best = k;
+          }
+          if (best === -1 || Math.abs(y(pts[best][0]) - y(pts[best][1])) < LH + 2) return;
+          i = best;
+          ly = (y(pts[i][0]) + y(pts[i][1])) / 2 + 4;
+          anchor = 'middle';
+        } else {
+          for (i = n - 1; i >= 0 && pts[i][1] == null; i -= 1);
+          if (i < 0) return;
+          ly = y(pts[i][1]) - 6;
+          anchor = 'end';
+        }
+        let lx = anchor === 'end' ? Math.min(x(i), right) - 2 : Math.min(Math.max(x(i), left + w / 2), right - w / 2);
+        ly = Math.min(Math.max(ly, top + LH), bottom - 2);
+        // Lines that end close together: nudge the label up or down a row.
+        const box = () => (anchor === 'end' ? [lx - w, lx] : [lx - w / 2, lx + w / 2]);
+        const clash = () => placed.some((p) => Math.abs(p.y - ly) < LH && box()[0] < p.x[1] && p.x[0] < box()[1]);
+        if (opts.type !== 'area') {
+          const base = ly;
+          [0, -1, 1, -2, 2, -3, 3].some((k) => { ly = base + k * LH; return !clash() && ly >= top + LH - 4 && ly <= bottom; });
+        }
+        if (clash() || ly < top + LH - 4 || ly > bottom) return;
+        placed.push({ x: box(), y: ly });
+        const t = s('text', { x: lx, y: ly, class: 'series-label', 'text-anchor': anchor, 'aria-hidden': 'true' });
+        t.textContent = ser.label;
+        svg.appendChild(t);
+      });
+    }
+
     // Draw once attached, and again when the width changes.
     requestAnimationFrame(draw);
     if (typeof ResizeObserver === 'function') {
@@ -321,7 +371,7 @@
   // Legend without values (for charts over time).
   function keys(items) {
     return h('ul', { class: 'legend legend-inline' }, items.map((it) => h('li', null,
-      h('span', { class: `swatch${it.line ? ' swatch-line' : ''}${it.band ? ' swatch-band' : ''}`, style: `background:var(${it.color})`, 'aria-hidden': 'true' }),
+      h('span', { class: `swatch${it.line ? ' swatch-line' : ''}${it.dashed ? ' swatch-dashed' : ''}${it.band ? ' swatch-band' : ''}`, style: `background:var(${it.color})`, 'aria-hidden': 'true' }),
       h('span', { class: 'legend-label' }, it.label))));
   }
 

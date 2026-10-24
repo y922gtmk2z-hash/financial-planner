@@ -1,5 +1,5 @@
 /*
- * "Your leftover money": how much is left each month after spending, debts
+ * "Money left over each month": how much is left each month after spending, debts
  * and regular savings, what you want to do with it (the split the projection
  * uses), and suggestions based on your figures. Used on Setup and Future.
  */
@@ -8,6 +8,7 @@
 
   const { h, money } = FP.dom;
   const TONE_ICON = { warn: '!', tip: 'i', good: '✓' };
+  const SPLIT_COLORS = { emergency: '--series-1', debts: '--series-8', cash: '--series-3', invest: '--series-7', mortgage: '--series-2', pension: '--series-5' };
 
   /*
    * opts.onChange: called after the split changes (e.g. to redraw a projection).
@@ -19,6 +20,7 @@
     const headline = h('div', { class: 'leftover-amount', role: 'status', 'aria-live': 'polite' });
     const rows = h('div', { class: 'leftover-rows' });
     const status = h('p', { class: 'split-status', role: 'status' });
+    const alloc = h('div', { class: 'alloc' });
     const suggested = h('div', { class: 'suggested-split' });
     const ideas = h('ul', { class: 'ideas' });
     const amounts = {};
@@ -83,7 +85,7 @@
       FP.dom.fill(fundStatus, have, ' ',
         n > 0 && left > 0
           ? `At ${money(left * shares.emergency)} a month it’s full in ${FP.suggest.duration(n)}, then this share goes to your other choices.`
-          : 'Put a share of your leftover money here to build it up.');
+          : 'Put a share of what\u2019s left over each month here to build it up.');
     }
 
     function refresh() {
@@ -111,7 +113,10 @@
           : `= ${money(left * shares[f.key])} a month`;
       });
       drawFund(r, shares, left);
+      drawAlloc(shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
+      // Under 100% is said in the allocation notice; the line below covers the rest.
+      status.hidden = shares.status === 'under' && shares.total > 0;
 
       if (r.split) {
         const same = FP.profile.LEFTOVER_FIELDS.every((f) => Math.abs((pct[f.key] || 0) - r.split[f.key]) < 0.5);
@@ -140,6 +145,33 @@
       drawIdeas(r.suggestions);
     }
 
+    // One bar across your choices, a running total, and what's left unallocated.
+    function drawAlloc(shares, left) {
+      const keys = FP.profile.LEFTOVER_FIELDS.filter((f) => shares[f.key] > 0);
+      const allocated = keys.reduce((t, f) => t + shares[f.key], 0);
+      const rest = Math.max(0, 1 - allocated);
+      if (!(left > 0)) { FP.dom.fill(alloc); alloc.hidden = true; return; }
+      alloc.hidden = false;
+      const label = keys.map((f) => `${f.label} ${Math.round(shares[f.key] * 100)}%`)
+        .concat(rest > 0.0005 ? [`not allocated ${Math.round(rest * 100)}%`] : []).join(', ');
+      const key = FP.chart.legend(keys.map((f) => ({ label: f.label, color: SPLIT_COLORS[f.key], value: left * shares[f.key] }))
+        .concat(rest > 0.0005 ? [{ label: 'Not allocated', color: '--surface-2', value: left * rest }] : []));
+      if (rest > 0.0005) {
+        const sw = key.lastChild.querySelector('.swatch');
+        sw.removeAttribute('style');
+        sw.classList.add('alloc-rest');
+      }
+      FP.dom.fill(alloc,
+        h('p', { class: 'alloc-total' }, h('strong', null, `${money(left * allocated)} of ${money(left)} a month`), ` allocated (${Math.round(allocated * 100)}%)`),
+        h('div', { class: 'alloc-bar', role: 'img', 'aria-label': `How what\u2019s left is shared out: ${label || 'nothing chosen yet'}` },
+          keys.map((f) => h('span', { class: 'alloc-seg', style: `flex-grow:${shares[f.key]};background:var(${SPLIT_COLORS[f.key]})` })),
+          rest > 0.0005 ? h('span', { class: 'alloc-seg alloc-rest', style: `flex-grow:${rest}` }) : null),
+        key,
+        rest > 0.0005 ? h('p', { class: 'notice warn alloc-notice' },
+          h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, '!'),
+          `${money(left * rest)} a month is not allocated and is treated as spent.`) : null);
+    }
+
     // Ideas you can tick off or hide; those go into a folded list you can bring back from.
     function drawIdeas(list) {
       const p = ctx.profile();
@@ -166,12 +198,13 @@
     }
 
     FP.dom.fill(card,
-      h('h2', { id: 'leftover-h' }, 'Your leftover money'),
+      h('h2', { id: 'leftover-h' }, 'Money left over each month'),
       headline,
       h('h3', null, 'What do you want to do with it?'),
       h('p', { class: 'help' }, 'Choose how it\u2019s shared out each year in your projection, as a share of what\u2019s left or as amounts a month (which rise with prices). Nothing is saved until you choose: anything you don\u2019t allocate is treated as spent.'),
       unitHolder,
       rows,
+      alloc,
       status,
       suggested,
       h('h3', null, 'Ideas based on your figures'),

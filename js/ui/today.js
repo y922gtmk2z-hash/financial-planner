@@ -59,8 +59,17 @@
           h('div', { class: 'legend-cols' },
             FP.chart.legend(assetSegs.filter((x) => x.value > 0)),
             FP.chart.legend(liabSegs.filter((x) => x.value > 0))),
+          FP.dom.soWhat(ownSoWhat(s, assetSegs)),
         ],
       h('details', { class: 'table-toggle' }, h('summary', null, 'Show as a table'), table));
+  }
+
+  // What the balance of owning and owing means, in one line.
+  function ownSoWhat(s, assetSegs) {
+    const net = s.assets.total - s.liabilities.total;
+    const top = assetSegs.reduce((x, y) => (y.value > x.value ? y : x), assetSegs[0]);
+    const share = top && s.assets.total > 0 ? Math.round((top.value / s.assets.total) * 100) : 0;
+    return `${net >= 0 ? `you own ${money(net)} more than you owe` : `you owe ${money(-net)} more than you own`}${share >= 50 ? `, and ${top.label.toLowerCase()} is ${share}% of what you own` : ''}.`;
   }
 
   function homeCard(s, a, p) {

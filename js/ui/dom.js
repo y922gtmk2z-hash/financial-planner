@@ -80,5 +80,17 @@
       items.filter(Boolean).map((t) => h('li', { class: 'chip' }, t)));
   }
 
-  FP.dom = { h, append, add, fill, money, pct, months, date, inputText, chips };
+  // A tab's heading, its one-line subtitle and (optionally) a way back to Setup.
+  function pageHead(title, sub, opts) {
+    return h('div', { class: 'page-head' },
+      h('div', null, h('h1', null, title), h('p', { class: 'page-sub' }, sub)),
+      opts && opts.edit ? h('a', { class: 'button secondary edit-figures', href: '#setup' }, 'Edit your figures') : null);
+  }
+
+  // One plain-English line under a chart: what it means for you.
+  function soWhat(text) {
+    return h('p', { class: 'so-what' }, h('strong', null, 'So what: '), text);
+  }
+
+  FP.dom = { h, append, add, fill, money, pct, months, date, inputText, chips, pageHead, soWhat };
 })(globalThis.FP = globalThis.FP || {});

@@ -7,6 +7,21 @@
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 
+  // Theme: 'system' (no attribute, follows the device), 'light' or 'dark'.
+  FP.theme = {
+    get: () => (['light', 'dark'].includes(FP.store.pref('theme')) ? FP.store.pref('theme') : 'system'),
+    set(value) {
+      FP.store.pref('theme', value === 'system' ? null : value);
+      FP.theme.apply();
+    },
+    apply() {
+      const t = FP.theme.get();
+      if (t === 'system') delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = t;
+    },
+  };
+  FP.theme.apply();
+
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
   let saveTimer = null;
@@ -67,6 +82,7 @@
     // When you last changed something (for the backup reminder).
     if (ok && changedSinceLoad) {
       FP.store.pref('lastChange', new Date().toISOString());
+      FP.store.pref('editsSinceExport', (Number(FP.store.pref('editsSinceExport')) || 0) + 1);
       changedSinceLoad = false;
     }
     status.textContent = ok ? 'Saved on this device' : 'Not saved — browser storage unavailable';
@@ -181,6 +197,21 @@
     lastY = y;
   }, { passive: true });
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
+  // On touch screens, typing in a field hides the tab bar so the keyboard
+  // leaves room for the form. A short delay on blur stops it flickering as you
+  // move between fields.
+  const touch = window.matchMedia('(hover: none) and (pointer: coarse)');
+  const typing = (el) => el && el.matches && el.matches('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not([type="range"]), select, textarea');
+  let kbdTimer = null;
+  document.addEventListener('focusin', (e) => {
+    if (!touch.matches || !typing(e.target)) return;
+    clearTimeout(kbdTimer);
+    document.body.classList.add('kbd-open');
+  });
+  document.addEventListener('focusout', () => {
+    clearTimeout(kbdTimer);
+    kbdTimer = setTimeout(() => { if (!typing(document.activeElement)) document.body.classList.remove('kbd-open'); }, 150);
+  });
   // The "More" menu closes when you tap elsewhere or press Escape.
   const menu = document.getElementById('header-menu');
   document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });
@@ -197,6 +228,11 @@
   const disclaimer = document.getElementById('disclaimer');
   disclaimer.open = !FP.store.pref('seenDisclaimer');
   FP.store.pref('seenDisclaimer', '1');
+  document.getElementById('show-disclaimer').addEventListener('click', () => {
+    disclaimer.open = true;
+    disclaimer.scrollIntoView({ block: 'start' });
+    disclaimer.querySelector('summary').focus();
+  });
 
   status.textContent = loaded.source === 'saved' ? 'Saved on this device' : '';
   if (loaded.error) toast(loaded.error);

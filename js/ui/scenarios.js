@@ -18,7 +18,7 @@
   function render(root, ctx) {
     const ws = ctx.workspace();
     if (ws.scenarios.length === 1 && FP.checklist.isEmpty(ctx.profile())) {
-      FP.dom.add(root, h('h1', null, 'Scenarios'), FP.checklist.emptyCard('and compare what-ifs'));
+      FP.dom.add(root, FP.dom.pageHead('Scenarios', 'What if\u2026'), FP.checklist.emptyCard('and compare what-ifs'));
       return;
     }
     const results = h('div');
@@ -28,7 +28,7 @@
     const drawList = () => FP.dom.fill(list, listCard(ctx));
 
     FP.dom.add(root,
-      h('h1', null, 'Scenarios'),
+      FP.dom.pageHead('Scenarios', 'What if\u2026'),
       h('p', { class: 'lead' }, 'Copy your plan, change anything — returns, house prices, overpayments, salary, retirement age — and compare the results side by side.'),
       list,
       presetCard(ctx),
@@ -51,6 +51,10 @@
     return h('section', { class: 'card', 'aria-labelledby': 'sc-list-h' },
       h('h2', { id: 'sc-list-h' }, 'Your scenarios'),
       h('p', { class: 'muted' }, 'Every screen shows and edits the scenario you’re editing. Switch at any time with the scenario picker at the top.'),
+      ws.scenarios.length >= S.MAX_SCENARIOS
+        ? h('p', { class: 'notice info', id: 'sc-full' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
+          `You have ${S.MAX_SCENARIOS} scenarios, the most the planner compares at once (each gets its own chart colour). Delete one to add or duplicate another.`)
+        : null,
       h('ul', { class: 'scenario-list' }, ws.scenarios.map((sc, i) => {
         const editing = sc.id === ws.activeId;
         const baseline = i === 0;
@@ -81,6 +85,7 @@
             editing ? null : h('button', { type: 'button', class: 'small', onclick: () => { ctx.setActive(sc.id); ctx.toast(`Now editing “${sc.name}”`); } }, 'Edit this'),
             h('button', {
               type: 'button', class: 'small secondary', disabled: ws.scenarios.length >= S.MAX_SCENARIOS,
+              'aria-describedby': ws.scenarios.length >= S.MAX_SCENARIOS ? 'sc-full' : null,
               onclick: () => { const c = S.clone(ws, sc.id); ctx.changed(); ctx.rerender(); ctx.toast(`Created “${c.name}” — now editing it`); },
             }, 'Duplicate'),
             renameBtn,
@@ -214,6 +219,33 @@
         h('th', { scope: 'row' }, row.label),
         sums.map(({ s }) => h('td', { class: 'num' }, s.ok ? row.cell(s) : '—')))))));
 
+    // First: how each scenario differs from the baseline, in a few key figures.
+    const years = (n) => `${Math.abs(n)} ${Math.abs(n) === 1 ? 'year' : 'years'}`;
+    const moneyDelta = (v, b, unit) => {
+      if (!Number.isFinite(v) || !Number.isFinite(b)) return null;
+      if (Math.abs(v - b) < 0.5) return h('span', { class: 'delta changed' }, 'Same');
+      return h('span', { class: `delta ${v > b ? 'better' : 'worse'}` }, `${v > b ? '+' : '\u2212'}${money(Math.abs(v - b))}${unit || ''}`);
+    };
+    const deltaRows = (s) => [
+      ['Net worth at retirement', s.atRetirement && base.atRetirement ? moneyDelta(s.atRetirement.netWorth, base.atRetirement.netWorth) : null],
+      ['Could spend in retirement', s.retirementSpend && base.retirementSpend ? moneyDelta(s.retirementSpend.monthly, base.retirementSpend.monthly, ' a month') : null],
+      ['Retirement age', s.retirementAge === base.retirementAge ? h('span', { class: 'delta changed' }, 'Same')
+        : h('span', { class: 'delta changed' }, `${years(s.retirementAge - base.retirementAge)} ${s.retirementAge > base.retirementAge ? 'later' : 'earlier'}`)],
+      ['Mortgage-free', Number.isFinite(s.mortgageFreeAge) && Number.isFinite(base.mortgageFreeAge)
+        ? (s.mortgageFreeAge === base.mortgageFreeAge ? h('span', { class: 'delta changed' }, 'Same')
+          : h('span', { class: `delta ${s.mortgageFreeAge < base.mortgageFreeAge ? 'better' : 'worse'}` }, `${years(s.mortgageFreeAge - base.mortgageFreeAge)} ${s.mortgageFreeAge < base.mortgageFreeAge ? 'sooner' : 'later'}`))
+        : null],
+      ['Money runs short', s.runsOutAge && !base.runsOutAge ? h('span', { class: 'delta worse' }, `At ${s.runsOutAge}`)
+        : !s.runsOutAge && base.runsOutAge ? h('span', { class: 'delta better' }, 'No longer') : null],
+    ].filter((r) => r[1]);
+    const others = sums.slice(1);
+    const deltas = others.length
+      ? h('ul', { class: 'delta-list' }, others.map(({ sc, s }) => h('li', null,
+        h('p', { class: 'scenario-name' }, h('span', { class: 'swatch', style: `background:var(${COLORS[sums.findIndex((x) => x.sc === sc)]})`, 'aria-hidden': 'true' }), h('strong', null, sc.name)),
+        s.ok ? h('dl', { class: 'facts delta-facts' }, deltaRows(s).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v))))
+          : h('p', { class: 'muted small' }, 'Not enough figures to project this scenario.'))))
+      : h('p', { class: 'muted' }, 'Add a what-if above to see how it differs from your baseline.');
+
     // Overlay chart, aligned by age.
     const ages = [];
     const minAge = Math.min(...ok.map((x) => x.s.rows[0].age));
@@ -221,7 +253,7 @@
     for (let a = minAge; a <= maxAge; a += 1) ages.push(a);
     const m = METRICS.find((x) => x.id === metric) || METRICS[0];
     const series = sums.map(({ sc, s }, i) => ({
-      label: sc.name, color: COLORS[i],
+      label: sc.name, color: COLORS[i], dashed: i >= 4,
       values: ages.map((age) => { const r = s.ok ? FP.compare.rowAtAge(s, age) : null; return r ? m.get(r) : null; }),
     }));
     const metricSelect = h('select', { id: 'compare-metric' }, METRICS.map((x) => h('option', { value: x.id, selected: x.id === m.id }, x.label)));
@@ -229,16 +261,20 @@
 
     return [
       h('section', { class: 'card', 'aria-labelledby': 'cmp-h' },
-        h('h2', { id: 'cmp-h' }, 'Side by side'),
-        h('p', { class: 'muted small' }, `Projected amounts in ${moneyNote}. Coloured figures show the difference from the baseline.`),
-        table,
+        h('h2', { id: 'cmp-h' }, `Compared with ${sums[0].sc.name}`),
+        h('p', { class: 'muted small' }, `Differences from the baseline, in ${moneyNote}. Green is better, red is worse.`),
+        deltas,
+        h('details', { class: 'table-toggle all-figures' },
+          h('summary', null, 'Show all figures'),
+          h('p', { class: 'muted small' }, `Projected amounts in ${moneyNote}. Coloured figures show the difference from the baseline.`),
+          table),
         sums.some(({ s }) => s.ok && s.projection.warnings.some((w) => w.key === 'shortfall'))
           ? h('p', { class: 'notice warn' }, 'At least one scenario runs short of money. Open it on the Future screen to see when.')
           : null),
       h('section', { class: 'card', 'aria-labelledby': 'ovl-h' },
         h('h2', { id: 'ovl-h' }, 'Over time'),
         h('div', { class: 'field compact' }, h('label', { for: 'compare-metric' }, 'Show'), h('div', { class: 'input-wrap' }, metricSelect)),
-        FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true }))),
+        FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true, dashed: x.dashed }))),
         FP.chart.timeChart({
           type: 'line', series,
           xLabels: ages.map(String),

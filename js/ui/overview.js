@@ -19,7 +19,7 @@
   function render(root, ctx) {
     const p = ctx.profile();
     // Nothing entered yet: say what this is and how to start.
-    if (FP.checklist.isEmpty(p)) { FP.welcome.render(root); return; }
+    if (FP.checklist.isEmpty(p)) { FP.welcome.render(root, ctx); return; }
     const pay = FP.tax.forProfile(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
     const ready = FP.summary.checklist(p).ready;
@@ -33,7 +33,10 @@
     const panel = (id) => () => FP.explore.open(ctx, id);
 
     FP.dom.add(root,
-      h('h1', null, 'Your plan'),
+      FP.dom.pageHead('Your plan', 'Four questions, answered', { edit: true }),
+      ready && FP.welcome.isRough(p) ? h('p', { class: 'notice info rough-plan' },
+        h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
+        h('span', null, h('strong', null, 'Based on 4 answers: '), 'add more detail (savings, pensions, debts) to sharpen this. ', h('a', { href: '#setup' }, 'Continue Setup'))) : null,
       FP.checklist.card(p),
       noticeList(notices),
       FP.backup.nudge(ctx),
@@ -42,7 +45,7 @@
       ready && proj.ok ? retirementCard(p, proj, ideas, panel, ctx) : null,
       ready ? FP.checklist.note(p) : null,
       proj.ok ? chartCard(proj, today, a) : null,
-      nextCard(ideas, a));
+      nextCard(ideas, a, ctx));
   }
 
   // Ideas you haven't ticked off or hidden, most pressing first.
@@ -54,7 +57,7 @@
 
   // A card answering one question: a verdict, the figures behind it (each opens its
   // detail panel) and the top recommendation for it.
-  function outcomeCard(id, title, verdict, rows, idea, panel) {
+  function outcomeCard(id, title, verdict, rows, idea, panel, after) {
     return h('section', { class: 'card outcome', 'aria-labelledby': `oc-${id}` },
       h('h2', { id: `oc-${id}` }, title),
       h('p', { class: `verdict ${verdict.tone}` }, h('span', { class: 'verdict-icon', 'aria-hidden': 'true' }, verdict.tone === 'ok' ? '\u2713' : verdict.tone === 'warn' ? '!' : '\u2022'), verdict.text),
@@ -69,7 +72,8 @@
         h('span', { class: 'go', 'aria-hidden': 'true' }, '\u203a'))))),
       idea ? h('button', { type: 'button', class: `card-idea ${idea.tone}`, onclick: panel(IDEA_PANEL[idea.id] || 'leftover') },
         h('span', { class: 'idea-icon', 'aria-hidden': 'true' }, idea.tone === 'warn' ? '!' : 'i'),
-        h('span', null, h('strong', null, idea.title), h('span', null, firstSentence(idea.text)))) : null);
+        h('span', null, h('strong', null, idea.title), h('span', null, firstSentence(idea.text)))) : null,
+      after || null);
   }
 
   const ideaFor = (area, ideas) => ideas.find((x) => AREA_IDEAS[area].includes(x.id)) || null;
@@ -138,16 +142,19 @@
       { label: 'Your goal', value: `${money(goal)} a month`, sub: p.goals && p.goals.retirementIncome > 0 ? 'what you set' : 'what you spend now', open: panel('retirement') },
       ret ? { label: `Pension pot at ${ret.age}`, value: money(ret.pension), sub: 'today\u2019s money', open: panel('retirement') } : null,
       ev.runsOut ? { label: 'Money runs short', value: `Age ${ev.runsOut.age}`, sub: String(ev.runsOut.year), warn: true, open: panel('retirement') } : null,
-    ], ideaFor('retirement', ideas), panel);
+    ], ideaFor('retirement', ideas), panel, h('p', { class: 'small how-link' }, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')));
   }
 
-  function nextCard(ideas, a) {
+  function nextCard(ideas, a, ctx) {
     return h('section', { class: 'card next-steps', 'aria-labelledby': 'next-h' },
       h('h2', { id: 'next-h' }, 'Next steps'),
       h('ul', null,
         ideas.length ? link('#setup/ideas', `${ideas.length} ${ideas.length === 1 ? 'idea' : 'ideas'} to look at`, 'Tick them off as you go \u2014 general rules of thumb, not advice') : null,
         link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
-        link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`)));
+        link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`)),
+      h('div', { class: 'button-row backup-row' },
+        h('button', { type: 'button', class: 'secondary', onclick: () => FP.backup.exportFile(ctx) }, 'Export a backup'),
+        h('span', { class: 'muted small' }, 'Your figures live only in this browser.')));
   }
 
   // The first notice in full; any others behind "N more".
@@ -191,10 +198,20 @@
         xTitle: (i) => `Age ${rows[i].age} \u00b7 ${rows[i].year}`,
         ariaLabel: `Line chart of projected net worth by age, in ${moneyNote}`,
       }),
+      FP.dom.soWhat(netWorthSoWhat(rows, ev)),
       h('p', { class: 'muted small' }, `Ages along the bottom, in ${moneyNote}. `, h('a', { href: '#future' }, 'See the full projection')));
+  }
+
+  // Shared with Future: how net worth moves between now and retirement.
+  function netWorthSoWhat(rows, ev) {
+    const start = rows[0];
+    const at = ev.retirement ? rows[ev.retirement.y] : rows[rows.length - 1];
+    const when = ev.retirement ? `when you retire at ${at.age}` : `by ${at.age}`;
+    const move = at.netWorth >= start.netWorth ? 'grows' : 'falls';
+    return `your net worth ${move} from ${money(start.netWorth)} to ${money(at.netWorth)} ${when}${ev.runsOut ? `, but your money runs short at ${ev.runsOut.age}` : ''}.`;
   }
 
 
   FP.screens = FP.screens || {};
-  FP.screens.overview = { title: 'Your plan', render };
+  FP.screens.overview = { title: 'Your plan', render, netWorthSoWhat };
 })(globalThis.FP = globalThis.FP || {});

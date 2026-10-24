@@ -1,5 +1,5 @@
 /*
- * Now: where you stand today, in three parts you switch between: this month
+ * Today (route #now): where you stand today, in three parts you switch between: this month
  * (cash flow), what you own and owe, and your pay and tax.
  */
 (function (FP) {
@@ -24,7 +24,7 @@
     if (!VIEWS.some((v) => v.id === view)) view = 'month';
 
     const body = h('div', { id: 'now-view' });
-    const nav = h('div', { class: 'segmented', role: 'tablist', 'aria-label': 'Now' });
+    const nav = h('div', { class: 'segmented', role: 'tablist', 'aria-label': 'Today' });
 
     function draw() {
       FP.dom.fill(nav, VIEWS.map((v) => h('button', {
@@ -49,11 +49,11 @@
     }
 
     if (FP.checklist.isEmpty(p)) {
-      FP.dom.add(root, h('h1', null, 'Now'), FP.checklist.emptyCard('where you stand today'));
+      FP.dom.add(root, FP.dom.pageHead('Today', 'Where you stand this month'), FP.checklist.emptyCard('where you stand today'));
       return;
     }
     FP.dom.add(root,
-      h('h1', null, 'Now'),
+      FP.dom.pageHead('Today', 'Where you stand this month', { edit: true }),
       s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>
         h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
       nav, body);
@@ -61,5 +61,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.now = { title: 'Now', render };
+  FP.screens.now = { title: 'Today', render };
 })(globalThis.FP = globalThis.FP || {});

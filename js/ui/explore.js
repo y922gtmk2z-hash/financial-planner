@@ -34,7 +34,7 @@
     if (parts[0] === 'leftover') {
       if (parts[1] === 'emergencyMonths') return { ...P.EMERGENCY_MONTHS_FIELD, path };
       const f = P.leftoverField(P.LEFTOVER_FIELDS.find((x) => x.key === parts[1]), p.leftover.unit);
-      return { ...f, path, label: `Leftover money to ${f.label.toLowerCase()}` };
+      return { ...f, path, label: `Left over each month: ${f.label.toLowerCase()}` };
     }
     const setup = P.fieldFor(path);
     if (setup) return setup;
