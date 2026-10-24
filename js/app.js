@@ -7,6 +7,21 @@
   // Older links: Today and Income are now parts of Now.
   const ALIASES = { today: 'now/own', income: 'now/pay' };
 
+  // Theme: 'system' (no attribute, follows the device), 'light' or 'dark'.
+  FP.theme = {
+    get: () => (['light', 'dark'].includes(FP.store.pref('theme')) ? FP.store.pref('theme') : 'system'),
+    set(value) {
+      FP.store.pref('theme', value === 'system' ? null : value);
+      FP.theme.apply();
+    },
+    apply() {
+      const t = FP.theme.get();
+      if (t === 'system') delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = t;
+    },
+  };
+  FP.theme.apply();
+
   const loaded = FP.store.load();
   let workspace = loaded.workspace;
   let saveTimer = null;

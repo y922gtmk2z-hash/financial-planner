@@ -107,19 +107,24 @@
             value: p.spending[0].monthly,
             onChange: (v) => { ctx.update('spending.0.monthly', v); updateTotal(); },
           })
-          : h('div', { class: 'spend-list' }, p.spending.map((r, i) => h('div', { class: 'spend-row' },
-            FP.field.render(P.SPENDING_FIELDS[0], {
-              value: r.category, compact: true,
-              onChange: (v) => ctx.update(`spending.${i}.category`, v),
-            }),
-            FP.field.render(P.SPENDING_FIELDS[1], {
-              value: r.monthly, compact: true,
+          : h('div', { class: 'spend-list' }, p.spending.map((r, i) => {
+            // Each row's labels are hidden, so name the inputs after the category.
+            const amountName = (cat) => `${cat || `Category ${i + 1}`} amount per month`;
+            const amount = FP.field.render(P.SPENDING_FIELDS[1], {
+              value: r.monthly, compact: true, ariaLabel: amountName(r.category),
               onChange: (v) => { ctx.update(`spending.${i}.monthly`, v); updateTotal(); },
-            }),
-            h('button', {
-              type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this category'}`,
-              onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawSpend(); },
-            }, '×')))),
+            });
+            return h('div', { class: 'spend-row' },
+              FP.field.render(P.SPENDING_FIELDS[0], {
+                value: r.category, compact: true, ariaLabel: `Category name ${i + 1}`,
+                onChange: (v) => { ctx.update(`spending.${i}.category`, v); amount.querySelector('input').setAttribute('aria-label', amountName(v)); },
+              }),
+              amount,
+              h('button', {
+                type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this category'}`,
+                onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawSpend(); },
+              }, '×'));
+          })),
         h('button', {
           type: 'button', class: single ? 'link' : 'secondary',
           onclick: () => {

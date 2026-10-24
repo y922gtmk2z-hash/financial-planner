@@ -221,7 +221,7 @@
     for (let a = minAge; a <= maxAge; a += 1) ages.push(a);
     const m = METRICS.find((x) => x.id === metric) || METRICS[0];
     const series = sums.map(({ sc, s }, i) => ({
-      label: sc.name, color: COLORS[i],
+      label: sc.name, color: COLORS[i], dashed: i >= 4,
       values: ages.map((age) => { const r = s.ok ? FP.compare.rowAtAge(s, age) : null; return r ? m.get(r) : null; }),
     }));
     const metricSelect = h('select', { id: 'compare-metric' }, METRICS.map((x) => h('option', { value: x.id, selected: x.id === m.id }, x.label)));
@@ -238,7 +238,7 @@
       h('section', { class: 'card', 'aria-labelledby': 'ovl-h' },
         h('h2', { id: 'ovl-h' }, 'Over time'),
         h('div', { class: 'field compact' }, h('label', { for: 'compare-metric' }, 'Show'), h('div', { class: 'input-wrap' }, metricSelect)),
-        FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true }))),
+        FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true, dashed: x.dashed }))),
         FP.chart.timeChart({
           type: 'line', series,
           xLabels: ages.map(String),

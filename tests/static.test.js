@@ -109,3 +109,17 @@ test('tab bar: one column per tab, each tab named by visible text with a hidden 
     assert.ok(!/[←-⟿]/.test(inner), 'no Unicode glyph icons');
   });
 });
+
+test('informational small text is at least 0.8rem', () => {
+  const css = read('css/styles.css');
+  const selectors = ['.save-status', '.badge', '.chip', '.step-chip', '.tile small', '.stat-grid.tiles small', '.live-figures small', '.tchart .tick', '.tabbar a'];
+  [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].forEach(([, sel, body]) => {
+    const names = sel.split(',').map((x) => x.trim());
+    if (!names.some((n) => selectors.includes(n))) return;
+    const m = body.match(/font-size:\s*([\d.]+)(rem|px)/);
+    if (!m) return;
+    const rem = m[2] === 'px' ? Number(m[1]) / 16 : Number(m[1]);
+    assert.ok(rem >= 0.75, `${sel.trim()} font-size ${m[0]}`);
+    if (!names.includes('.tabbar a')) assert.ok(rem >= 0.8, `${sel.trim()} font-size ${m[0]}`);
+  });
+});

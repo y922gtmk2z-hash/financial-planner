@@ -141,7 +141,7 @@
         FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))
           .concat({ label: 'If returns are 2 points lower or higher', color: '--series-7', band: true })),
         FP.chart.timeChart({
-          type: 'line', series: netSeries, markers, band,
+          type: 'line', series: netSeries, markers, band, directLabels: true,
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
         }),
@@ -152,7 +152,7 @@
         h('h2', { id: 'comp-chart-h' }, 'What your net worth is made of'),
         FP.chart.keys(compSeries.map((x) => ({ label: x.label, color: x.color }))),
         FP.chart.timeChart({
-          type: 'area', series: compSeries, markers, totalLabel: 'Net worth',
+          type: 'area', series: compSeries, markers, totalLabel: 'Net worth', directLabels: true,
           xLabels: rows.map((x) => String(x.age)), xTitle,
           ariaLabel: `Stacked area chart of net worth by component, ${moneyNote}`,
         }),

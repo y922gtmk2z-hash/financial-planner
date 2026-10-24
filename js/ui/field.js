@@ -10,7 +10,7 @@
 
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
-   * opts:  { value, onChange(value), compact, extra (node under help) }
+   * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared) }
    */
   function render(field, opts) {
     uid += 1;
@@ -35,7 +35,7 @@
 
     let input;
     if (field.type === 'select') {
-      input = h('select', { id, 'aria-describedby': helpId },
+      input = h('select', { id, 'aria-describedby': helpId, 'aria-label': opts.ariaLabel || null },
         field.options.map((o) => h('option', { value: o.value, selected: o.value === opts.value }, o.label)));
       input.addEventListener('change', () => commit(input.value));
     } else {
@@ -49,6 +49,7 @@
         placeholder: field.placeholder || (numeric ? (field.nullable ? opts.nullPlaceholder || field.nullPlaceholder || 'Not set' : '0') : ''),
         value: FP.dom.inputText(field, opts.value),
         'aria-describedby': `${helpId} ${errId}`,
+        'aria-label': opts.ariaLabel || null,
         maxlength: numeric ? 16 : 60,
       });
       input.addEventListener('input', () => commit(input.value));

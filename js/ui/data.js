@@ -30,6 +30,13 @@
         h('p', { class: 'muted' }, 'Clearing your browser data, or using a private window, will remove it. Export a file to keep a backup or move to another device.'),
         ctx.storageError ? h('p', { class: 'notice warn' }, ctx.storageError) : null),
       h('section', { class: 'card' },
+        h('h2', null, 'Appearance'),
+        FP.field.render({
+          label: 'Theme', type: 'toggle',
+          help: 'System follows your device\u2019s light or dark setting.',
+          options: [{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }],
+        }, { value: FP.theme.get(), onChange: (v) => FP.theme.set(v) })),
+      h('section', { class: 'card' },
         h('h2', null, 'Back up or move your data'),
         backupStatus(),
         h('div', { class: 'button-row' },
@@ -54,6 +61,7 @@
             onclick: () => {
               if (!confirm('Delete all your data from this browser? This can’t be undone. Export a file first if you want a backup.')) return;
               FP.store.clear();
+              FP.theme.apply();
               ctx.replaceWorkspace(FP.scenarios.fromProfile(FP.profile.blank()));
               ctx.toast('All data cleared');
             },

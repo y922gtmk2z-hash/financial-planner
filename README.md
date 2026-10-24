@@ -436,3 +436,12 @@ Checked with axe-core on every screen and in an open detail panel, in light and 
 violations). Inputs have labels and help text, errors are announced, charts have a
 table or keyboard readout (arrow keys), colour is never the only signal, and the layout
 works from 320px wide with no sideways scrolling.
+
+- Chart colours are at least 3:1 against the background in both themes. Stacked areas
+  have a 2px gap between them and are named on the chart. Scenario lines 5 to 8 are
+  dashed, and the legend shows the same dash.
+- Buttons and links used often on a phone are at least 44px tall (40px for the header
+  and small buttons). Text that carries information is at least 0.8rem.
+- Focused fields get a solid 2px ring in the focus colour.
+- **Theme:** Your data → Appearance sets System, Light or Dark. The choice is saved in
+  this browser. System follows the device setting.
