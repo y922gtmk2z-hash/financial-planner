@@ -2681,37 +2681,192 @@
         "id": "debt",
         "tone": "warn",
         "title": "Clear Credit card (sample) first",
-        "text": "It costs 7% a year, more than savings earn (3.5%), so paying extra off it is a guaranteed return. Car finance (sample) (6.9%) is next. Put a share of your leftover money into “Paying off debts faster” (most expensive first), or raise the monthly payment in Your figures."
+        "text": "It costs 7% a year, more than savings earn (3.5%), so paying extra off it is a guaranteed return. Car finance (sample) (6.9%) is next. Put a share of your leftover money into “Paying off debts faster” (most expensive first), or raise the monthly payment in Your figures.",
+        "patch": [
+          {
+            "path": "debts.1.monthlyPayment",
+            "op": "add",
+            "value": 50
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 44.04,
+            "retirementSpend": 3801.5,
+            "atRetirement": 823776.57,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119441.22
+          },
+          "after": {
+            "leftover": -5.96,
+            "retirementSpend": 3801.58,
+            "atRetirement": 823797.76,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119425.21
+          },
+          "change": {
+            "leftover": -50,
+            "retirementSpend": 0.08,
+            "atRetirement": 21.19,
+            "lastsTo": 0,
+            "debtFreeAge": 0,
+            "interest": -16.01
+          }
+        },
+        "howTo": []
       },
       {
         "id": "emergencyOk",
         "tone": "good",
         "title": "Emergency fund in place",
-        "text": "Your cash covers about 4.5 months of essential outgoings, meeting your 3-month target. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices."
+        "text": "Your cash covers about 4.5 months of essential outgoings, meeting your 3-month target. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       },
       {
         "id": "relief",
         "tone": "tip",
         "title": "Higher-rate pension relief",
-        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance."
+        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.",
+        "patch": [
+          {
+            "path": "assumptions.employeePensionPct",
+            "op": "add",
+            "value": 3
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 44.04,
+            "retirementSpend": 3801.5,
+            "atRetirement": 823776.57,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119441.22
+          },
+          "after": {
+            "leftover": -39.96,
+            "retirementSpend": 3839.34,
+            "atRetirement": 853494.48,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 120538.97
+          },
+          "change": {
+            "leftover": -84,
+            "retirementSpend": 37.84,
+            "atRetirement": 29717.9,
+            "lastsTo": 0,
+            "debtFreeAge": 0,
+            "interest": 1097.75
+          }
+        },
+        "howTo": []
       },
       {
         "id": "match",
         "tone": "tip",
         "title": "Check for employer matching",
-        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available."
+        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       },
       {
         "id": "mortgage",
         "tone": "tip",
         "title": "Overpaying the mortgage beats cash savings",
-        "text": "Your mortgage costs 4.5% and cash earns 3.5%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return 4.6% after fees but can fall. Most lenders allow 10% of the balance a year without a charge."
+        "text": "Your mortgage costs 4.5% and cash earns 3.5%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return 4.6% after fees but can fall. Most lenders allow 10% of the balance a year without a charge.",
+        "patch": [
+          {
+            "path": "mortgage.monthlyOverpayment",
+            "op": "add",
+            "value": 200
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 44.04,
+            "retirementSpend": 3801.5,
+            "atRetirement": 823776.57,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119441.22
+          },
+          "after": {
+            "leftover": -155.96,
+            "retirementSpend": 3806.07,
+            "atRetirement": 825076.23,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 103726.89
+          },
+          "change": {
+            "leftover": -200,
+            "retirementSpend": 4.57,
+            "atRetirement": 1299.66,
+            "lastsTo": 0,
+            "debtFreeAge": 0,
+            "interest": -15714.34
+          }
+        },
+        "howTo": []
       },
       {
         "id": "isa",
         "tone": "tip",
         "title": "Use your ISA allowance",
-        "text": "You have about £19,100 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value."
+        "text": "You have about £19,100 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.",
+        "patch": [
+          {
+            "path": "savings",
+            "op": "set",
+            "value": [
+              {
+                "id": "sample-sv1",
+                "type": "ssIsa",
+                "monthly": 75,
+                "grows": "salary"
+              },
+              {
+                "id": "idea-isa",
+                "type": "ssIsa",
+                "monthly": 40,
+                "grows": "fixed"
+              }
+            ]
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 44.04,
+            "retirementSpend": 3801.5,
+            "atRetirement": 823776.57,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119441.22
+          },
+          "after": {
+            "leftover": 4.04,
+            "retirementSpend": 3806.26,
+            "atRetirement": 823935.28,
+            "lastsTo": 95,
+            "debtFreeAge": 56,
+            "interest": 119889.4
+          },
+          "change": {
+            "leftover": -40,
+            "retirementSpend": 4.76,
+            "atRetirement": 158.71,
+            "lastsTo": 0,
+            "debtFreeAge": 0,
+            "interest": 448.17
+          }
+        },
+        "howTo": []
       }
     ],
     "split": {

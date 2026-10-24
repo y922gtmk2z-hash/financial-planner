@@ -163,47 +163,48 @@
 
   /*
    * One-tap what-ifs, each a change to a copy of the baseline.
-   * applies(p): whether it makes sense for this profile; apply(p) changes the copy.
+   * applies(p): whether it makes sense for this profile; patch(p): what it
+   * changes, as an FP.patch patch.
    */
   const PRESETS = [
     {
       id: 'retireEarlier', label: 'Retire 2 years earlier',
       applies: (p) => p.about.age != null && p.assumptions.retirementAge - 2 > p.about.age && p.assumptions.retirementAge - 2 >= limit('retirementAge').min,
       name: (p) => `Retire at ${p.assumptions.retirementAge - 2}`,
-      apply: (p) => { p.assumptions.retirementAge -= 2; },
+      patch: () => [{ path: 'assumptions.retirementAge', op: 'add', value: -2 }],
     },
     {
       id: 'workLonger', label: 'Work 2 years longer',
       applies: (p) => p.about.age != null && p.assumptions.retirementAge + 2 < p.assumptions.endAge && p.assumptions.retirementAge + 2 <= limit('retirementAge').max,
       name: (p) => `Retire at ${p.assumptions.retirementAge + 2}`,
-      apply: (p) => { p.assumptions.retirementAge += 2; },
+      patch: () => [{ path: 'assumptions.retirementAge', op: 'add', value: 2 }],
     },
     {
       id: 'overpay', label: 'Overpay the mortgage £200 a month more',
       applies: (p) => (p.mortgage.balance || 0) > 0,
       name: (p) => `Overpay ${gbp((p.mortgage.monthlyOverpayment || 0) + 200)} a month`,
-      apply: (p) => { p.mortgage.monthlyOverpayment = (p.mortgage.monthlyOverpayment || 0) + 200; },
+      patch: () => [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: 200 }],
     },
     {
       id: 'spendLess', label: 'Spend 10% less',
       applies: (p) => p.spending.some((r) => r.monthly > 0),
       name: () => 'Spend 10% less',
-      apply: (p) => { p.spending.forEach((r) => { r.monthly = Math.round((r.monthly || 0) * 0.9); }); },
+      patch: (p) => p.spending.map((r, i) => ({ path: `spending.${i}.monthly`, op: 'set', value: Math.round((r.monthly || 0) * 0.9) })),
     },
     {
       id: 'payRise', label: '10% pay rise',
       applies: (p) => (p.income.grossSalary || 0) > 0,
       name: (p) => `Pay rise to ${gbp(p.income.grossSalary * 1.1)}`,
-      apply: (p) => { p.income.grossSalary = Math.round(p.income.grossSalary * 1.1); },
+      patch: (p) => [{ path: 'income.grossSalary', op: 'set', value: Math.round(p.income.grossSalary * 1.1) }],
     },
     {
       id: 'weakerMarkets', label: 'Weaker markets (returns 2 points lower)',
       applies: (p) => p.assumptions.investmentReturn - 2 >= limit('investmentReturn').min && p.assumptions.pensionGrowth - 2 >= limit('pensionGrowth').min,
       name: () => 'Weaker markets',
-      apply: (p) => {
-        p.assumptions.investmentReturn -= 2;
-        p.assumptions.pensionGrowth -= 2;
-      },
+      patch: () => [
+        { path: 'assumptions.investmentReturn', op: 'add', value: -2 },
+        { path: 'assumptions.pensionGrowth', op: 'add', value: -2 },
+      ],
     },
   ];
 
@@ -222,7 +223,7 @@
     if (!preset || !preset.applies(base.profile) || ws.scenarios.length >= MAX_SCENARIOS) return null;
     const keep = ws.activeId;
     const copy = clone(ws, base.id, preset.name(base.profile));
-    preset.apply(copy.profile);
+    copy.profile = FP.patch.applyPatch(copy.profile, preset.patch(base.profile));
     copy.profile.isSample = false;
     ws.activeId = keep;
     return copy;

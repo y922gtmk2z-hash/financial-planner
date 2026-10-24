@@ -2393,19 +2393,66 @@
         "id": "emergencyOk",
         "tone": "good",
         "title": "Emergency fund in place",
-        "text": "Your cash covers about 9.6 months of essential outgoings, meeting your 3-month target. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices."
+        "text": "Your cash covers about 9.6 months of essential outgoings, meeting your 3-month target. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       },
       {
         "id": "match",
         "tone": "tip",
         "title": "Check for employer matching",
-        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available."
+        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
+        "patch": null,
+        "impact": null,
+        "howTo": []
       },
       {
         "id": "isa",
         "tone": "tip",
         "title": "Use your ISA allowance",
-        "text": "You have about £20,000 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value."
+        "text": "You have about £20,000 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.",
+        "patch": [
+          {
+            "path": "savings",
+            "op": "set",
+            "value": [
+              {
+                "id": "idea-isa",
+                "type": "ssIsa",
+                "monthly": 640,
+                "grows": "fixed"
+              }
+            ]
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": 648.62,
+            "retirementSpend": 2299.62,
+            "atRetirement": 522346.07,
+            "lastsTo": 87,
+            "debtFreeAge": 58,
+            "interest": 0
+          },
+          "after": {
+            "leftover": 8.62,
+            "retirementSpend": 2352.6,
+            "atRetirement": 537302.19,
+            "lastsTo": 89,
+            "debtFreeAge": 58,
+            "interest": 0
+          },
+          "change": {
+            "leftover": -640,
+            "retirementSpend": 52.98,
+            "atRetirement": 14956.13,
+            "lastsTo": 2,
+            "debtFreeAge": 0,
+            "interest": 0
+          }
+        },
+        "howTo": []
       }
     ],
     "split": {

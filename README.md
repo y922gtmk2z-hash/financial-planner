@@ -259,6 +259,13 @@ advice:
 - using the ISA allowance;
 - not rushing to repay a student loan that will be written off.
 
+Behind the scenes, each idea that comes down to one change in your plan carries it
+as a **patch** (for example "pay 3% more into your pension"), and the planner can
+work out its **impact**: what it does to what's left over each month, what you could
+spend in retirement, your savings and pensions when you retire, the age your money
+lasts to, when you're debt-free and the total interest you pay. The one-tap what-ifs
+in Scenarios are patches too. Nothing on screen uses this yet.
+
 Mark an idea **✓ Done** or **Not for me** and it moves into a folded list you can bring
 it back from; Overview shows how many are left and the top three.
 
@@ -427,6 +434,7 @@ js/model/migrate.js        numbered steps that upgrade older saves and backups
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
+js/calc/patch.js           patches: what an idea or what-if changes, applying it, its impact
 js/calc/outcomes.js        the results you can tap into: drivers, levers, before/after
 js/ui/*.js                 one file per screen, plus field, chart, checklist, panel
                            (sheet.js, explore.js) and DOM helpers
@@ -447,7 +455,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-227 tests cover:
+239 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -458,6 +466,11 @@ npm test   # Node 18+, no dependencies to install
   change is listed by path with its old and new value. If results are meant to
   change, run `GOLDEN_UPDATE=1 npm run golden:update` (it refuses without
   `GOLDEN_UPDATE=1`) and say in the pull request which values moved and why.
+- **Patches:** setting and adding values by path on a copy (never the original),
+  undoing a patch, refusing unknown changes, impact signs (a pension increase lowers
+  what's left over and raises retirement spending; overpaying cuts interest), interest
+  paid matching the mortgage calculator, each idea's patch and impact, the taper idea
+  paying in just enough, and the one-tap what-ifs creating the same scenarios as before.
 - **Upgrading saved data:** saves and exports from versions 1 and 2, including the
   oldest shapes (a single bonus, one spending total, the split as assumptions), load
   and match the golden results; a save or backup from a newer version is refused.

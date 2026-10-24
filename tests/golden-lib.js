@@ -72,7 +72,7 @@ function snapshot(profile) {
     retirementNeed: FP.projection.retirementNeed(profile),
     potNeeded: FP.projection.potNeeded(profile),
     suggest: {
-      suggestions: ideas.suggestions.map(({ id, tone, title, text }) => ({ id, tone, title, text })),
+      suggestions: ideas.suggestions.map(({ id, tone, title, text, patch, impact, howTo }) => ({ id, tone, title, text, patch, impact, howTo })),
       split: ideas.split,
     },
   });
