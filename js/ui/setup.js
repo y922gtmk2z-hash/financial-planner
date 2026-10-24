@@ -12,12 +12,22 @@
 
   // A first-time visitor goes section by section; you can switch to
   // everything on one page at any time.
+  // summary(p): one line for the section's heading on the one-page view.
+  const sum = (list, key) => (list || []).reduce((t, x) => t + (x[key] || 0), 0);
   const STEPS = [
-    { id: 'you', title: 'About you', short: 'About you' },
-    { id: 'income', title: 'Income', short: 'Income' },
-    { id: 'outgoings', title: 'Outgoings', short: 'Outgoings' },
-    { id: 'assets', title: 'Assets', short: 'Assets' },
-    { id: 'debts', title: 'Debts', short: 'Debts' },
+    { id: 'you', title: 'About you', short: 'About you',
+      summary: (p) => `Age ${p.about.age == null ? '\u2014' : p.about.age} \u00b7 retire at ${p.assumptions.retirementAge}` },
+    { id: 'income', title: 'Income', short: 'Income',
+      summary: (p) => {
+        const extras = INCOME_PARTS.filter((part) => part.id !== 'pension' && part.status(p)).length;
+        return [p.income.grossSalary > 0 ? `${money(p.income.grossSalary)} salary` : 'No salary', extras ? `${extras} extra${extras === 1 ? '' : 's'}` : null].filter(Boolean).join(' \u00b7 ');
+      } },
+    { id: 'outgoings', title: 'Outgoings', short: 'Outgoings',
+      summary: (p) => [`${money(sum(p.spending, 'monthly'))} a month`, sum(p.savings, 'monthly') > 0 ? `${money(sum(p.savings, 'monthly'))} saved` : null].filter(Boolean).join(' \u00b7 ') },
+    { id: 'assets', title: 'Assets', short: 'Assets',
+      summary: (p) => { const t = Object.values(p.assets).reduce((a, v) => a + (v || 0), 0); return t > 0 ? money(t) : 'None added'; } },
+    { id: 'debts', title: 'Debts', short: 'Debts',
+      summary: (p) => { const t = (p.mortgage.balance || 0) + sum(p.debts, 'balance'); return t > 0 ? `${money(t)} owed` : 'None added'; } },
   ];
 
   // Steps that need something before a projection can be shown.
@@ -85,17 +95,6 @@
     return h('section', { class: 'card', id: 'about', 'aria-labelledby': 'sec-about' },
       h('h2', { id: 'sec-about' }, 'About you'),
       section('about').fields.map(maker(ctx)));
-  }
-
-  // How projections show amounts: a viewing choice, kept with your figures so it's easy to find.
-  function projectionsCard() {
-    return h('details', { class: 'card more-details', id: 'projections' },
-      h('summary', null, 'How amounts are shown'),
-      FP.field.render({
-        label: 'Show amounts in', type: 'toggle',
-        help: 'Today’s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Future and Scenarios.',
-        options: [{ value: 'real', label: 'Today’s money' }, { value: 'nominal', label: 'Future money' }],
-      }, { value: FP.screens.future.getView(), onChange: (v) => FP.screens.future.setView(v) }));
   }
 
   /*
@@ -232,66 +231,118 @@
   }
 
   /*
-   * What's been worked out for a loan, in a sentence (or a prompt to give
-   * more). `yearly` describes the rate: '% APR' or '% a year'.
+   * What a loan's figures need saying beyond the worked-out value, which shows
+   * in its own box: figures that don't add up, a payment that never clears
+   * it, a rate that had to be assumed, or a prompt for more. '' if nothing.
+   * `yearly` describes the rate: '% APR' or '% a year'.
    */
   function loanNote(loan, yearly) {
     if (!(loan.balance > 0)) return '';
     if (loan.error) return loan.error;
     const rate = `${Math.round(loan.rate * 10) / 10}${yearly}`;
-    const assumed = loan.rateIsDefault ? ` That uses ${rate}; add your rate if you know it.` : '';
-    if (loan.worked === 'rate') return `Interest rate worked out from your payment and time left: about ${rate}.`;
-    if (loan.worked === 'payment') return `Monthly payment to clear it in that time: about ${money(loan.payment)}.${assumed}`;
-    if (loan.worked === 'months') {
-      return loan.months === Infinity
-        ? `At this payment it\u2019s never paid off: the payment doesn\u2019t cover the interest.${assumed}`
-        : `At this payment it\u2019s paid off in about ${FP.dom.months(Math.ceil(loan.months))}.${assumed}`;
-    }
+    if (loan.months === Infinity) return `At this payment it’s never paid off: the payment doesn’t cover the interest${loan.rateIsDefault ? ` (at an assumed ${rate})` : ''}.`;
+    if (loan.worked && loan.rateIsDefault) return `Worked out using an assumed ${rate}. Add your rate if you know it.`;
     if (!(loan.payment > 0)) return 'Give any two of monthly payment, time left and interest rate, and the third is worked out.';
     return '';
   }
 
+  // The worked-out value shown in its empty box (as the placeholder).
+  function showWorked(scope, loan, paths) {
+    const wrap = (key) => {
+      const field = scope.querySelector(`[data-path="${CSS.escape(paths[key])}"]`);
+      return field && { field, input: field.querySelector('input'), box: field.querySelector('.input-wrap') };
+    };
+    Object.keys(paths).forEach((key) => {
+      const w = wrap(key);
+      if (!w || !w.input) return;
+      const worked = loan.balance > 0 && loan.worked === key && Number.isFinite(loan[key]);
+      if (!w.input.dataset.placeholder) w.input.dataset.placeholder = w.input.placeholder;
+      let text = w.input.dataset.placeholder;
+      if (worked && key === 'rate') text = `≈ ${Math.round(loan.rate * 10) / 10} · worked out`;
+      if (worked && key === 'payment') text = `≈ ${Math.round(loan.payment).toLocaleString('en-GB')} · worked out`;
+      if (worked && key === 'months') {
+        const unit = w.field.querySelector('select.term-unit');
+        const n = unit && unit.value === 'months' ? Math.ceil(loan.months) : Math.round((loan.months / 12) * 10) / 10;
+        text = `≈ ${n} · worked out`;
+      }
+      w.input.placeholder = text;
+      w.box.classList.toggle('worked', worked);
+    });
+  }
+
+  // "£7,800 · £245 a month · about 3 years left": a loan folded to one line.
+  function loanSummary(loan) {
+    if (!(loan.balance > 0)) return 'Not added';
+    const left = loan.months === Infinity ? 'never paid off' : loan.months > 0 ? `${FP.dom.months(Math.ceil(loan.months))} left` : null;
+    return [money(loan.balance), loan.payment > 0 ? `${money(loan.payment)} a month` : null, left].filter(Boolean).join(' · ');
+  }
+
+  /*
+   * Debts: the mortgage and each other debt fold to a one-line summary once
+   * they have a balance (open while empty, so a new one is ready to fill in).
+   */
   function debtsCard(ctx) {
     const sec = section('debts');
     const make = maker(ctx);
-    // Each note redraws from the profile; the other debts' notes are rebuilt with their rows.
-    const note = (get, list) => {
-      const el = h('p', { class: 'help loan-note', role: 'status' });
-      const draw = () => { el.textContent = get(); el.hidden = !el.textContent; };
-      draw();
-      list.push(draw);
-      return el;
+    // One loan's fold: its summary line, the note and worked-out boxes kept up to date.
+    // Returns { fold, draw }.
+    const loanFold = (id, title, body, get, paths, yearly) => {
+      const sum = h('span', { class: 'part-status' });
+      const note = h('p', { class: 'help loan-note', role: 'status' });
+      const fold = h('details', { class: 'part', id }, h('summary', null, h('span', null, title()), sum), body, note);
+      const draw = () => {
+        const loan = get();
+        sum.textContent = loanSummary(loan);
+        note.textContent = loanNote(loan, yearly);
+        note.hidden = !note.textContent;
+        showWorked(fold, loan, paths);
+      };
+      fold.open = !(get().balance > 0);
+      return { fold, draw };
     };
-    const mortgageNotes = [];
-    let debtNotes = [];
+
+    const mortgagePaths = { rate: 'assumptions.mortgageRate', payment: 'mortgage.monthlyPayment', months: 'mortgage.remainingTermYears' };
+    const mortgage = loanFold('mortgage-item', () => 'Mortgage',
+      [sec.fields.filter((f) => f.group === 'mortgage' && !f.more).map(make),
+        h('details', { class: 'advanced' }, h('summary', null, 'Overpayments'), sec.fields.filter((f) => f.group === 'mortgage' && f.more).map(make))],
+      () => FP.loan.forMortgage(ctx.profile()), mortgagePaths, '% a year');
+    let debtDraws = [];
+
     const others = h('div', { class: 'field-group', role: 'group', 'aria-labelledby': 'grp-otherDebts', id: 'other-debts' });
     const drawOthers = () => {
       const p = ctx.profile();
-      debtNotes = [];
+      const folds = p.debts.map((d, i) => {
+        const paths = { rate: `debts.${i}.rate`, payment: `debts.${i}.monthlyPayment`, months: `debts.${i}.termMonths` };
+        const name = () => (ctx.profile().debts[i] || {}).name || `Debt ${i + 1}`;
+        const { fold, draw } = loanFold(`debt-${d.id}`, name,
+          [P.DEBT_FIELDS.map((f) => FP.field.render({ ...f, path: `debts.${i}.${f.key}` }, {
+            value: d[f.key],
+            nullPlaceholder: 'Not sure',
+            onChange: (v) => {
+              ctx.update(`debts.${i}.${f.key}`, v);
+              if (f.key === 'name') fold.querySelector('summary > span').textContent = name();
+            },
+          })),
+          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt')],
+          () => FP.loan.forDebt(ctx.profile().debts[i] || {}, ctx.profile().assumptions), paths, '% APR');
+        return { fold, draw };
+      });
       FP.dom.fill(others,
         h('h3', { id: 'grp-otherDebts' }, 'Other debts'),
-        h('p', { class: 'help' }, 'Loans, car finance, credit cards. Give the balance and any two of payment, time left and APR.'),
-        p.debts.map((d, i) => h('fieldset', { class: 'row-card' },
-          h('legend', null, d.name || `Debt ${i + 1}`),
-          P.DEBT_FIELDS.map((f) => FP.field.render(f, {
-            value: d[f.key],
-            compact: f.key !== 'rate',
-            nullPlaceholder: 'Not sure',
-            onChange: (v) => ctx.update(`debts.${i}.${f.key}`, v),
-          })),
-          note(() => loanNote(FP.loan.forDebt(ctx.profile().debts[i] || {}, ctx.profile().assumptions), '% APR'), debtNotes),
-          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt'))),
+        h('p', { class: 'help' }, 'Loans, car finance, credit cards.'),
+        folds.length ? h('div', { class: 'parts' }, folds.map((x) => x.fold)) : null,
         h('button', { type: 'button', class: 'secondary', onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawOthers(); } }, '+ Add a debt'));
+      debtDraws = folds.map((x) => x.draw);
+      debtDraws.forEach((d) => d());
     };
-    const mortgage = group(sec, 'mortgage', make);
-    mortgage.insertBefore(note(() => loanNote(FP.loan.forMortgage(ctx.profile()), '% a year'), mortgageNotes), mortgage.querySelector('details'));
     drawOthers();
     const card = h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
       h('h2', { id: 'sec-debts' }, 'Debts'),
-      h('p', { class: 'muted' }, sec.intro),
-      mortgage,
+      h('p', { class: 'muted' }, `${sec.intro} For each, give the balance and any two of monthly payment, time left and interest rate: the third is worked out.`),
+      h('div', { class: 'parts' }, mortgage.fold),
       others);
-    card.refreshNotes = () => mortgageNotes.concat(debtNotes).forEach((d) => d());
+    mortgage.draw();
+    card.refreshNotes = () => [mortgage.draw, ...debtDraws].forEach((d) => d());
     return card;
   }
 
@@ -302,16 +353,24 @@
     let current = Math.min(STEPS.length - 1, Number(FP.store.pref('setupStep')) || 0);
     const visited = new Set((FP.store.pref('setupVisited') || '').split(',').filter(Boolean));
 
-    const leftover = FP.leftoverCard.render(ctx, { id: 'leftover' });
+    const leftover = FP.leftoverCard.render(ctx, { id: 'leftover', fold: true });
     const income = incomeCard(ctx);
     const debts = debtsCard(ctx);
     const groups = [
-      [aboutCard(ctx), projectionsCard()],
+      [aboutCard(ctx)],
       [income],
       [spendCard(ctx), leftover],
       [assetsCard(ctx)],
       [debts],
     ].map((cards, i) => h('div', { class: 'setup-step', 'data-step': STEPS[i].id }, cards));
+    // On the one-page view each section folds to a heading with a summary; one is open at a time.
+    let openAll = current;
+    const heads = STEPS.map((st, i) => {
+      const head = h('button', { type: 'button', class: 'step-head', 'aria-expanded': 'false',
+        onclick: () => { openAll = openAll === i ? -1 : i; draw(); head.scrollIntoView({ block: 'nearest' }); } });
+      groups[i].prepend(head);
+      return head;
+    });
     const nav = h('nav', { class: 'step-nav', 'aria-label': 'Your figures sections' });
     const intro = h('div', { class: 'setup-intro' });
     const footer = h('div', { class: 'step-footer' });
@@ -370,6 +429,14 @@
         h('button', { type: 'button', class: 'link', onclick: () => setMode(steps ? 'all' : 'steps') },
           steps ? 'Show everything on one page' : 'Go section by section'));
       groups.forEach((g, i) => { g.hidden = steps && i !== current; });
+      root.classList.toggle('one-page', !steps);
+      heads.forEach((head, i) => {
+        const open = !steps && openAll === i;
+        head.hidden = steps;
+        head.setAttribute('aria-expanded', String(open));
+        FP.dom.fill(head, h('span', { class: 'fold-title' }, STEPS[i].title), h('span', { class: 'fold-sum' }, STEPS[i].summary(pp)));
+        [...groups[i].children].forEach((el) => { if (el !== head) el.hidden = !steps && !open; });
+      });
       calc.hidden = steps;
       footer.hidden = !steps;
       if (steps) {
@@ -392,6 +459,7 @@
       const g = e.target.closest('[data-step]');
       const i = g ? STEPS.findIndex((st) => st.id === g.dataset.step) : -1;
       if (mode === 'steps' && i >= 0 && i !== current) show(i, false);
+      if (mode === 'all' && i >= 0 && i !== openAll) { openAll = i; draw(); }
     });
 
     const strip = liveStrip(ctx, root);

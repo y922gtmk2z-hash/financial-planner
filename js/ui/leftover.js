@@ -12,11 +12,18 @@
 
   /*
    * opts.onChange: called after the split changes (e.g. to redraw a projection).
+   * opts.fold: fold the card to a one-line summary (open while nothing's chosen).
    * Returns the card; card.refresh() updates the figures without touching inputs.
    */
   function render(ctx, opts) {
     opts = opts || {};
-    const card = h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' });
+    const body = h('div', { class: 'leftover-body' });
+    const sum = h('span');
+    const card = opts.fold
+      ? FP.dom.foldCard(opts.id || 'leftover', 'Money left over each month', sum, body)
+      : h('section', { class: 'card leftover', id: opts.id || null, 'aria-labelledby': 'leftover-h' }, body);
+    card.classList.add('leftover');
+    const choose = h('p', { class: 'help' }, 'Your plan only saves it once you choose what to do with it.');
     const headline = h('div', { class: 'leftover-amount', role: 'status', 'aria-live': 'polite' });
     const rows = h('div', { class: 'leftover-rows' });
     const status = h('p', { class: 'split-status', role: 'status' });
@@ -57,17 +64,17 @@
         amounts[f.key] = h('span', { class: 'leftover-money' });
         return h('div', { class: `leftover-row${f.key === 'emergency' ? ' emergency' : ''}` },
           FP.field.render(f, {
-            value: p.leftover[f.key], compact: false,
+            value: p.leftover[f.key], foldHelp: true,
             onChange: (v) => { ctx.update(`leftover.${f.key}`, v); refresh(); changed(); },
             extra: amounts[f.key],
           }),
-          f.key === 'emergency' ? [
+          // The fund's target only matters once some money goes to it.
+          f.key === 'emergency' ? h('div', { class: 'fund-target' },
             FP.field.render(target, {
-              value: p.leftover[target.key], compact: false,
+              value: p.leftover[target.key], foldHelp: true,
               onChange: (v) => { ctx.update(`leftover.${target.key}`, v); refresh(); changed(); },
             }),
-            fundStatus,
-          ] : null);
+            fundStatus) : null);
       }));
     }
 
@@ -113,6 +120,7 @@
           : `= ${money(left * shares[f.key])} a month`;
       });
       drawFund(r, shares, left);
+      rows.querySelectorAll('.fund-target').forEach((el) => { el.hidden = !(shares.emergency > 0); });
       drawAlloc(shares, left);
       FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
       // Under 100% is said in the allocation notice; the line below covers the rest.
@@ -143,6 +151,13 @@
       suggested.hidden = !r.split;
 
       drawIdeas(r.suggestions);
+
+      // The one-line summary when folded, and the nudge while nothing's chosen.
+      const state = !(r.left > 0) ? 'nothing left over'
+        : shares.total === 0 ? 'nothing chosen yet'
+          : hasOwnSplit(p) ? 'your own split' : 'using the suggested split';
+      sum.textContent = `${money(Math.max(0, r.left || 0))} a month \u00b7 ${state}`;
+      choose.hidden = shares.total > 0;
     }
 
     // One bar across your choices, a running total, and what's left unallocated.
@@ -205,10 +220,10 @@
       h('p', { class: 'help' }, 'Share it out as a share of what\u2019s left or as amounts a month (which rise with prices). Anything you don\u2019t allocate is treated as spent.'),
       unitHolder,
       rows);
-    FP.dom.fill(card,
-      h('h2', { id: 'leftover-h' }, 'Money left over each month'),
+    FP.dom.fill(body,
+      opts.fold ? null : h('h2', { id: 'leftover-h' }, 'Money left over each month'),
       headline,
-      h('p', { class: 'help' }, 'Your plan only saves it once you choose what to do with it.'),
+      choose,
       suggested,
       alloc,
       status,
@@ -221,6 +236,10 @@
     drawFields();
     refresh();
     own.open = hasOwnSplit(ctx.profile());
+    if (opts.fold) {
+      const left = leftNow();
+      card.open = left > 0 && FP.projection.splitShares(ctx.profile().leftover, left).total === 0;
+    }
     card.refresh = refresh;
     return card;
   }

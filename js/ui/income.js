@@ -44,8 +44,13 @@
         ? `${PLAN_LABELS[inc.studentLoanPlan]}${inc.studentLoanBalance > 0 ? ` \u00b7 ${money(inc.studentLoanBalance)} owed` : ''}`
         : 'None', 'income.studentLoanPlan'],
     ];
-    return h('section', { class: 'card', 'aria-labelledby': 'inc-in' },
-      h('h2', { id: 'inc-in' }, 'Based on'),
+    const summary = [
+      inc.grossSalary > 0 ? `${money(inc.grossSalary)} salary` : 'No salary',
+      `${pct(a.employeePensionPct, 1)} pension`,
+      inc.taxCode || 'standard tax code',
+      inc.studentLoanPlan !== 'none' ? `${PLAN_LABELS[inc.studentLoanPlan]} loan` : null,
+    ].filter(Boolean).join(' \u00b7 ');
+    return FP.dom.foldCard('pay-based-on', 'Based on', summary,
       h('dl', { class: 'facts' }, rows.map(([label, value, target]) => h('div', null,
         h('dt', null, label),
         h('dd', null, value, ' ', h('a', { href: `#setup/${target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Your figures` }, 'Change'))))),
@@ -118,8 +123,7 @@
       breakdownCard(r),
       studentLoanCard(p, r),
       bandsCard(r),
-      h('section', { class: 'card', 'aria-labelledby': 'notes-h' },
-        h('h2', { id: 'notes-h' }, 'How this is worked out'),
+      FP.dom.foldCard('pay-notes', 'How this is worked out', 'Your pension method, bonuses and what isn\u2019t included',
         h('ul', { class: 'notes' },
           h('li', null, methodNote),
           h('li', null, 'Pension contributions are a percentage of salary, not bonus.'),
@@ -147,29 +151,36 @@
       values.map((v) => h('td', { class: 'num' }, money(v))));
     const each = (key) => months.map((m) => m[key]);
     const lumpy = bps.length > 0;
-    return h('section', { class: 'card', 'aria-labelledby': 'bd-h' },
-      h('h2', { id: 'bd-h' }, 'Breakdown'),
-      h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Pay breakdown table' }, h('table', { class: 'data-table breakdown' },
+    // One table per set of columns: [heading, value for the year?, index into months?]
+    const table = (cols, label) => {
+      const pick = (yearV, monthsV) => cols.map(([, useYear, i]) => (useYear ? yearV : monthsV[i]));
+      return h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': label }, h('table', { class: 'data-table breakdown' },
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Item')),
-          h('th', { scope: 'col', class: 'num' }, 'Year'),
-          h('th', { scope: 'col', class: 'num' }, lumpy ? 'Regular month' : 'Month'),
-          bps.map((b) => h('th', { scope: 'col', class: 'num' }, monthName(b.month))))),
+          cols.map(([head]) => h('th', { scope: 'col', class: 'num' }, head)))),
         h('tbody', null,
-          row('Salary', [r.salary, ...months.map(() => r.salary / 12)]),
-          r.bonus > 0 ? row('Bonus', [r.bonus, r.bonusSpread / 12, ...bps.map((b) => b.amount + r.bonusSpread / 12)]) : null,
-          r.otherIncome > 0 ? row('Other income', [r.otherIncome, ...each('otherIncome')]) : null,
-          r.salarySacrifice > 0 ? row('\u2212 Salary sacrifice (car, cycle\u2026)', [r.salarySacrifice, ...each('salarySacrifice')], 'minus') : null,
-          r.pensionFromPay > 0 ? row(`\u2212 Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, [r.pensionFromPay, ...each('pensionFromPay')], 'minus') : null,
-          row('\u2212 Income tax', [r.incomeTax, ...each('incomeTax')], 'minus'),
-          row('\u2212 National Insurance', [r.nationalInsurance, ...each('nationalInsurance')], 'minus'),
-          r.studentLoan > 0 ? row('\u2212 Student loan', [r.studentLoan, ...each('studentLoan')], 'minus') : null,
-          row('Take-home pay', [r.takeHome, ...each('takeHome')], 'result'),
-          r.benefitInKind > 0 ? row('Benefits in kind (taxed, not paid)', [r.benefitInKind, ...months.map(() => r.benefitInKind / 12)], 'aside') : null,
-          r.employerPension > 0 ? row('Employer adds to your pension', [r.employerPension, ...months.map(() => r.employerPension / 12)], 'aside') : null,
-          r.pensionIntoPot > 0 ? row('Total paid into your pension', [r.pensionIntoPot, ...months.map(() => r.pensionIntoPot / 12)], 'aside') : null))),
-      lumpy ? h('p', { class: 'muted small' },
-        `The year is ${12 - bps.length} regular month${12 - bps.length === 1 ? '' : 's'} plus ${bps.map((b) => monthName(b.month)).join(', ')}.`) : null);
+          row('Salary', pick(r.salary, months.map(() => r.salary / 12))),
+          r.bonus > 0 ? row('Bonus', pick(r.bonus, [r.bonusSpread / 12, ...bps.map((b) => b.amount + r.bonusSpread / 12)])) : null,
+          r.otherIncome > 0 ? row('Other income', pick(r.otherIncome, each('otherIncome'))) : null,
+          r.salarySacrifice > 0 ? row('\u2212 Salary sacrifice (car, cycle\u2026)', pick(r.salarySacrifice, each('salarySacrifice')), 'minus') : null,
+          r.pensionFromPay > 0 ? row(`\u2212 Your pension${r.pensionMethod === 'salarySacrifice' ? ' (sacrificed)' : ''}`, pick(r.pensionFromPay, each('pensionFromPay')), 'minus') : null,
+          row('\u2212 Income tax', pick(r.incomeTax, each('incomeTax')), 'minus'),
+          row('\u2212 National Insurance', pick(r.nationalInsurance, each('nationalInsurance')), 'minus'),
+          r.studentLoan > 0 ? row('\u2212 Student loan', pick(r.studentLoan, each('studentLoan')), 'minus') : null,
+          row('Take-home pay', pick(r.takeHome, each('takeHome')), 'result'),
+          r.benefitInKind > 0 ? row('Benefits in kind (taxed, not paid)', pick(r.benefitInKind, months.map(() => r.benefitInKind / 12)), 'aside') : null,
+          r.employerPension > 0 ? row('Employer adds to your pension', pick(r.employerPension, months.map(() => r.employerPension / 12)), 'aside') : null,
+          r.pensionIntoPot > 0 ? row('Total paid into your pension', pick(r.pensionIntoPot, months.map(() => r.pensionIntoPot / 12)), 'aside') : null)));
+    };
+    // The year and a regular month fit a phone; bonus months fold away.
+    return h('section', { class: 'card', 'aria-labelledby': 'bd-h' },
+      h('h2', { id: 'bd-h' }, 'Breakdown'),
+      table([['Year', true], [lumpy ? 'Regular month' : 'Month', false, 0]], 'Pay breakdown: year and month'),
+      lumpy ? h('details', { class: 'advanced', id: 'bonus-months' },
+        h('summary', null, `Bonus months: ${bps.map((b) => monthName(b.month)).join(', ')}`),
+        table(bps.map((b, i) => [monthName(b.month), false, i + 1]), 'Pay breakdown: bonus months'),
+        h('p', { class: 'muted small' },
+          `The year is ${12 - bps.length} regular month${12 - bps.length === 1 ? '' : 's'} plus ${bps.map((b) => monthName(b.month)).join(', ')}.`)) : null);
   }
 
   // Balance, interest and when the loan ends (from the projection).
@@ -202,7 +213,10 @@
     } else if (sl) {
       outcome = `On these assumptions you\u2019d still owe about ${money(FP.projection.toReal(proj.rows[proj.years]).studentLoan)} (today\u2019s money) at ${proj.rows[proj.years].age}.`;
     }
-    return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
+    const headline = sl && sl.clearedRow ? `${money(inc.studentLoanBalance)} \u00b7 repaid in ${sl.clearedRow.year}`
+      : sl && sl.writtenOffRow ? `${money(inc.studentLoanBalance)} \u00b7 written off April ${writeOff}`
+        : `${money(inc.studentLoanBalance)} owed`;
+    return FP.dom.foldCard('pay-student-loan', 'Your student loan', headline,
       h('dl', { class: 'rows' }, [
         ['Balance today', money(inc.studentLoanBalance)],
         ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && override == null ? ' (depends on income)' : ''}`],
@@ -248,8 +262,7 @@
     const cfg = FP.taxConfig;
     const ni = cfg.nationalInsurance;
     const bands = cfg.bands[r.region];
-    return h('details', { class: 'card rules' },
-      h('summary', null, h('strong', null, `Rules used (${cfg.taxYear})`)),
+    return FP.dom.foldCard('pay-rules', `Rules used (${cfg.taxYear})`, 'Tax bands, National Insurance and student loan thresholds',
       h('p', { class: 'muted' }, 'Read-only here. To update them for a new tax year, edit the tax config file (js/config/).'),
       h('table', { class: 'data-table' },
         h('caption', null, r.region === 'scotland' ? 'Scottish income tax' : 'Income tax (England, Wales, NI)'),

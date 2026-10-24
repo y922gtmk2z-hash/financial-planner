@@ -92,5 +92,15 @@
     return h('p', { class: 'so-what' }, h('strong', null, 'So what: '), text);
   }
 
-  FP.dom = { h, append, add, fill, money, pct, months, date, inputText, chips, pageHead, soWhat };
+  /*
+   * A card folded to one line: a title and a short summary of what's inside.
+   * The id lets it stay open or closed as you move between screens.
+   */
+  function foldCard(id, title, summary, ...children) {
+    return h('details', { class: 'card fold-card', id },
+      h('summary', null, h('span', { class: 'fold-title' }, title), summary ? h('span', { class: 'fold-sum' }, summary) : null),
+      h('div', { class: 'fold-body' }, children));
+  }
+
+  FP.dom = { h, append, add, fill, money, pct, months, date, inputText, chips, pageHead, soWhat, foldCard };
 })(globalThis.FP = globalThis.FP || {});

@@ -66,6 +66,14 @@ see results; no illustrative data is used.
 
 ## Screens
 
+**Keeping it light:** every screen leads with the answer and folds the rest away.
+Explanations ("How this is worked out", "Based on", tax rules, the year-by-year table)
+are one-line folds with a summary of what's inside; Assumptions groups fold to their
+values, one open at a time; a form box's help shows while the box is empty or you're
+in it, then steps aside behind a small "i" by its label. Sections you open or close
+stay that way while you move between screens. The sample-data banner is shown in
+full once, then as one line.
+
 **How it's laid out:** four tabs at the bottom (**Your plan**, **Today**, **Future**,
 **Scenarios**) and a header that stays pinned, slides away as you scroll down and
 comes back as soon as you scroll up, with **Your figures** and a **More** menu (Assumptions,
@@ -123,11 +131,11 @@ one-line "So what" under it.
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite, and folded away how amounts are shown), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, other debts). Section by section, or all on one page if you choose. A strip above the tabs shows take-home and what's left over as you type. |
+| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (spending as one total or categories, regular savings, money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
-| **Settings** (More menu) | Theme (System, Light or Dark), saved in this browser only. |
+| **Settings** (More menu) | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
 
 Old links to `#today` and `#income` open the matching part of **Today** (its link is still `#now`).

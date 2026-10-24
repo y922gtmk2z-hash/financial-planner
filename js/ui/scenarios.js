@@ -27,12 +27,9 @@
     const list = h('div');
     const drawList = () => FP.dom.fill(list, listCard(ctx));
 
-    FP.dom.add(root,
-      FP.dom.pageHead('Scenarios', 'What if\u2026'),
-      h('p', { class: 'lead' }, 'Copy your plan, change anything — returns, house prices, overpayments, salary, retirement age — and compare the results side by side.'),
-      list,
-      presetCard(ctx),
-      createCard(ctx),
+    // The comparison comes first once there's something to compare; until
+    // then, the one-tap what-ifs. Managing scenarios and making your own follow.
+    const compare = [
       h('div', { class: 'view-toggle' }, FP.field.render({
         label: 'Show amounts in', type: 'toggle',
         options: [{ value: 'real', label: 'Today’s money' }, { value: 'nominal', label: 'Future money' }],
@@ -40,17 +37,27 @@
         value: view,
         onChange: (v) => { view = v; FP.screens.future.setView(v); draw(); },
       })),
-      results);
+      results];
+    const several = ws.scenarios.length > 1;
+    FP.dom.add(root,
+      FP.dom.pageHead('Scenarios', 'What if\u2026'),
+      several ? null : h('p', { class: 'lead' }, 'Try a change to your plan \u2014 retire earlier, overpay the mortgage, weaker markets \u2014 and compare it side by side.'),
+      several ? compare : presetCard(ctx),
+      several ? list : null,
+      several ? presetCard(ctx) : null,
+      createCard(ctx),
+      several ? null : compare);
     drawList();
     draw();
   }
 
+  // Your scenarios, one compact row each; Duplicate, Rename and Delete sit in a "⋯" menu.
   function listCard(ctx) {
     const ws = ctx.workspace();
     const base = ws.scenarios[0];
     return h('section', { class: 'card', 'aria-labelledby': 'sc-list-h' },
       h('h2', { id: 'sc-list-h' }, 'Your scenarios'),
-      h('p', { class: 'muted' }, 'Every screen shows and edits the scenario you’re editing. Switch at any time with the scenario picker at the top.'),
+      h('p', { class: 'muted small' }, 'Every screen shows and edits the one marked Editing.'),
       ws.scenarios.length >= S.MAX_SCENARIOS
         ? h('p', { class: 'notice info', id: 'sc-full' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'),
           `You have ${S.MAX_SCENARIOS} scenarios, the most the planner compares at once (each gets its own chart colour). Delete one to add or duplicate another.`)
@@ -76,15 +83,11 @@
             input.select();
           },
         }, 'Rename');
-        return h('li', { class: `scenario-item${editing ? ' is-active' : ''}` },
-          nameBox,
-          baseline
-            ? h('p', { class: 'muted small' }, 'Your main plan. Other scenarios are compared with it.')
-            : diffList(diffs),
-          h('div', { class: 'scenario-actions' },
-            editing ? null : h('button', { type: 'button', class: 'small', onclick: () => { ctx.setActive(sc.id); ctx.toast(`Now editing “${sc.name}”`); } }, 'Edit this'),
+        const menu = h('details', { class: 'row-menu' },
+          h('summary', { 'aria-label': `More for \u201c${sc.name}\u201d` }, '\u22ef'),
+          h('div', { class: 'row-menu-list' },
             h('button', {
-              type: 'button', class: 'small secondary', disabled: ws.scenarios.length >= S.MAX_SCENARIOS,
+              type: 'button', class: 'link', disabled: ws.scenarios.length >= S.MAX_SCENARIOS,
               'aria-describedby': ws.scenarios.length >= S.MAX_SCENARIOS ? 'sc-full' : null,
               onclick: () => { const c = S.clone(ws, sc.id); ctx.changed(); ctx.rerender(); ctx.toast(`Created “${c.name}” — now editing it`); },
             }, 'Duplicate'),
@@ -98,13 +101,21 @@
                 ctx.rerender();
               },
             }, 'Delete')));
+        renameBtn.addEventListener('click', () => { menu.open = false; });
+        return h('li', { class: `scenario-item${editing ? ' is-active' : ''}` },
+          h('div', { class: 'scenario-head' }, nameBox,
+            editing ? null : h('button', { type: 'button', class: 'small secondary', onclick: () => { ctx.setActive(sc.id); ctx.toast(`Now editing “${sc.name}”`); } }, 'Edit'),
+            menu),
+          baseline
+            ? h('p', { class: 'muted small' }, 'Your main plan. The others are compared with it.')
+            : diffList(diffs));
       })));
   }
 
   function diffList(diffs) {
     if (!diffs.length) return h('p', { class: 'muted small' }, 'Same as the baseline so far. Edit it to see a difference.');
     const fmt = (d, v) => (d.kind === 'money' ? money(v) : d.kind === 'pct' ? pct(v, 2) : v == null ? 'Not set' : String(v));
-    const shown = diffs.slice(0, 6);
+    const shown = diffs.slice(0, 2);
     return h('ul', { class: 'diff-list', 'aria-label': 'Differences from the baseline' },
       shown.map((d) => h('li', null, d.kind === 'note'
         ? `${d.label} changed`
@@ -152,8 +163,7 @@
       if (quick) quick.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
-    return h('section', { class: 'card', 'aria-labelledby': 'sc-new-h' },
-      h('h2', { id: 'sc-new-h' }, 'Create a scenario'),
+    return FP.dom.foldCard('sc-new', 'Make your own scenario', 'Copy your plan, then change anything',
       full
         ? h('p', { class: 'muted' }, `You can have up to ${S.MAX_SCENARIOS} scenarios. Delete one to add another.`)
         : [

@@ -29,7 +29,7 @@
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
    * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared),
-   *          noBlankNote (don't point out a blank key figure) }
+   *          noBlankNote (don't point out a blank key figure), foldHelp (help behind the "i" even when blank) }
    */
   function render(field, opts) {
     uid += 1;
@@ -40,8 +40,9 @@
 
     if (field.type === 'toggle') {
       // Segmented radio buttons for a short list of choices.
-      return h('fieldset', { class: 'field', 'aria-describedby': helpId, 'data-path': field.path || null },
-        h('legend', { class: 'field-legend' }, field.label),
+      const hasHelp = field.help && !opts.compact;
+      const fs = h('fieldset', { class: `field${hasHelp ? ' answered' : ''}`, 'aria-describedby': helpId, 'data-path': field.path || null },
+        h('legend', { class: 'field-legend label-row' }, field.label, hasHelp ? helpToggle(field, helpId) : null),
         h('div', { class: 'toggle' }, field.options.map((o, i) => [
           h('input', {
             type: 'radio', name: id, id: `${id}-${i}`, value: o.value, checked: o.value === opts.value,
@@ -49,7 +50,8 @@
           }),
           h('label', { for: `${id}-${i}` }, o.label),
         ])),
-        field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help) : null);
+        hasHelp ? h('p', { class: 'help help-text', id: helpId }, field.help) : null);
+      return fs;
     }
 
     if (field.type === 'term') return termField(field, opts, { id, helpId, errId, err });
@@ -107,15 +109,42 @@
     const suffix = field.suffix ? h('span', { class: 'affix', 'aria-hidden': 'true' }, field.suffix) : null;
 
     const where = opts.compact ? null : whereFor(field);
-    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}`, 'data-path': field.path || null },
-      h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
+    const hasHelp = (field.help && !opts.compact) || !!where;
+    const done = hasHelp && (opts.foldHelp || isAnswered(field, opts.value));
+    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
+      h('div', { class: 'label-row' },
+        h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
+        done ? helpToggle(field, helpId) : null),
       h('div', { class: 'input-wrap' }, prefix, input, suffix),
-      field.help && !opts.compact ? h('p', { class: 'help', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
-        : where ? h('p', { class: 'help', id: helpId }, h('strong', null, 'Where do I find this? '), where)
+      field.help && !opts.compact ? h('p', { class: 'help help-text', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
+        : where ? h('p', { class: 'help help-text', id: helpId }, h('strong', null, 'Where do I find this? '), where)
           : h('span', { id: helpId, hidden: true }),
       blank,
       err,
       opts.extra || null);
+  }
+
+  /*
+   * Help stays in view while a box is empty (or you're in it). Once it's
+   * answered the help steps aside behind a small "i" by the label, which
+   * brings it back; it stays linked to the box for screen readers.
+   */
+  function isAnswered(field, v) {
+    if (field.type === 'select' || field.type === 'toggle') return true;
+    if (field.type === 'text' || field.type === 'taxcode') return !!v;
+    return v != null && v !== 0;
+  }
+
+  function helpToggle(field, helpId) {
+    return h('button', {
+      type: 'button', class: 'help-toggle', 'aria-expanded': 'false', 'aria-controls': helpId,
+      'aria-label': `About \u201c${field.label}\u201d`,
+      onclick: (e) => {
+        const wrap = e.currentTarget.closest('.field');
+        const open = wrap.classList.toggle('show-help');
+        e.currentTarget.setAttribute('aria-expanded', String(open));
+      },
+    }, 'i');
   }
 
   /*
@@ -151,10 +180,11 @@
     }
     input.addEventListener('input', commit);
     unitSel.addEventListener('change', () => { unit = unitSel.value; commit(); });
-    return h('div', { class: `field term${opts.compact ? ' compact' : ''}`, 'data-path': field.path || null },
-      h('label', { for: ids.id }, field.label),
+    const done = field.help && !opts.compact && isAnswered(field, opts.value);
+    return h('div', { class: `field term${opts.compact ? ' compact' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
+      h('div', { class: 'label-row' }, h('label', { for: ids.id }, field.label), done ? helpToggle(field, ids.helpId) : null),
       h('div', { class: 'term-row' }, h('div', { class: 'input-wrap' }, input), h('div', { class: 'input-wrap term-unit-wrap' }, unitSel)),
-      field.help && !opts.compact ? h('p', { class: 'help', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
+      field.help && !opts.compact ? h('p', { class: 'help help-text', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
       ids.err,
       opts.extra || null);
   }
