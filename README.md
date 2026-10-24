@@ -158,7 +158,9 @@ is checked as you type, with plain-English errors. Blank boxes count as £0.
   are no accounts and no server, and the page's Content Security Policy blocks all
   network connections (`connect-src 'none'`).
 - **Export** saves every scenario to a JSON file; **Import** loads one back (it is
-  checked and cleaned up first, and older single-plan exports still work).
+  checked and cleaned up first). Saves and backups from every earlier version still
+  load: each is upgraded one numbered step at a time (`js/model/migrate.js`). A save
+  or backup from a newer version than the page is refused with a message saying so.
 - **Clear all data** removes everything the planner stored in this browser. It says what
   will go and asks you to type DELETE first.
 - **Export a backup** is also on Your plan. Once you've changed your figures, Your plan
@@ -421,6 +423,7 @@ js/config/tax-2026-27.js   UK tax, NI and student loan rules for one tax year
 js/model/profile.js        the shared data model: fields, parsing, validation, normalising
 js/model/scenarios.js      workspace of scenarios: copy, rename, delete, differences
 js/model/sample.js         fictional sample household and example scenarios
+js/model/migrate.js        numbered steps that upgrade older saves and backups
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
@@ -429,6 +432,8 @@ js/ui/*.js                 one file per screen, plus field, chart, checklist, pa
                            (sheet.js, explore.js) and DOM helpers
 js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
+tests/fixtures/*.json      five example households for the golden snapshots
+tests/golden/*.json        today's results for each fixture (see Tests)
 docs/PLAN.md               build plan
 ```
 
@@ -442,7 +447,20 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-166 tests cover:
+227 tests cover:
+
+- **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
+  start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
+  a car scheme, someone near retirement, and a stretched budget with debts). For
+  each, `tests/golden/` holds today's take-home pay, Today summary, every projection
+  row, what you could spend in retirement, how much you'd need, the pot you'd need,
+  and the ideas and suggested split, to the penny, as if run on 24 Oct 2026. Any
+  change is listed by path with its old and new value. If results are meant to
+  change, run `GOLDEN_UPDATE=1 npm run golden:update` (it refuses without
+  `GOLDEN_UPDATE=1`) and say in the pull request which values moved and why.
+- **Upgrading saved data:** saves and exports from versions 1 and 2, including the
+  oldest shapes (a single bonus, one spending total, the split as assumptions), load
+  and match the golden results; a save or backup from a newer version is refused.
 
 - **Income tax:** rest-of-UK and Scottish bands, the allowance taper and the 60%
   effective rate, all five student loan plans, the three ways a pension can be paid,

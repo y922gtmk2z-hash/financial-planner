@@ -28,12 +28,10 @@
     return { activeId: id, scenarios: [{ id, name: cleanName(name, 'Baseline'), profile }] };
   }
 
-  // Anything (a save, an import, an older single-profile save) → valid workspace.
+  // Anything → valid workspace. Older saves are upgraded first, by FP.migrate.
   function normalise(input) {
     const src = input && typeof input === 'object' ? input : {};
-    if (!Array.isArray(src.scenarios)) {
-      return fromProfile(FP.profile.normalise(src.profile || {}));
-    }
+    if (!Array.isArray(src.scenarios)) return fromProfile(FP.profile.blank());
     const seen = new Set();
     const scenarios = src.scenarios
       .filter((s) => s && typeof s === 'object')

@@ -1,0 +1,15 @@
+{
+  "about": { "age": 44 },
+  "income": {
+    "grossSalary": 118000,
+    "region": "scotland",
+    "studentLoanPlan": "plan2",
+    "studentLoanBalance": 48000,
+    "studentLoanStartYear": 2015,
+    "pensionMethod": "salarySacrifice",
+    "bonuses": [{ "id": "tp-b1", "amount": 12000, "month": "mar" }],
+    "sacrifices": [{ "id": "tp-car", "type": "car", "monthly": 650, "monthsLeft": 36, "carValue": 52000, "bikRate": 4 }]
+  },
+  "outgoings": { "estimate": 4200 },
+  "spending": [{ "id": "tp-rest", "category": "Rest of your estimate", "monthly": 0, "group": "other", "rest": true }]
+}

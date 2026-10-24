@@ -6,7 +6,8 @@
 (function (FP) {
   'use strict';
 
-  const SCHEMA_VERSION = 1;
+  // The version of saved data. Older saves are upgraded by js/model/migrate.js.
+  const SCHEMA_VERSION = 3;
 
   const STUDENT_LOAN_PLANS = [
     { value: 'none', label: 'None' },
@@ -363,8 +364,9 @@
   }
 
   /*
-   * Turn anything (an import, an old save) into a valid profile. Unknown keys are
-   * dropped; missing or invalid values fall back to blanks/defaults.
+   * Turn anything into a valid profile in today's shape. Unknown keys are
+   * dropped; missing or invalid values fall back to blanks/defaults. Older
+   * saves are upgraded to today's shape first, by FP.migrate.
    */
   function normalise(input) {
     const src = input && typeof input === 'object' ? input : {};
@@ -390,10 +392,6 @@
     if (Array.isArray(srcIncome.bonuses)) {
       p.income.bonuses = srcIncome.bonuses.filter((b) => b && typeof b === 'object').slice(0, MAX_BONUSES)
         .map((b) => normaliseRow(b, BONUS_FIELDS, 'b'));
-    } else if (srcIncome.bonus !== undefined) {
-      // Older saves had a single bonus (and later a month for it).
-      const amount = coerce(BONUS_FIELDS[0], srcIncome.bonus, 0);
-      if (amount > 0) p.income.bonuses = [normaliseRow({ amount, month: srcIncome.bonusMonth }, BONUS_FIELDS, 'b')];
     }
     if (Array.isArray(srcIncome.sacrifices)) {
       p.income.sacrifices = srcIncome.sacrifices.filter((x) => x && typeof x === 'object').slice(0, MAX_SACRIFICES)
@@ -404,18 +402,11 @@
       p.income.benefits = srcIncome.benefits.filter((x) => x && typeof x === 'object').slice(0, MAX_BENEFITS)
         .map((x) => normaliseRow(x, BENEFIT_FIELDS, 'bk'));
     }
-    // The leftover split used to be four assumptions (splitCash, ...).
-    const oldA = src.assumptions && typeof src.assumptions === 'object' ? src.assumptions : {};
-    const leftoverSrc = src.leftover && typeof src.leftover === 'object'
-      ? src.leftover
-      : { cash: oldA.splitCash, invest: oldA.splitInvest, mortgage: oldA.splitMortgage, pension: oldA.splitPension };
-    const hasSplit = LEFTOVER_FIELDS.some((f) => leftoverSrc[f.key] !== undefined);
+    const leftoverSrc = src.leftover && typeof src.leftover === 'object' ? src.leftover : {};
     p.leftover.unit = leftoverSrc.unit === 'gbp' ? 'gbp' : 'pct';
     LEFTOVER_FIELDS.forEach((f) => {
       if (leftoverSrc[f.key] !== undefined) p.leftover[f.key] = coerce(leftoverField(f, p.leftover.unit), leftoverSrc[f.key], LEFTOVER_DEFAULT[f.key]);
     });
-    // Splits saved before the emergency fund share existed keep adding up as they did.
-    if (hasSplit && leftoverSrc.emergency === undefined) p.leftover.emergency = 0;
     if (leftoverSrc.emergencyMonths !== undefined) {
       p.leftover.emergencyMonths = coerce(EMERGENCY_MONTHS_FIELD, leftoverSrc.emergencyMonths, LEFTOVER_DEFAULT.emergencyMonths);
     }
@@ -436,16 +427,6 @@
         if (i === restAt) Object.assign(row, { rest: true, group: 'other', category: REST_CATEGORY });
         return row;
       });
-      // Saved before the estimate: one total (which left out mortgage and debt
-      // payments) becomes your estimate, with the payments added back in.
-      const only = p.spending.length === 1 && p.spending[0];
-      if (!src.outgoings && only && !only.rest && (only.category === 'Everything' || !only.category)) {
-        Object.assign(only, { rest: true, group: 'other', category: REST_CATEGORY });
-        if (only.monthly > 0 && FP.summary) {
-          const cf = FP.summary.compute(p).cashFlow;
-          p.outgoings.estimate = Math.round(cf.outgoings * 100) / 100;
-        }
-      }
     }
     return p;
   }

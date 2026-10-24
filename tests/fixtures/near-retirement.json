@@ -1,0 +1,9 @@
+{
+  "about": { "age": 58 },
+  "income": { "grossSalary": 52000 },
+  "assets": { "homeValue": 420000, "cashSavings": 25000, "isa": 60000, "pension": 410000 },
+  "mortgage": { "balance": 0 },
+  "outgoings": { "estimate": 2600 },
+  "spending": [{ "id": "nr-rest", "category": "Rest of your estimate", "monthly": 0, "group": "other", "rest": true }],
+  "assumptions": { "retirementAge": 60 }
+}
