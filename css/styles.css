@@ -952,3 +952,13 @@ a.button { text-decoration: none; }
 .how-to { margin: 8px 0 4px; padding-left: 1.3em; }
 .how-to li + li { margin-top: 4px; }
 .actions.put-away .action.put { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px; padding: 8px 0; border-top: 1px solid var(--border); }
+
+/* ---------- Plan detail meter and "Have these to hand" (Your plan, Your figures) ---------- */
+.detail-meter { margin: 4px 0 12px; }
+.detail-meter p { margin: 0 0 6px; }
+.meter-bar { height: 8px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; }
+.meter-bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.setup-meter .detail-meter { margin-top: 0; }
+.to-hand-list { margin: 8px 0 0; padding-left: 1.2em; }
+.to-hand-list li + li { margin-top: 6px; }
+.detail-meter a, .to-hand-list a { color: var(--accent); font-weight: 600; }

@@ -482,6 +482,8 @@
     function markVisited(i) {
       visited.add(STEPS[i].id);
       FP.store.pref('setupVisited', [...visited].join(','));
+      // Going through Debts counts towards your plan's detail, even with none.
+      meter.refresh();
     }
 
     function show(i, focus) {
@@ -558,8 +560,13 @@
 
     // The strip sits above the Back and Next buttons: pinned to the bottom of
     // the screen, it's only ever pushed up from where it sits, so it can't cover them.
-    const strip = liveStrip(ctx, root, () => (mode === 'steps' ? STEPS[current].id : openAll >= 0 ? STEPS[openAll].id : null));
-    FP.dom.add(root, h('h1', null, 'Your figures'), intro, nav, groups, strip, footer, calc);
+    // Leaving from the strip counts as having been through the section you're in, like Next.
+    const strip = liveStrip(ctx, root, () => (mode === 'steps' ? STEPS[current].id : openAll >= 0 ? STEPS[openAll].id : null),
+      () => { if (mode === 'steps') markVisited(current); });
+    // How much is in so far, and what to add next; it follows what you type.
+    const meter = h('div', { class: 'setup-meter', role: 'status' }, FP.checklist.meter(ctx.profile()));
+    meter.refresh = () => FP.dom.fill(meter, FP.checklist.meter(ctx.profile()));
+    FP.dom.add(root, h('h1', null, 'Your figures'), intro, meter, toHand(), nav, groups, strip, footer, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {
@@ -575,6 +582,7 @@
       timer = setTimeout(() => {
         if (!leftover.contains(e.target)) leftover.refresh();
         strip.refresh();
+        meter.refresh();
         income.refreshStatus();
         debts.refreshNotes();
         outgoings.refresh();
@@ -622,6 +630,30 @@
   }
 
   /*
+   * What's worth finding before you start, and which section each fills. Open
+   * the first time you see Your figures, then folded to one line.
+   */
+  const TO_HAND = [
+    ['Your latest payslip', 'Income', 'income', 'salary, pension contributions, tax code and any student loan or salary sacrifice'],
+    ['Your P60', 'Income', 'income', 'last tax year\u2019s pay and tax code'],
+    ['Pension statements (or your pension provider\u2019s app)', 'Assets', 'assets', 'your pension pots'],
+    ['Your mortgage statement', 'Debts', 'debts', 'balance, rate and time left'],
+    ['Credit card and loan statements', 'Debts', 'debts', 'balances, monthly payments and interest rates'],
+    ['Your student loan balance (your Student Loans Company online account)', 'Income', 'income', 'what you owe and when you started repaying'],
+  ];
+  function toHand() {
+    const first = FP.store.pref('seenToHand') !== '1';
+    FP.store.pref('seenToHand', '1');
+    return h('details', { class: 'card fold-card to-hand', id: 'to-hand', open: first || null },
+      h('summary', null, h('span', { class: 'fold-title' }, 'Have these to hand'), h('span', { class: 'fold-sum' }, 'Payslip, P60, pension and debt statements')),
+      h('div', { class: 'fold-body' },
+        h('p', { class: 'help' }, 'Not essential: a rough figure is fine for anything you don\u2019t have.'),
+        h('ul', { class: 'to-hand-list' }, TO_HAND.map(([what, section, id, fills]) => h('li', null,
+          h('strong', null, what),
+          h('span', null, ' for ', h('a', { href: `#setup/${id}` }, section), `: ${fills}.`))))));
+  }
+
+  /*
    * Pinned above the tabs: the result the section you're in changes (About you:
    * what you could spend in retirement; Income: take-home; Outgoings: left over;
    * Assets and Debts: net worth). On the one-page view with nothing open, take-home
@@ -645,10 +677,10 @@
     return [FP.dom.measure('netWorth'), money(FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).netWorth)];
   }
 
-  function liveStrip(ctx, root, section) {
+  function liveStrip(ctx, root, section, leaving) {
     const figures = h('p', { class: 'live-figures', role: 'status', 'aria-live': 'polite' });
     const strip = h('div', { class: 'live-strip', role: 'group', 'aria-label': 'From what you’ve entered' }, figures,
-      h('button', { type: 'button', class: 'small', onclick: () => calculate(ctx, root) }, 'See my plan'));
+      h('button', { type: 'button', class: 'small', onclick: () => { leaving(); calculate(ctx, root); } }, 'See my plan'));
     strip.refresh = () => {
       const p = ctx.profile();
       const show = STRIP[section()];
@@ -695,5 +727,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.setup = { title: 'Your figures', render };
+  FP.screens.setup = { title: 'Your figures', render, hasPayDetail };
 })(globalThis.FP = globalThis.FP || {});
