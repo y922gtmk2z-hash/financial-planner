@@ -401,6 +401,12 @@ Each year, in order:
    25% of each withdrawal tax-free, the rest taxed as income), then cash, then
    investments. Anything left is shown as an unfunded shortfall, with a warning.
 
+In the code, `initState` sets up where you start and `stepYear` runs one year in
+the order above; `project` loops it. Each year gets its rates of return (before
+fees) from the assumptions, or from an optional year-by-year path, and a list of
+life events. Nothing on screen uses a path or events yet: they're there so a later
+version can show a range of market outcomes and dated life events.
+
 **Not modelled:** tax on savings and investments, higher-rate relief on extra pension
 contributions, student loan repayments on pension income, holding both an
 undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance, and changes to your mortgage
@@ -447,7 +453,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-227 tests cover:
+234 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -458,6 +464,11 @@ npm test   # Node 18+, no dependencies to install
   change is listed by path with its old and new value. If results are meant to
   change, run `GOLDEN_UPDATE=1 npm run golden:update` (it refuses without
   `GOLDEN_UPDATE=1`) and say in the pull request which values moved and why.
+- **Projection years:** stepping the years one at a time gives the same rows as the
+  full projection, a year-by-year returns path equal to the assumptions changes
+  nothing, a path changes only the years and rates it gives (fees still apply),
+  the projection runs to your end age when asked, and 1,000 projections of the
+  sample household take under 3 seconds.
 - **Upgrading saved data:** saves and exports from versions 1 and 2, including the
   oldest shapes (a single bonus, one spending total, the split as assumptions), load
   and match the golden results; a save or backup from a newer version is refused.
