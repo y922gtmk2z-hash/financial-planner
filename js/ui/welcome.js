@@ -8,15 +8,16 @@
   const { h } = FP.dom;
 
   // The answers behind a first, rough plan. Same profile fields as Your figures.
-  const QUICK = ['about.age', 'income.grossSalary', 'spending.0.monthly', 'assumptions.retirementAge', 'goals.retirementIncome'];
-  const SPEND_FIELD = { path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month',
-    help: 'Apart from your mortgage and debt payments. A rough figure is fine.' };
+  const QUICK = ['about.age', 'income.grossSalary', 'outgoings.estimate', 'assumptions.retirementAge', 'goals.retirementIncome'];
+  const SPEND_FIELD = { path: 'outgoings.estimate', label: 'Everything going out each month', type: 'money', suffix: 'a month', nullable: true,
+    nullPlaceholder: '0',
+    help: 'Include your rent or mortgage, bills and any loan or card payments, as well as everyday spending. An estimate is fine: you can refine it later.' };
 
   const spendTotal = (p) => p.spending.reduce((t, r) => t + (Number(r.monthly) || 0), 0);
-  // Spending already split into categories is edited in Setup, not here.
-  const splitSpending = (p) => p.spending.length > 1 && spendTotal(p) > 0;
+  // Outgoings already itemised without an estimate are edited in Your figures, not here.
+  const itemisedOnly = (p) => p.outgoings.estimate == null && spendTotal(p) > 0;
   function quickPaths(p) {
-    return QUICK.filter((path) => path !== SPEND_FIELD.path || !splitSpending(p));
+    return QUICK.filter((path) => path !== SPEND_FIELD.path || !itemisedOnly(p));
   }
   const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
   const questionCount = (p) => COUNT_WORDS[quickPaths(p).length];
@@ -33,9 +34,8 @@
    */
   function quickStart(ctx, root) {
     const p = ctx.profile();
-    if (!p.spending.length) p.spending.push(FP.profile.newSpending());
-    // Older plans started with nine empty categories: make them one line to fill in.
-    if (p.spending.length > 1 && !splitSpending(p)) p.spending = [{ ...FP.profile.newSpending(), category: 'Everything' }];
+    // Older plans started with nine empty categories: clear them for your estimate.
+    if (p.spending.length > 1 && !(spendTotal(p) > 0)) p.spending = [FP.profile.newRest()];
     const paths = quickPaths(p);
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
       h('h1', { id: 'quick-h' }, 'Quick start'),
@@ -46,7 +46,12 @@
           value: FP.profile.get(ctx.profile(), path),
           nullPlaceholder: f.nullPlaceholder,
           noBlankNote: true,
-          onChange: (v) => ctx.update(path, v),
+          onChange: (v) => {
+            FP.profile.set(ctx.profile(), path, v);
+            // Your estimate goes into your outgoings as the rest not itemised yet.
+            if (path === SPEND_FIELD.path) FP.summary.syncOutgoings(ctx.profile());
+            ctx.changed();
+          },
         });
       }),
       h('button', { type: 'button', class: 'quick-go', onclick: () => {
@@ -55,7 +60,7 @@
         // Your plan shows this page again until these are in, so say what's missing.
         const missing = FP.summary.checklist(ctx.profile()).blocking;
         if (missing.length) {
-          const first = missing[0].id === 'spending' ? SPEND_FIELD.path : missing[0].target;
+          const first = missing[0].target;
           const input = card.querySelector(`[data-path="${CSS.escape(first)}"] input`);
           if (input) input.focus();
           ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
@@ -85,7 +90,7 @@
   }
 
   const steps = (p) => [
-    [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, spending and when you’d like to retire. About a minute; rough figures are fine.'],
+    [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, what goes out each month and when you’d like to retire. About a minute; rough figures are fine.'],
     ['See your first plan', 'What’s left each month, and how much you’d need for retirement.'],
     ['Add detail when you’re ready', 'Savings, pensions and debts sharpen the picture and unlock your next steps.'],
   ];
@@ -143,7 +148,7 @@
     const inc = p.income;
     const visited = (FP.store.pref('setupVisited') || '').split(',');
     const added = Object.values(p.assets).some((v) => v > 0) || p.mortgage.balance > 0 || (p.debts || []).length > 0
-      || (p.savings || []).length > 0 || p.spending.length > 1 || FP.projection.splitShares(p.leftover, 1).total > 0
+      || (p.savings || []).length > 0 || p.spending.some((r) => !r.rest && r.monthly > 0) || FP.projection.splitShares(p.leftover, 1).total > 0
       || inc.studentLoanPlan !== 'none' || inc.bonuses.length > 0 || inc.sacrifices.length > 0 || (inc.benefits || []).length > 0
       || inc.otherIncome > 0 || inc.taxFreeIncome > 0 || !!inc.taxCode;
     return !added && !(visited.includes('assets') && visited.includes('debts'));

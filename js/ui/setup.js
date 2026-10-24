@@ -1,6 +1,6 @@
 /*
  * Your figures: enter your numbers once, in five sections: About you, Income,
- * Outgoings, Assets and Debts. Each asks the essentials first, with detail
+ * Outgoings (bills, debt payments and other), Assets and Debts. Each asks the essentials first, with detail
  * folded away (under Income, everything beyond your salary is under
  * Advanced). Every field writes straight into the shared profile.
  */
@@ -23,7 +23,7 @@
         return [p.income.grossSalary > 0 ? `${money(p.income.grossSalary)} salary` : 'No salary', extras ? `${extras} extra${extras === 1 ? '' : 's'}` : null].filter(Boolean).join(' \u00b7 ');
       } },
     { id: 'outgoings', title: 'Outgoings', short: 'Outgoings',
-      summary: (p) => [`${money(sum(p.spending, 'monthly'))} a month`, sum(p.savings, 'monthly') > 0 ? `${money(sum(p.savings, 'monthly'))} saved` : null].filter(Boolean).join(' \u00b7 ') },
+      summary: (p) => [`${money(FP.summary.outgoings(p).total)} a month`, sum(p.savings, 'monthly') > 0 ? `${money(sum(p.savings, 'monthly'))} saved` : null].filter(Boolean).join(' \u00b7 ') },
     { id: 'assets', title: 'Assets', short: 'Assets',
       summary: (p) => { const t = Object.values(p.assets).reduce((a, v) => a + (v || 0), 0); return t > 0 ? money(t) : 'None added'; } },
     { id: 'debts', title: 'Debts', short: 'Debts',
@@ -155,68 +155,152 @@
     return card;
   }
 
-  // Outgoings: one spending question (split it up if you like), then regular
-  // savings; your leftover money follows as its own card.
-  function spendCard(ctx) {
-    const card = h('section', { class: 'card', id: 'spending', 'aria-labelledby': 'sec-spend' });
-    const spend = h('div', { class: 'spend-part' });
-    const total = h('strong');
-    const updateTotal = () => {
-      total.textContent = `${money(ctx.profile().spending.reduce((t, r) => t + (r.monthly || 0), 0))} a month`;
+  /*
+   * Outgoings: your estimate of everything going out, then three folds to
+   * itemise it: bills, debt payments and other spending. Whatever of the
+   * estimate isn't itemised yet counts as other spending. Debt payments are
+   * the same figures as under Debts, so what you add here shows there too.
+   * Regular savings follow; your leftover money follows as its own card.
+   * links: { debtsChanged() (redraw Debts), toDebts(path) (go to a box there) }.
+   */
+  function outgoingsCard(ctx, links) {
+    const make = maker(ctx);
+    const status = h('p', { class: 'help outgoings-status', role: 'status' });
+    const spendTotal = (p, g) => sum(p.spending.filter((r) => !r.rest && r.group === g), 'monthly');
+    const fold = (id, title, body) => {
+      const st = h('span', { class: 'part-status' });
+      return { el: h('details', { class: 'part', id }, h('summary', null, h('span', null, title), st), body), st };
     };
-    const drawSpend = () => {
+
+    // Bills and Other: a list of categories each. Removing a row moves the
+    // others' places in the list, so both lists are drawn again.
+    const restAmount = h('strong');
+    const restRow = h('div', { class: 'total-row rest-row' }, h('span', null, 'Rest of your estimate'), restAmount);
+    const lists = [
+      { group: 'bills', title: 'Bills', example: 'e.g. Council tax', add: '+ Add a bill',
+        help: 'Rent, council tax, energy, water, phone and broadband, insurance, subscriptions.' },
+      { group: 'other', title: 'Other', example: 'e.g. Groceries', add: '+ Add something else',
+        help: 'Food, travel, childcare, eating out, holidays and anything else.' },
+    ].map((l) => ({ ...l, body: h('div') }));
+    const drawLists = (focusGroup) => {
       const p = ctx.profile();
-      const single = p.spending.length <= 1;
-      if (!p.spending.length) p.spending.push(P.newSpending());
-      FP.dom.fill(spend,
-        single
-          ? FP.field.render({ path: 'spending.0.monthly', label: 'What you spend in a month', type: 'money', suffix: 'a month',
-            help: 'Everything apart from your mortgage and debt payments (those go under Debts). A rough total is fine.' }, {
-            value: p.spending[0].monthly,
-            onChange: (v) => { ctx.update('spending.0.monthly', v); updateTotal(); },
-          })
-          : [
-            h('h3', null, 'What you spend in a month'),
-            h('p', { class: 'help' }, 'Everything apart from your mortgage and debt payments (those go under Debts).'),
-            h('div', { class: 'spend-list' }, p.spending.map((r, i) => {
-              // Each row's labels are hidden, so name the inputs after the category.
-              const amountName = (cat) => `${cat || `Category ${i + 1}`} amount per month`;
-              const amount = FP.field.render(P.SPENDING_FIELDS[1], {
-                value: r.monthly, compact: true, ariaLabel: amountName(r.category),
-                onChange: (v) => { ctx.update(`spending.${i}.monthly`, v); updateTotal(); },
-              });
-              return h('div', { class: 'spend-row' },
-                FP.field.render(P.SPENDING_FIELDS[0], {
-                  value: r.category, compact: true, ariaLabel: `Category name ${i + 1}`,
-                  onChange: (v) => { ctx.update(`spending.${i}.category`, v); amount.querySelector('input').setAttribute('aria-label', amountName(v)); },
-                }),
-                amount,
-                h('button', {
-                  type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this category'}`,
-                  onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawSpend(); },
-                }, '×'));
-            })),
-          ],
-        h('button', {
-          type: 'button', class: single ? 'link' : 'secondary',
-          onclick: () => {
-            // Splitting one total: keep it as the first category.
-            if (single && p.spending[0] && (!p.spending[0].category || p.spending[0].category === 'Everything')) p.spending[0].category = 'Everything else';
-            p.spending.push(P.newSpending());
-            ctx.changed();
-            drawSpend();
-            const rows = spend.querySelectorAll('.spend-row input[type="text"]:not([inputmode])');
-            if (rows.length) rows[rows.length - 1].focus();
-          },
-        }, single ? '+ Split it into categories' : '+ Add a category'),
-        single ? null : h('div', { class: 'total-row' }, h('span', null, 'Total spending'), total));
-      updateTotal();
+      lists.forEach((l) => {
+        const rows = p.spending.map((r, i) => ({ r, i })).filter(({ r }) => !r.rest && r.group === l.group);
+        FP.dom.fill(l.body,
+          h('p', { class: 'help' }, l.help),
+          rows.length ? h('div', { class: 'spend-list' }, rows.map(({ r, i }) => {
+            // Each row's labels are hidden, so name the inputs after the category.
+            const amountName = (cat) => `${cat || `${l.title} ${i + 1}`} amount per month`;
+            const amount = FP.field.render(P.SPENDING_FIELDS[1], {
+              value: r.monthly, compact: true, ariaLabel: amountName(r.category),
+              onChange: (v) => ctx.update(`spending.${i}.monthly`, v),
+            });
+            return h('div', { class: 'spend-row' },
+              FP.field.render({ ...P.SPENDING_FIELDS[0], placeholder: l.example }, {
+                value: r.category, compact: true, ariaLabel: `${l.title}: name ${i + 1}`,
+                onChange: (v) => { ctx.update(`spending.${i}.category`, v); amount.querySelector('input').setAttribute('aria-label', amountName(v)); },
+              }),
+              amount,
+              h('button', {
+                type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.category || 'this one'}`,
+                onclick: () => { p.spending.splice(i, 1); ctx.changed(); drawLists(); },
+              }, '×'));
+          })) : null,
+          l.group === 'other' ? restRow : null,
+          h('button', {
+            type: 'button', class: 'secondary',
+            onclick: () => { p.spending.push(P.newSpending(l.group)); ctx.changed(); drawLists(l.group); },
+          }, l.add));
+      });
+      if (focusGroup) {
+        const names = lists.find((l) => l.group === focusGroup).body.querySelectorAll('.spend-row input[type="text"]:not([inputmode])');
+        if (names.length) names[names.length - 1].focus();
+      }
     };
-    drawSpend();
-    FP.dom.fill(card,
+
+    // Debt payments: your mortgage, and each other debt's name and payment.
+    const mortgagePay = { ...P.fieldFor('mortgage.monthlyPayment'), label: 'Mortgage', needsMortgage: false, nullPlaceholder: '0',
+      help: 'Your normal monthly payment. Leave blank if you don’t have one.' };
+    const pays = h('div');
+    const unpaidNote = h('div', { class: 'notice info small', role: 'status' });
+    const drawPays = (focus) => {
+      const p = ctx.profile();
+      FP.dom.fill(pays,
+        h('p', { class: 'help' }, 'Your mortgage, loans, car finance and credit cards. They show under Debts too, where you add what’s left to pay.'),
+        make(mortgagePay),
+        p.debts.length ? h('div', { class: 'spend-list' }, p.debts.map((d, i) => {
+          const named = () => (ctx.profile().debts[i] || {}).name || `Debt ${i + 1}`;
+          const amount = FP.field.render({ ...P.DEBT_FIELDS.find((f) => f.key === 'monthlyPayment'), suffix: null, path: `debts.${i}.monthlyPayment` }, {
+            value: d.monthlyPayment, compact: true, ariaLabel: `${named()}: monthly payment`,
+            onChange: (v) => ctx.update(`debts.${i}.monthlyPayment`, v),
+          });
+          return h('div', { class: 'spend-row' },
+            FP.field.render({ ...P.DEBT_FIELDS.find((f) => f.key === 'name'), path: `debts.${i}.name` }, {
+              value: d.name, compact: true, ariaLabel: `Debt name ${i + 1}`,
+              onChange: (v) => { ctx.update(`debts.${i}.name`, v); amount.querySelector('input').setAttribute('aria-label', `${named()}: monthly payment`); },
+            }),
+            amount,
+            h('button', {
+              type: 'button', class: 'icon-btn', 'aria-label': `Remove ${d.name || 'this debt'} (from Debts too)`,
+              onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawPays(); links.debtsChanged(); },
+            }, '×'));
+        })) : null,
+        unpaidNote,
+        h('button', {
+          type: 'button', class: 'secondary',
+          onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawPays(true); links.debtsChanged(); },
+        }, '+ Add a debt payment'));
+      if (focus) {
+        const names = pays.querySelectorAll('.spend-row input[type="text"]:not([inputmode])');
+        if (names.length) names[names.length - 1].focus();
+      }
+      refresh();
+    };
+
+    const bills = fold('out-bills', 'Bills', lists[0].body);
+    const debts = fold('out-debts', 'Debt payments', pays);
+    const other = fold('out-other', 'Other', lists[1].body);
+
+    // Totals, the rest of your estimate and payments that don't count yet.
+    function refresh() {
+      const p = ctx.profile();
+      const o = FP.summary.outgoings(p);
+      const s = FP.summary.compute(p);
+      const perMonth = (n) => (n > 0 ? `${money(n)} a month` : 'None added');
+      bills.st.textContent = perMonth(spendTotal(p, 'bills'));
+      debts.st.textContent = perMonth(s.cashFlow.mortgageMonthly + s.cashFlow.debtMonthly - s.cashFlow.studentLoanExtraMonthly);
+      other.st.textContent = perMonth(spendTotal(p, 'other') + o.rest);
+      restRow.hidden = o.estimate == null;
+      restAmount.textContent = money(o.rest);
+      status.textContent = o.estimate == null
+        ? (o.itemised > 0 ? `${money(o.itemised)} a month itemised below.` : 'Give an estimate, or itemise what goes out below.')
+        : !(o.itemised > 0) ? 'Your estimate counts as other spending until you itemise it below.'
+          : o.itemised < o.estimate ? `${money(o.itemised)} itemised below. The other ${money(o.rest)} of your estimate counts as other spending until you itemise it.`
+            : o.itemised === o.estimate ? 'Your estimate is all itemised below.'
+              : `What you’ve itemised below (${money(o.itemised)}) is more than your estimate, so that’s what’s used.`;
+      // A payment counts once its debt has a balance (under Debts).
+      const unpaid = [p.mortgage.monthlyPayment > 0 && !(p.mortgage.balance > 0) ? { name: 'your mortgage', path: 'mortgage.balance' } : null]
+        .concat(p.debts.map((d, i) => (d.monthlyPayment > 0 && !(d.balance > 0) ? { name: d.name || `debt ${i + 1}`, path: `debts.${i}.balance` } : null)))
+        .filter(Boolean);
+      unpaidNote.hidden = !unpaid.length;
+      if (unpaid.length) {
+        FP.dom.fill(unpaidNote,
+          `Add what’s left to pay on ${unpaid.map((u) => u.name).join(' and ')} under Debts, so ${unpaid.length === 1 ? 'its payment counts' : 'their payments count'}${o.estimate == null ? '' : ' (until then, your estimate covers it)'}. `,
+          h('button', { type: 'button', class: 'link', onclick: () => links.toDebts(unpaid[0].path) }, 'Go to Debts'));
+      }
+      showWorked(pays, FP.loan.forMortgage(p), { payment: 'mortgage.monthlyPayment' });
+    }
+
+    drawLists();
+    const card = h('section', { class: 'card', id: 'spending', 'aria-labelledby': 'sec-spend' },
       h('h2', { id: 'sec-spend' }, 'Outgoings'),
-      spend,
+      make(P.fieldFor('outgoings.estimate')),
+      status,
+      h('div', { class: 'parts' }, bills.el, debts.el, other.el),
       FP.savingsEditor.render(ctx, { embedded: true }));
+    drawPays();
+    card.refresh = refresh;
+    card.redrawPays = () => drawPays();
     return card;
   }
 
@@ -281,7 +365,7 @@
    * Debts: the mortgage and each other debt fold to a one-line summary once
    * they have a balance (open while empty, so a new one is ready to fill in).
    */
-  function debtsCard(ctx) {
+  function debtsCard(ctx, links) {
     const sec = section('debts');
     const make = maker(ctx);
     // One loan's fold: its summary line, the note and worked-out boxes kept up to date.
@@ -292,6 +376,8 @@
       const fold = h('details', { class: 'part', id }, h('summary', null, h('span', null, title()), sum), body, note);
       const draw = () => {
         const loan = get();
+        // The name may have been changed under Outgoings.
+        fold.querySelector('summary > span').textContent = title();
         sum.textContent = loanSummary(loan);
         note.textContent = loanNote(loan, yearly);
         note.hidden = !note.textContent;
@@ -323,7 +409,7 @@
               if (f.key === 'name') fold.querySelector('summary > span').textContent = name();
             },
           })),
-          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); } }, 'Remove this debt')],
+          h('button', { type: 'button', class: 'link danger', onclick: () => { p.debts.splice(i, 1); ctx.changed(); drawOthers(); links.paymentsChanged(); } }, 'Remove this debt')],
           () => FP.loan.forDebt(ctx.profile().debts[i] || {}, ctx.profile().assumptions), paths, '% APR');
         return { fold, draw };
       });
@@ -331,22 +417,29 @@
         h('h3', { id: 'grp-otherDebts' }, 'Other debts'),
         h('p', { class: 'help' }, 'Loans, car finance, credit cards.'),
         folds.length ? h('div', { class: 'parts' }, folds.map((x) => x.fold)) : null,
-        h('button', { type: 'button', class: 'secondary', onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawOthers(); } }, '+ Add a debt'));
+        h('button', { type: 'button', class: 'secondary', onclick: () => { p.debts.push(P.newDebt()); ctx.changed(); drawOthers(); links.paymentsChanged(); } }, '+ Add a debt'));
       debtDraws = folds.map((x) => x.draw);
       debtDraws.forEach((d) => d());
     };
     drawOthers();
     const card = h('section', { class: 'card', id: 'debts', 'aria-labelledby': 'sec-debts' },
       h('h2', { id: 'sec-debts' }, 'Debts'),
-      h('p', { class: 'muted' }, `${sec.intro} For each, give the balance and any two of monthly payment, time left and interest rate: the third is worked out.`),
+      h('p', { class: 'muted' }, `${sec.intro} For each, give the balance and any two of monthly payment, time left and interest rate: the third is worked out. Payments you add under Outgoings show here too.`),
       h('div', { class: 'parts' }, mortgage.fold),
       others);
     mortgage.draw();
     card.refreshNotes = () => [mortgage.draw, ...debtDraws].forEach((d) => d());
+    card.redraw = drawOthers;
     return card;
   }
 
-  function render(root, ctx) {
+  function render(root, appCtx) {
+    // What's left of your estimate follows every change to your outgoings.
+    const ctx = {
+      ...appCtx,
+      update(path, value) { P.set(appCtx.profile(), path, value); ctx.changed(); },
+      changed() { FP.summary.syncOutgoings(appCtx.profile()); appCtx.changed(); },
+    };
     const saved = FP.store.pref('setupMode');
     // Section by section unless you've chosen the one-page view.
     let mode = saved === 'all' ? 'all' : 'steps';
@@ -355,11 +448,17 @@
 
     const leftover = FP.leftoverCard.render(ctx, { id: 'leftover', fold: true });
     const income = incomeCard(ctx);
-    const debts = debtsCard(ctx);
+    // Debt payments under Outgoings and Debts are the same figures.
+    let outgoings = null;
+    const debts = debtsCard(ctx, { paymentsChanged: () => outgoings.redrawPays() });
+    outgoings = outgoingsCard(ctx, {
+      debtsChanged: () => debts.redraw(),
+      toDebts: (path) => reveal(debts.querySelector(`[data-path="${CSS.escape(path)}"]`) || debts),
+    });
     const groups = [
       [aboutCard(ctx)],
       [income],
-      [spendCard(ctx), leftover],
+      [outgoings, leftover],
       [assetsCard(ctx)],
       [debts],
     ].map((cards, i) => h('div', { class: 'setup-step', 'data-step': STEPS[i].id }, cards));
@@ -471,6 +570,7 @@
         strip.refresh();
         income.refreshStatus();
         debts.refreshNotes();
+        outgoings.refresh();
         showNeeded(root, ctx.profile());
         // Typing in a section counts as having been there.
         const g = e.target.closest && e.target.closest('[data-step]');
@@ -482,6 +582,12 @@
         if (!nav.contains(e.target) && !footer.contains(e.target)) draw();
       }, 200);
     };
+    // A box shown in two places (a debt payment, under Outgoings and Debts) keeps both copies the same.
+    root.addEventListener('input', (e) => {
+      const wrap = e.target.closest && e.target.closest('[data-path]');
+      if (!wrap || e.target.type !== 'text') return;
+      root.querySelectorAll(`[data-path="${CSS.escape(wrap.dataset.path)}"] input[type="text"]`).forEach((i) => { if (i !== e.target) i.value = e.target.value; });
+    });
     root.addEventListener('input', refresh);
     root.addEventListener('change', refresh);
     root.addEventListener('click', refresh);

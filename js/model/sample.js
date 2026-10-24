@@ -33,12 +33,12 @@
       // The example household has chosen what to do with its leftover money.
       leftover: { emergency: 10, debts: 0, cash: 20, invest: 50, mortgage: 10, pension: 10, emergencyMonths: 3 },
       spending: [
-        { id: 'sample-s1', category: 'Bills & utilities', monthly: 260 },
-        { id: 'sample-s2', category: 'Council tax', monthly: 175 },
+        { id: 'sample-s1', category: 'Bills & utilities', monthly: 260, group: 'bills' },
+        { id: 'sample-s2', category: 'Council tax', monthly: 175, group: 'bills' },
         { id: 'sample-s3', category: 'Groceries', monthly: 420 },
         { id: 'sample-s4', category: 'Transport', monthly: 140 },
         { id: 'sample-s5', category: 'Childcare', monthly: 0 },
-        { id: 'sample-s6', category: 'Insurance', monthly: 65 },
+        { id: 'sample-s6', category: 'Insurance', monthly: 65, group: 'bills' },
         { id: 'sample-s7', category: 'Eating out & leisure', monthly: 180 },
         { id: 'sample-s8', category: 'Holidays', monthly: 120 },
         { id: 'sample-s9', category: 'Other', monthly: 120 },

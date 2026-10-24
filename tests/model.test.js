@@ -163,3 +163,45 @@ test('risk appetite: blank by default, kept when valid, dropped when not', () =>
   assert.equal(FP.profile.normalise({ about: { riskAppetite: 'reckless' } }).about.riskAppetite, '');
   assert.equal(FP.profile.normalise({ about: { age: 40 } }).about.riskAppetite, '');
 });
+
+test('outgoings: an estimate of everything going out; what isn’t itemised counts as spending', () => {
+  const p = FP.profile.blank();
+  p.outgoings.estimate = 2500;
+  FP.summary.syncOutgoings(p);
+  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 2500);
+  // Itemising a bill and a debt payment leaves the total where it was.
+  p.spending.push({ ...FP.profile.newSpending('bills'), category: 'Council tax', monthly: 150 });
+  p.debts.push({ ...FP.profile.newDebt(), name: 'Car', balance: 5000, monthlyPayment: 200 });
+  FP.summary.syncOutgoings(p);
+  const o = FP.summary.outgoings(p);
+  assert.equal(o.itemised, 350);
+  assert.equal(o.rest, 2150);
+  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 2500);
+  // A payment with no balance yet doesn't count, so the estimate still covers it.
+  p.debts.push({ ...FP.profile.newDebt(), name: 'Card', monthlyPayment: 50 });
+  FP.summary.syncOutgoings(p);
+  assert.equal(FP.summary.outgoings(p).rest, 2150);
+  // Itemising more than the estimate: what's itemised is used.
+  p.spending[1].monthly = 3000;
+  FP.summary.syncOutgoings(p);
+  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 3200);
+  // Kept through a save.
+  const back = FP.profile.normalise(JSON.parse(JSON.stringify(p)));
+  assert.equal(back.outgoings.estimate, 2500);
+  assert.equal(back.spending.filter((r) => r.rest).length, 1);
+  assert.equal(back.spending[1].group, 'bills');
+});
+
+test('an older plan’s one spending total becomes an estimate that includes its payments', () => {
+  const p = FP.profile.normalise({
+    spending: [{ id: 's', category: 'Everything', monthly: 1000 }],
+    debts: [{ id: 'd', name: 'Loan', balance: 3000, monthlyPayment: 100 }],
+  });
+  assert.equal(p.outgoings.estimate, 1100);
+  assert.equal(p.spending[0].rest, true);
+  assert.equal(FP.summary.compute(p).cashFlow.outgoings, 1100);
+  // Categories stay as they were, under Other.
+  const q = FP.profile.normalise({ spending: [{ category: 'Food', monthly: 300 }, { category: 'Fun', monthly: 100 }] });
+  assert.equal(q.outgoings.estimate, null);
+  assert.deepEqual(q.spending.map((r) => r.group), ['other', 'other']);
+});

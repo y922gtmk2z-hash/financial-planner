@@ -175,10 +175,11 @@
     const age = profile.about.age;
     const working = age == null || age < a.retirementAge;
     const spend = profile.spending.reduce((t, r) => t + num(r.monthly), 0);
+    const estimate = num((profile.outgoings || {}).estimate);
     const items = [
       { id: 'age', label: 'Your age', done: age != null, blocking: true, target: 'about.age',
         why: 'Needed to work out the years to retirement.' },
-      { id: 'spending', label: 'Your monthly spending', done: spend > 0, blocking: true, target: 'spending',
+      { id: 'spending', label: 'What goes out each month', done: spend > 0 || estimate > 0, blocking: true, target: 'outgoings.estimate',
         why: 'Without it, everything you take home would look like savings.' },
       { id: 'salary', label: 'Your salary', done: !working || num(profile.income.grossSalary) > 0, blocking: false, target: 'income.grossSalary',
         why: 'Leave it blank if you\u2019re not working.' },
@@ -195,5 +196,32 @@
     };
   }
 
-  FP.summary = { compute, checklist, ASSET_ITEMS, debtRate, mortgageMonths };
+  /*
+   * Your outgoings against your estimate of everything going out. itemised:
+   * bills, other spending, mortgage and debt payments you've entered (a
+   * payment counts once its debt has a balance); rest: what's left of the
+   * estimate. Returns { estimate (or null), itemised, rest, total }.
+   */
+  function outgoings(profile) {
+    const cf = compute(profile).cashFlow;
+    const restRow = profile.spending.find((r) => r.rest);
+    const itemised = cf.outgoings - (restRow ? num(restRow.monthly) : 0);
+    const est = (profile.outgoings || {}).estimate;
+    const estimate = Number.isFinite(est) ? est : null;
+    const rest = estimate == null ? 0 : Math.max(0, Math.round((estimate - itemised) * 100) / 100);
+    return { estimate, itemised, rest, total: itemised + rest };
+  }
+
+  // Puts what's left of your estimate in its own spending row (see FP.profile.newRest).
+  function syncOutgoings(profile) {
+    let row = profile.spending.find((r) => r.rest);
+    if (!row && (profile.outgoings || {}).estimate == null) return;
+    if (!row) {
+      row = FP.profile.newRest();
+      profile.spending.push(row);
+    }
+    row.monthly = outgoings(profile).rest;
+  }
+
+  FP.summary = { compute, checklist, outgoings, syncOutgoings, ASSET_ITEMS, debtRate, mortgageMonths };
 })(globalThis.FP = globalThis.FP || {});
