@@ -137,7 +137,7 @@
     const cfg = opts.taxConfig || FP.taxConfig;
     const a = profile.assumptions;
     const age0 = profile.about.age;
-    if (age0 == null) return { ok: false, reason: 'age', message: 'Enter your age in Setup to see a projection.' };
+    if (age0 == null) return { ok: false, reason: 'age', message: 'Enter your age in Your figures to see a projection.' };
     const years = Math.min(opts.maxYears || MAX_YEARS, (a.endAge || 0) - age0);
     if (years < 1) return { ok: false, reason: 'endAge', message: 'Your projection end age must be after your current age.' };
 
@@ -403,7 +403,7 @@
       if (mStart > 0 && mBal > 0 && overpaid + flow.toMortgage > allowance + 0.5) {
         warnOnce('overpay', flow.toMortgage > 0
           ? `In ${startYear + y} (age ${age0 + y}) mortgage overpayments of about ${fmt(overpaid + flow.toMortgage)} are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee. Keep overpayments from your leftover money within the limit in Assumptions, or lower your monthly overpayment.`
-          : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Setup.`);
+          : `In ${startYear + y} (age ${age0 + y}) your monthly overpayments (about ${fmt(overpaid)} that year) are more than ${a.overpaymentLimitPct}% of the balance. Your lender may charge an early repayment fee — consider lowering your monthly overpayment in Your figures.`);
       }
       if (surplus < 0) {
         let need = -surplus;
