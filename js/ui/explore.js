@@ -47,10 +47,16 @@
 
   function fmt(kind, v, per) {
     if (v == null) return '—';
-    if (kind === 'money') return `${money(v)}${per ? ` ${per}` : ''}`;
+    if (kind === 'money') return `${cash(v)}${per ? ` ${per}` : ''}`;
     if (kind === 'age') return `Age ${v}`;
     if (kind === 'months') return `${v >= 99 ? 'Over 24' : v.toFixed(1)} months`;
     return String(v);
+  }
+
+  // What a named measure includes, under its name (for example Savings and pensions).
+  function includesNote(label) {
+    const m = Object.values(FP.dom.MEASURES).find((x) => label.startsWith(x.label));
+    return m ? h('small', { class: 'includes' }, m.includes) : null;
   }
 
   // "2 years sooner", "+£210 a month", "1.5 months more".
@@ -62,8 +68,13 @@
       return `${n} year${n === 1 ? '' : 's'} ${diff < 0 ? 'sooner' : 'later'}`;
     }
     if (d.kind === 'months') return `${Math.abs(diff).toFixed(1)} months ${diff > 0 ? 'more' : 'less'}`;
-    return `${diff > 0 ? '+' : '−'}${money(Math.abs(diff))}${d.per ? ` ${d.per}` : ''}`;
+    return `${diff > 0 ? '+' : '−'}${cash(Math.abs(diff))}${d.per ? ` ${d.per}` : ''}`;
   }
+
+  // The retirement sheet's figures are all at retirement: rounded when that's
+  // five or more years away, as on Your plan. Set each time a sheet draws.
+  let approx = false;
+  const cash = (n) => money(n, { approx });
 
   function miniChart(before, after, changed) {
     const s = after.series;
@@ -127,6 +138,7 @@
     }
 
     function draw() {
+      approx = o.id === 'retirement' && FP.dom.far(work.assumptions.retirementAge - work.about.age);
       const after = o.evaluate(work);
       const isChanged = changed();
       if (!after.ok) {
@@ -138,7 +150,7 @@
           after.sub ? h('p', { class: 'muted' }, after.sub) : null,
           isChanged ? h('p', { class: 'muted small' }, `Before: ${before.headline}`) : null,
           after.metrics.length ? h('dl', { class: 'facts sheet-metrics' }, (isChanged ? diffs : after.metrics.map((m) => ({ label: m.label, after: m.value, kind: m.kind, per: m.per, change: 'same' }))).map((d) => h('div', null,
-            h('dt', null, d.label),
+            h('dt', null, d.label, includesNote(d.label)),
             h('dd', null, fmt(d.kind, d.after, d.per),
               isChanged && d.change !== 'same' ? h('span', { class: `delta ${d.change}` }, ` ${deltaText(d)}`) : null)))) : null,
           miniChart(before, after, isChanged));

@@ -150,7 +150,12 @@
     return h('p', { class: 'gate-other' }, 'Just looking? ',
       h('button', {
         type: 'button', class: 'link',
-        onclick: () => { ctx.replaceWorkspace(FP.sampleWorkspace()); ctx.toast('Sample data loaded'); },
+        onclick: () => {
+          // The front page has just shown the notice, so the bar stays one line.
+          document.getElementById('disclaimer').open = false;
+          ctx.replaceWorkspace(FP.sampleWorkspace());
+          ctx.toast('Sample data loaded');
+        },
       }, 'See a fictional example'),
       ' · Used it before? ', h('a', { href: '#data' }, 'Import a backup'));
   }

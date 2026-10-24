@@ -89,8 +89,13 @@ Explanations ("How this is worked out", "Based on", tax rules, the year-by-year 
 are one-line folds with a summary of what's inside; Assumptions groups fold to their
 values, one open at a time; a form box's help shows while the box is empty or you're
 in it, then steps aside behind a small "i" by its label. Sections you open or close
-stay that way while you move between screens. The sample-data banner is shown in
-full once, then as one line.
+stay that way while you move between screens. The sample-data banner (one sentence)
+is shown in full once in this browser, then as one line.
+
+**Figures ahead are rounded:** anything five or more years ahead (at retirement, in
+the charts, the year-by-year table and the "So what" lines) is shown to three
+significant figures, such as £1.20m, £292k or £3,800 a month, so it doesn't look more
+exact than an estimate can be. Today's figures stay to the pound.
 
 **How it's laid out:** four tabs at the bottom (**Your plan**, **Today**, **Future**,
 **Scenarios**) and a header that stays pinned, slides away as you scroll down and
@@ -129,9 +134,10 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
      Assumptions rate; mortgage: 4.5%), and the note says so.
 2. **Your plan** answers four questions, each with a verdict and its top
    recommendation: **Each month** (take-home, what's left over, emergency fund),
-   **Debt-free** (mortgage, student loan, other debts), **Retirement** (how much
-   you'd need when you retire, how much you're on course for, how long it lasts at
-   your goal, and what you could spend) and **Next steps**.
+   **Debt-free** (mortgage, student loan, other debts), **Retirement** (money lasts
+   to, could spend in retirement, savings and pensions when you retire, and how much
+   you'd need) and **Next steps**. Each card ends with a link to the figures behind
+   it.
 3. **Tap any figure** to open its detail panel: the result and a chart, the inputs
    and assumptions that drive it (change them right there), a before-and-after
    comparison as you type, the changes that would help most (**Try it**), and the
@@ -142,20 +148,37 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
 Every figure has one home in Your figures; other screens link straight to the field (for
 example `#setup/income.grossSalary`). Until your age and monthly spending are entered,
 Your plan, Future and Scenarios show a **Finish your plan** checklist instead of a
-projection. The disclaimer is shown in full on your first visit, then as one line you
-can open. The scenario picker appears once you have more than one scenario. Each tab
-opens with a one-line subtitle (Your plan: "Four questions, answered"; Today: "Where you
-stand this month"; Future: "Year by year"; Scenarios: "What if…"), and Your plan,
-Today and Future have an **Edit your figures** button. Each chart has a
-one-line "So what" under it.
+projection. The disclaimer is shown in full on your first visit (unless you came from
+the front page, which shows it), then as one line you can open; this is remembered in
+this browser. The scenario picker appears once you have more than one scenario, with
+the first one shown as "Baseline". Each tab opens with a one-line subtitle (Your plan:
+"Four questions, answered"; Today: "Where you stand this month"; Future: "Year by
+year"; Scenarios: "What if…"). **Your figures** is always in the header, so the
+screens don't repeat it as a button; cards end with an **Edit your figures** link
+instead. On a 390 × 844 phone the first figure on Your plan starts within the top
+45% of the screen, with or without the sample. Each chart has a one-line "So what"
+under it.
+
+### Glossary
+
+The same measure has the same name on every screen (the names live in one place,
+`FP.dom.MEASURES` in `js/ui/dom.js`), and detail panels say what each includes:
+
+| Name | What it is |
+| --- | --- |
+| **Savings and pensions** | Cash, ISAs, other investments and pensions. Not your home. |
+| **Pension pots** | Your pensions only. |
+| **Net worth** | Everything you own, your home too, minus everything you owe. |
+| **Money lasts to** | The age your savings and pensions last to, spending your retirement goal each month; "95+" when they last to the end of your plan. |
+| **Could spend in retirement** | The most you could spend each month from retirement, in today's money, without running short. |
 
 | Screen | What it does |
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
-| **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
+| **Future** | Year-by-year projection to your end age (95 unless you change it), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), money left over each month (folded above the results) and a full year-by-year table. |
+| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
 | **Settings** (More menu) | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
@@ -433,8 +456,8 @@ undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritan
 after its term. Money moves at the end of each year, so contributions start growing
 the following year.
 
-**What you could spend in retirement** (Overview and Scenarios) re-runs the projection
-to your end age, past the 40-year limit of the charts, to find the highest monthly
+**Could spend in retirement** (Your plan and Scenarios) re-runs the projection
+to your end age, the same age the charts run to, to find the highest monthly
 spending from retirement (in today's money) that never runs short. It doesn't sell your
 home; mortgage and debt payments are on top. The **range on the net worth chart** re-runs
 it with investment and pension returns 2 points a year lower and higher.
@@ -474,7 +497,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-246 tests cover:
+250 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -495,6 +518,9 @@ npm test   # Node 18+, no dependencies to install
   nothing, a path changes only the years and rates it gives (fees still apply),
   the projection runs to your end age when asked, and 1,000 projections of the
   sample household take under 3 seconds.
+- **Money formatting:** today's figures to the pound, figures five or more years
+  ahead to three significant figures (£1.20m, £292k, £3,800), and the shared measure
+  names used by the detail panels.
 - **Upgrading saved data:** saves and exports from versions 1 and 2, including the
   oldest shapes (a single bonus, one spending total, the split as assumptions), load
   and match the golden results; a save or backup from a newer version is refused.
