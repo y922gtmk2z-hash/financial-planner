@@ -56,7 +56,7 @@
     return h('section', { class: 'card more-detail', 'aria-labelledby': 'more-h' },
       h('h2', { id: 'more-h' }, 'Make it your plan'),
       h('p', null, 'This uses just your quick answers. Add your savings, pensions and any debts and the planner can tell you when you\u2019ll be debt-free, what you could spend in retirement and what to do next.'),
-      h('a', { class: 'button', href: '#setup' }, 'Add more detail'),
+      h('a', { class: 'button', href: '#setup' }, 'Add your pensions and savings'),
       h('p', { class: 'muted small' }, 'About five minutes. A rough figure is fine.'));
   }
 
@@ -106,7 +106,7 @@
     return outcomeCard('month', 'Each month', verdict, [
       { label: 'Take-home pay', value: money(pay.takeHomeMonthly), sub: 'a month', open: panel('takeHome') },
       { label: left < 0 ? 'Short each month' : 'Left over each month', value: money(Math.abs(left)), sub: 'after spending, debts and saving', warn: left < 0, open: panel('leftover') },
-      e && Number.isFinite(e.months) ? { label: 'Emergency fund', value: `${e.months >= 24 ? '24+' : e.months.toFixed(1)} months`, sub: `target ${e.targetMonths}`, warn: e.short, open: panel('emergency') } : null,
+      e && Number.isFinite(e.months) ? { label: 'Emergency fund', value: `${e.months >= 24 ? '24+' : e.months.toFixed(1)} months`, sub: `target ${e.targetMonths} ${e.targetMonths === 1 ? 'month' : 'months'}`, warn: e.short, open: panel('emergency') } : null,
     ], ideaFor('month', ideas), panel);
   }
 
@@ -142,45 +142,41 @@
   }
 
   /*
-   * Retirement leads with what you'd need and how long your money would last
-   * at your goal, rather than a verdict: with only the quick answers it's too
-   * early to say you're on track.
+   * The first look: what you're on course for by the time you retire (from
+   * the projection, with the default workplace pension) against what you'd
+   * need to spend your goal to the end of your plan, both from
+   * retirementNeed and in today's money. Marked Rough: it rests on the quick
+   * answers alone, with nothing yet for pensions and savings you already have.
    */
-  /*
-   * The first look: how big a pot you'd need, not what you'd have, which
-   * would rest on guessing what you'll save. It pays for retirement to
-   * average life expectancy (or to the end of the plan, once you're past it).
-   */
-  function potCard(p) {
+  function firstLookCard(p) {
     const a = p.assumptions;
-    const toAverage = !(p.about.age >= a.lifeExpectancy);
-    const need = toAverage ? FP.projection.potNeeded(p) : FP.projection.retirementNeed(p);
-    const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';
-    const lasts = toAverage ? `${a.lifeExpectancy}, about average life expectancy in the UK` : need && String(need.endAge);
-    let text;
-    let more = null;
-    if (!need) text = toAverage && a.retirementAge >= a.lifeExpectancy
-      ? `Retiring at ${a.retirementAge} is after average life expectancy (${a.lifeExpectancy}).`
-      : `Retiring at ${a.retirementAge} is beyond the projection.`;
-    else if (need.needed <= 0) {
-      text = `Your State Pension would cover spending ${goalText} from ${a.retirementAge}.`;
-      more = `To age ${lasts}, assuming the full State Pension (check your forecast on GOV.UK). In today\u2019s money.`;
-    } else {
-      // Before you can draw a pension, it has to be savings you can reach.
-      const pot = toAverage && a.retirementAge < a.pensionAccessAge ? 'savings and pensions' : 'a pension pot';
-      text = `To spend ${goalText} from ${a.retirementAge}, you\u2019d need ${pot} of about ${money(roundTo(need.needed))} by then.`;
-      const longer = toAverage && a.endAge > a.lifeExpectancy ? FP.projection.potNeeded(p, a.endAge) : null;
-      more = [`That lasts to ${lasts}. It counts the full State Pension from ${a.statePensionAge}, growth on the pot and income tax on what you draw, in today\u2019s money.`,
-        longer && longer.needed > need.needed ? ` Many people live longer: to last to ${longer.endAge}, you\u2019d need about ${money(roundTo(longer.needed))}.` : ''];
+    const need = FP.projection.retirementNeed(p);
+    const n = FP.welcome.answerCount(p);
+    let lead;
+    let result = null;
+    let how = null;
+    if (!need) lead = `Retiring at ${a.retirementAge} is beyond the projection.`;
+    else {
+      const goalText = `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}`;
+      const have = roundTo(need.have);
+      const needed = roundTo(need.needed);
+      lead = `On course for about ${money(have)} by ${a.retirementAge}. You\u2019d need about ${money(needed)}.`;
+      const short = needed - have;
+      result = short > 0
+        ? h('p', { class: 'first-look-result' }, h('strong', { class: 'negative' }, `Short by about ${money(short)}`))
+        : h('p', { class: 'first-look-result' }, h('strong', null, 'On course'));
+      how = `To spend ${goalText} from ${a.retirementAge} to ${need.endAge}, in savings and pensions. It assumes your ${a.employeePensionPct}% + ${a.employerPensionPct}% workplace pension and counts the full State Pension from ${a.statePensionAge}, in today\u2019s money.`;
     }
     return h('section', { class: 'card outcome', 'aria-labelledby': 'oc-retirement' },
       h('h2', { id: 'oc-retirement' }, 'Retirement'),
-      h('p', { class: 'verdict info' }, h('span', { class: 'verdict-icon', 'aria-hidden': 'true' }, '\u2022'), text),
-      more ? h('p', { class: 'small' }, more) : null);
+      h('p', { class: 'verdict info' }, h('span', { class: 'badge' }, 'Rough'), lead),
+      result,
+      h('p', { class: 'small' }, `Based on ${n} ${n === 1 ? 'answer' : 'answers'}. Your existing pensions and savings aren\u2019t included yet.`),
+      how ? h('p', { class: 'muted small' }, how) : null);
   }
 
   function retirementCard(p, proj, ideas, panel, rough) {
-    if (rough) return potCard(p);
+    if (rough) return firstLookCard(p);
     const a = p.assumptions;
     const need = FP.projection.retirementNeed(p);
     const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';

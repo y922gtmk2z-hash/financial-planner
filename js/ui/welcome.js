@@ -5,7 +5,7 @@
 (function (FP) {
   'use strict';
 
-  const { h } = FP.dom;
+  const { h, money } = FP.dom;
 
   // The answers behind a first, rough plan. Same profile fields as Your figures.
   const QUICK = ['about.age', 'income.grossSalary', 'outgoings.estimate', 'assumptions.retirementAge', 'goals.retirementIncome'];
@@ -28,6 +28,53 @@
   }
 
   /*
+   * Sense checks on the figures most often typed in the wrong period (a yearly
+   * amount in a monthly box, or the other way round). Never blocking: each asks,
+   * and offers the likely figure. Returns null or { text, fix, fixLabel }.
+   */
+  const maybeYearly = (v) => ({
+    text: `That\u2019s ${money(v * 12)} a year. Did you mean ${money(v)} a year (${money(v / 12)} a month)?`,
+    // To the penny, so the yearly figure comes back exactly.
+    fix: Math.round((v / 12) * 100) / 100,
+    fixLabel: `Use ${money(v / 12)} a month`,
+  });
+  const CHECKS = {
+    'goals.retirementIncome': (v, p) => {
+      if (!(v > 0)) return null;
+      const takeHome = FP.tax.forProfile(p).takeHomeMonthly;
+      const out = FP.summary.compute(p, takeHome).cashFlow.outgoings;
+      return (out > 0 && v > out * 2) || (takeHome > 0 && v > takeHome) ? maybeYearly(v) : null;
+    },
+    'outgoings.estimate': (v, p) => {
+      const takeHome = FP.tax.forProfile(p).takeHomeMonthly;
+      return v > 0 && takeHome > 0 && v > takeHome * 1.5 ? maybeYearly(v) : null;
+    },
+    'income.grossSalary': (v) => {
+      if (v > 0 && v < 1000) {
+        return { text: `That\u2019s ${money(v)} a year. Did you mean ${money(v * 12)} a year (${money(v)} a month)?`, fix: v * 12, fixLabel: `Use ${money(v * 12)} a year` };
+      }
+      if (v > 1000000) {
+        const fix = Math.round(v / 10);
+        return { text: `That\u2019s ${money(v)} a year. Did you mean ${money(fix)} a year?`, fix, fixLabel: `Use ${money(fix)} a year` };
+      }
+      return null;
+    },
+  };
+  // The sense check for a field in this profile, as FP.field.render's `check`, or undefined.
+  function senseCheck(path, profile) {
+    const c = CHECKS[path];
+    return c ? (v) => c(v, profile()) : undefined;
+  }
+
+  // How many of the quick-start questions have an answer.
+  function answerCount(p) {
+    return quickPaths(p).filter((path) => {
+      const v = FP.profile.get(p, path);
+      return v != null && v !== 0;
+    }).length;
+  }
+
+  /*
    * Quick start: up to five answers, then a first look at your plan. Where the same
    * fields also appear further down the page (Setup), typing in one copy
    * updates the other.
@@ -46,11 +93,14 @@
           value: FP.profile.get(ctx.profile(), path),
           nullPlaceholder: f.nullPlaceholder,
           noBlankNote: true,
+          check: senseCheck(path, ctx.profile),
           onChange: (v) => {
             FP.profile.set(ctx.profile(), path, v);
             // Your estimate goes into your outgoings as the rest not itemised yet.
             if (path === SPEND_FIELD.path) FP.summary.syncOutgoings(ctx.profile());
             ctx.changed();
+            // The checks compare your answers with each other.
+            FP.field.recheckAll(card);
           },
         });
       }),
@@ -154,5 +204,5 @@
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, quickStart, isRough };
+  FP.welcome = { render, quickStart, isRough, senseCheck, answerCount };
 })(globalThis.FP = globalThis.FP || {});

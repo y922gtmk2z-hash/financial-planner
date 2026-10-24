@@ -20,6 +20,19 @@
   // Key figures where a blank box is worth pointing out (it still counts as £0).
   const KEY_FIELDS = ['income.grossSalary'];
 
+  /*
+   * Whether a money box is a monthly or a yearly figure: from its suffix, or
+   * for list rows ("Per month", a debt's payment) from its key.
+   */
+  function periodOf(field) {
+    if (field.type !== 'money') return null;
+    if (field.suffix === 'a month' || field.key === 'monthly' || field.key === 'monthlyPayment') return 'month';
+    if (field.suffix === 'a year' || field.key === 'yearly') return 'year';
+    return null;
+  }
+  // "£36,000 a year" under a monthly box, "£3,000 a month" under a yearly one.
+  const otherPeriod = (period, v) => (period === 'month' ? `${FP.dom.money(v * 12)} a year` : `${FP.dom.money(v / 12)} a month`);
+
   const whereFor = (field) => {
     const w = WHERE[field.path] || (field.key === 'carValue' ? WHERE.carValue : null)
       || (field.key === 'yearly' && FP.profile.BENEFIT_FIELDS.includes(field) ? WHERE.yearly : null);
@@ -29,7 +42,9 @@
   /*
    * field: { label, type, help, suffix, placeholder, options, min, max, nullable }
    * opts:  { value, onChange(value), compact, extra (node under help), ariaLabel (when the visible label is hidden or shared),
-   *          noBlankNote (don't point out a blank key figure), foldHelp (help behind the "i" even when blank) }
+   *          noBlankNote (don't point out a blank key figure), foldHelp (help behind the "i" even when blank),
+   *          check(value): a sense check, null or { text, fix, fixLabel } (fix: a value to offer instead) }
+   * Boxes with a check get el.recheck(), to run it again when something it depends on changes.
    */
   function render(field, opts) {
     uid += 1;
@@ -90,18 +105,52 @@
       ? h('p', { class: 'help blank-note', hidden: opts.value > 0 }, 'Not entered yet: counts as \u00a30.')
       : null;
 
+    const period = periodOf(field);
+    const periodId = `${id}-per`;
+    const perNote = period ? h('p', { class: 'help period-note', id: periodId }) : null;
+    const showPeriod = (v) => {
+      if (!perNote) return;
+      perNote.hidden = !(v > 0);
+      perNote.textContent = v > 0 ? otherPeriod(period, v) : '';
+    };
+    if (perNote) input.setAttribute('aria-describedby', `${input.getAttribute('aria-describedby')} ${periodId}`);
+    showPeriod(opts.value);
+
+    // A sense check: never blocks, just asks, with a one-tap fix when there's an obvious one.
+    const checkNote = opts.check ? h('p', { class: 'help sense-check', role: 'status' }) : null;
+    let current = opts.value;
+    function recheck() {
+      if (!checkNote) return;
+      const c = input.getAttribute('aria-invalid') ? null : opts.check(current);
+      FP.dom.fill(checkNote, c ? [c.text, c.fix != null ? [' ', h('button', {
+        type: 'button', class: 'link',
+        onclick: () => {
+          input.value = FP.dom.inputText(field, c.fix);
+          commit(input.value);
+          input.focus();
+        },
+      }, c.fixLabel)] : null] : null);
+      checkNote.hidden = !c;
+      // The check gives the yearly figure itself.
+      if (c && perNote) perNote.hidden = true; else showPeriod(current);
+    }
+
     function commit(raw) {
       const r = FP.profile.parseValue(field, raw);
       if (r.ok) {
+        current = r.value;
+        showPeriod(r.value);
         if (blank) blank.hidden = r.value > 0;
         err.hidden = true;
         err.textContent = '';
         input.removeAttribute('aria-invalid');
         opts.onChange(r.value);
+        recheck();
       } else {
         err.hidden = false;
         err.textContent = r.error;
         input.setAttribute('aria-invalid', 'true');
+        recheck();
       }
     }
 
@@ -111,7 +160,7 @@
     const where = opts.compact ? null : whereFor(field);
     const hasHelp = (field.help && !opts.compact) || !!where;
     const done = hasHelp && (opts.foldHelp || isAnswered(field, opts.value));
-    return h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
+    const el = h('div', { class: `field${opts.compact ? ' compact' : ''}${field.shared ? ' shared' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null, 'data-check': checkNote ? '' : null },
       h('div', { class: 'label-row' },
         h('label', { for: id }, field.label, field.shared ? h('span', { class: 'badge', title: 'Also in the Assumptions panel' }, 'Assumption') : null),
         done ? helpToggle(field, helpId) : null),
@@ -119,9 +168,21 @@
       field.help && !opts.compact ? h('p', { class: 'help help-text', id: helpId }, field.help, where ? [' ', h('span', { class: 'where' }, h('strong', null, 'Where do I find this? '), where)] : null)
         : where ? h('p', { class: 'help help-text', id: helpId }, h('strong', null, 'Where do I find this? '), where)
           : h('span', { id: helpId, hidden: true }),
+      perNote,
       blank,
       err,
+      checkNote,
       opts.extra || null);
+    if (checkNote) {
+      el.recheck = recheck;
+      recheck();
+    }
+    return el;
+  }
+
+  // Runs every sense check on the page again (after a change they depend on).
+  function recheckAll(root) {
+    (root || document).querySelectorAll('.field[data-check]').forEach((el) => { if (el.recheck) el.recheck(); });
   }
 
   /*
@@ -189,5 +250,5 @@
       opts.extra || null);
   }
 
-  FP.field = { render };
+  FP.field = { render, recheckAll };
 })(globalThis.FP = globalThis.FP || {});

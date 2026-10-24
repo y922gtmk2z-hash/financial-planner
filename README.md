@@ -49,11 +49,25 @@ and the not-advice notice. It has no header, tabs or footer. Get started opens t
 mortgage, bills and debt payments; an estimate is fine), retirement
 age and (optionally) what you'd like to spend in retirement. Those answers give a
 **first look** at Your plan: what you take home and have left each month, and for
-retirement how much you'd need in savings and pensions when you retire, how much you're
-on course for and how long it would last at your spending. It doesn't say whether
-you're "on track" yet, and next steps, ideas and the net-worth chart wait until you've
-added more (savings, pensions, debts or pay details, or been through Assets and
-Debts). The quick-start answers then live under About you in Your figures.
+retirement a verdict marked **Rough**: "On course for about £X by 60. You'd need
+about £Y." then "Short by about £Z" or "On course". Both figures are in today's
+money, from the same calculation Your plan uses later: what the projection says
+you'd have (with the default 5% + 3% workplace pension) against what you'd need to
+spend your goal to the end of your plan. A line says it's based on your answers and
+that pensions and savings you already have aren't included yet; the button under it
+is **Add your pensions and savings**. Next steps, ideas and the net-worth chart wait
+until you've added more (savings, pensions, debts or pay details, or been through
+Assets and Debts). The quick-start answers then live under About you in Your figures.
+
+**Sense checks** (in the quick start and Your figures) catch figures typed in the
+wrong period. Every monthly money box shows the yearly figure underneath in small
+text ("£36,000 a year"), and every yearly box the monthly one. If what you'd like to
+spend in retirement is more than twice what goes out now, or more than you take home,
+it asks: "That's £480,000 a year. Did you mean £40,000 a year (£3,333 a month)?",
+with a button to use that figure. The same goes for everything going out each month
+when it's more than 50% over your take-home, and for a salary under £1,000 (did you
+mean that a month?) or over £1,000,000 (did you mean a tenth of it?). They never
+stop you carrying on.
 
 **The planner opens up in stages**, so there's only a little to take in at a time:
 
@@ -87,10 +101,9 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
 **Your journey:**
 
 1. **Your figures**, in five sections (section by section unless you choose one page):
-   - **About you:** your age, when you'd like to retire, what you'd like to spend in
-     retirement and how you feel about investment **risk** (cautious, balanced or
-     adventurous). *Risk appetite is stored but not used yet: it's there so a later
-     version can suggest growth rates and where to put money to match it.*
+   - **About you:** your age, when you'd like to retire and what you'd like to spend
+     in retirement. *Your risk appetite is still stored (and kept in backups), but
+     the question is off the screens until a later version uses it.*
    - **Income:** your salary. **Advanced** (folded away) holds the rest, each part
      folding open on its own with a one-line summary: workplace pension, **student
      loan** (repaid from your pay, so it lives here rather than under Debts),
@@ -140,7 +153,7 @@ one-line "So what" under it.
 | --- | --- |
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
-| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal, risk appetite), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
+| **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows take-home and what's left over as you type. |
 | **Future** | Year-by-year projection (up to 40 years, to your end age), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures, money left over each month (folded above the results) and a full year-by-year table. |
 | **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel, or copy your plan and change anything; compare up to 8. The comparison opens on what's different from the Baseline (£ and years, green better, red worse); **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
