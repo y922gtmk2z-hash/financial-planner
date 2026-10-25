@@ -17,6 +17,7 @@
  *      and cash, which sets how it grows. The two old return assumptions
  *      (investmentReturn, pensionGrowth) become mixes and a market shift that
  *      give exactly the same rates.
+ *   8  Life events (profile.events). Older plans have none.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -129,6 +130,14 @@
           if (isObj(p.partner)) p.partner.pensionMix = { ...got.pension };
           if (Array.isArray(p.pensions)) p.pensions.filter(isObj).forEach((x) => { x.mix = { ...got.pension }; });
         });
+        return data;
+      },
+    },
+    {
+      from: 7, to: 8,
+      // Life events started: older plans have none yet.
+      up(data) {
+        profilesOf(data).forEach((p) => { if (!Array.isArray(p.events)) p.events = []; });
         return data;
       },
     },

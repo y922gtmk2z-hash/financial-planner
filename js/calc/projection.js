@@ -12,8 +12,9 @@
  *     FP.mix), net of fees.
  *  3. Mortgage amortises month by month (fixed payment plus overpayments, with
  *     an optional rate change); other debts amortise until cleared.
- *  4. Spending grows with spending growth. Surplus = net income - spending -
- *     mortgage and debt payments.
+ *  4. Spending grows with spending growth, plus any life events that year
+ *     (in today's money, so they rise with prices). Surplus = net income -
+ *     spending - life events - mortgage and debt payments.
  *  5. Pension contributions from pay are added while working.
  *  6. A surplus first repays any earlier shortfall, then is split between
  *     cash, investments (ISA first), mortgage overpayment and pension. A
@@ -22,7 +23,7 @@
  *
  * initState sets up where you start, stepYear runs one year, and project
  * loops it, giving each year its rates of return (the assumptions, or
- * opts.returnsPath) and any life events (opts.events, not used yet).
+ * opts.returnsPath) and the life events (profile.events and opts.events).
  */
 (function (FP) {
   'use strict';
@@ -255,7 +256,8 @@
    * shares, bonds, cashFund }: this year's rates, % a year, for cash savings,
    * your home, and the shares, bonds and cash that pots are invested in
    * (before fees, which still come off investments and pensions).
-   * ctx.events: life events (not used yet).
+   * ctx.events: life events, in the shape of profile.events (see
+   * FP.profile.EVENT_TYPES); anything without a start year is ignored.
    */
   function stepYear(state, y, ctx) {
     const { profile, opts, cfg, a, age0, startYear, startMonthIndex, cashLimitFromIndex, byAmount, shares, debts, termMonths, overMonthly, spendMonthly0, relief, warnOnce, persons, pots } = state;
@@ -265,8 +267,11 @@
     const priceFactor = FP.growth.inflationFactor(a.inflation, g);
     const cfgY = a.taxThresholds === 'inflation' ? FP.tax.indexConfig(cfg, priceFactor) : cfg;
 
+    // Life events this year: the projection year starting in this calendar year.
+    const life = eventsForYear(ctx.events, startYear + g, persons.length);
+
     // 1. Income, person by person, then added together for the household.
-    const each = persons.map((ps, i) => personYear(state, ps, i, g, priceFactor, cfgY));
+    const each = persons.map((ps, i) => personYear(state, ps, i, g, priceFactor, cfgY, life.paused[i]));
     const one = each.length === 1;
     const total = (k) => (one ? each[0][k] : sum(each, (x) => x[k]));
     // You (person 1) are working; the household is working while either of you is.
@@ -373,7 +378,13 @@
     } else if (saved.overCashLimit) {
       warnOnce('cashIsaLimit', `From ${startYear + y} (age ${age0 + y}) your cash ISA savings are more than the ${fmt(a.cashIsaLimit)} cash ISA limit for under-65s. The extra is saved as ordinary cash.`);
     }
-    const surplus = netIncome - spending - mortgagePaid - debtPaid - slExtra - saved.total - pensionSaving;
+    // Life events, in today's money: costs and monthly money in through the year,
+    // and a lump sum in (an inheritance) straight into cash savings.
+    const eventsOut = life.out * priceFactor;
+    const eventsIn = life.inMonthly * priceFactor;
+    const eventsLump = life.inLump * priceFactor;
+    const surplus = netIncome + eventsIn - spending - eventsOut - mortgagePaid - debtPaid - slExtra - saved.total - pensionSaving;
+    cash += eventsLump;
 
     // Regular savings go in first (so they take ISA allowance before the leftover money is shared out).
     cash += saved.cash;
@@ -500,6 +511,8 @@
     });
     // Only with more than one person or pot, so a single person's rows stay as they were.
     if (pots.length) row.pensionSaving = pensionSaving;
+    // Only in years with a life event, so plans without any keep the same rows.
+    if (eventsOut || eventsIn || eventsLump) Object.assign(row, { eventsOut, eventsIn, eventsLump });
     if (!one) {
       row.people = each.map((x, i) => ({
         working: x.working, age: persons[i].age0 + y, salary: x.salary, takeHome: x.takeHome, statePension: x.statePension,
@@ -515,7 +528,32 @@
    * State Pension, and other income that carries on after they retire.
    * Changes their student loan balance (ps.slBal).
    */
-  function personYear(state, ps, index, g, priceFactor, cfgY) {
+  /*
+   * The life events in calendar year `year`, a year's worth: out (costs),
+   * inMonthly (money coming in through the year), inLump (lump sums in), all in
+   * today's money, and paused[i]: person i is on a career break.
+   */
+  function eventsForYear(list, year, people) {
+    const out = { out: 0, inMonthly: 0, inLump: 0, paused: [] };
+    (Array.isArray(list) ? list : []).forEach((e) => {
+      if (!e || !Number.isFinite(e.startYear)) return;
+      const lump = e.per === 'lump';
+      const end = lump || e.endYear == null ? e.startYear : e.endYear;
+      if (year < e.startYear || year > end) return;
+      const t = FP.profile.eventType(e.type);
+      const amount = Math.max(0, e.amount || 0) * (lump ? 1 : 12);
+      if (t.dir === 'in') out[lump ? 'inLump' : 'inMonthly'] += amount;
+      else out.out += amount;
+      if (t.pause) {
+        if (e.owner === 'joint') for (let i = 0; i < people; i += 1) out.paused[i] = true;
+        else out.paused[e.owner === 'partner' && people > 1 ? 1 : 0] = true;
+      }
+    });
+    return out;
+  }
+
+  // paused: on a career break this year, so no pay, bonuses or workplace pension.
+  function personYear(state, ps, index, g, priceFactor, cfgY, paused) {
     const { a, startMonthIndex, dbs } = state;
     const p = ps.person;
     const inc = p.income;
@@ -530,15 +568,15 @@
     let slDue = 0;
     let slPay = 0;
     if (working) {
-      const sf = FP.growth.compound(1, a.salaryGrowth, g);
+      const sf = paused ? 0 : FP.growth.compound(1, a.salaryGrowth, g);
       const input = FP.tax.inputFromPerson(p);
       input.salary = (input.salary || 0) * sf;
       input.bonuses = (input.bonuses || []).map((b) => ({ ...b, amount: (b.amount || 0) * sf }));
       // Salary sacrifice (car, cycle...) only while each arrangement lasts.
-      const ss = FP.tax.sacrificeForYear(inc.sacrifices, g);
+      const ss = paused ? { sacrifice: 0, benefitInKind: 0 } : FP.tax.sacrificeForYear(inc.sacrifices, g);
       input.otherSacrifice = ss.sacrifice;
       // Benefits in kind and other income rise with prices.
-      input.benefitInKind = ss.benefitInKind + FP.tax.benefitsTotal(inc.benefits) * priceFactor;
+      input.benefitInKind = ss.benefitInKind + (paused ? 0 : FP.tax.benefitsTotal(inc.benefits) * priceFactor);
       input.otherIncome = (inc.otherIncome || 0) * priceFactor;
       // A defined benefit pension paid while you still work is taxed with your pay.
       if (definedBenefit > 0) input.otherIncome += definedBenefit;
@@ -662,7 +700,7 @@
    * startMonth, taxConfig, returnsPath (an array of { cash, house, shares,
    * bonds, cashFund } by year, first projection year first, overriding the assumption
    * rates; missing years or rates use the assumptions), events (an array,
-   * passed to each year as ctx.events), and the solvers' retirementSpending,
+   * added to profile.events and passed to each year as ctx.events), and the solvers' retirementSpending,
    * retirementBoost and retirementBoostTo.
    */
   function project(profile, opts) {
@@ -670,7 +708,7 @@
     const state = initState(profile, opts);
     if (!state.ok) return state;
     const { a, years, startYear, shares, byAmount, leftToday, warnings } = state;
-    const lifeEvents = Array.isArray(opts.events) ? opts.events : [];
+    const lifeEvents = (profile.events || []).concat(Array.isArray(opts.events) ? opts.events : []);
 
     const rows = [snapshot(state, 0, { today: true })];
     for (let y = 1; y <= years; y += 1) {
@@ -758,7 +796,7 @@
     'studentLoanRepaid', 'studentLoanExtra', 'studentLoanInterest', 'studentLoanWrittenOff',
     'liabilities', 'netWorth', 'salary', 'bonus', 'takeHome', 'pensionFromPay', 'statePension', 'statePensionTax', 'otherIncomeRetired',
     'netIncome', 'spending', 'regularSaving', 'savedCash', 'savedIsa', 'salarySacrifice', 'mortgagePaid', 'debtPaid', 'surplus', 'toCash', 'toInvest', 'toMortgage',
-    'toPension', 'notSaved', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded',
+    'toPension', 'notSaved', 'fromPension', 'pensionTax', 'fromCash', 'fromInvest', 'unfunded', 'eventsOut', 'eventsIn', 'eventsLump',
   ];
   /*
    * How much you could spend in retirement without running short before the

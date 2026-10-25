@@ -67,7 +67,7 @@
     {
       key: 'sharesVolatility', group: 'mix', label: 'Shares: how much returns vary', unit: 'pct',
       default: 16, min: 0, max: 50, setOn: MIX_SET_ON, advanced: true,
-      help: 'Volatility: how far a typical year\u2019s return is from the average. Shares can fall a lot in a bad year. Used to show the size of falls, not in the projection.',
+      help: 'Volatility: how far a typical year\u2019s return is from the average. Shares can fall a lot in a bad year. Used for the size of falls and the market paths on Future; the main projection uses the average.',
     },
     {
       key: 'bondsReturn', group: 'mix', label: 'Bonds: return (before fees)', unit: 'pct',

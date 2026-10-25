@@ -196,8 +196,8 @@ The same measure has the same name on every screen (the names live in one place,
 | **Your plan** (first tab) | The four outcome cards above, each figure opening a detail panel; your net worth today and over time; any notes. |
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
 | **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
-| **Future** | Year-by-year projection to your end age (95 unless you change it), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), money left over each month (folded above the results) and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **Future** | Year-by-year projection to your end age (95 unless you change it), in today's money or future money. **Life events** (folded above the results), net worth and home-equity lines with the **market paths**: a dashed middle path, a shaded range holding 8 in 10 paths and "Your money lasts to 95 in 8 of 10 market paths", life events marked on both charts, a stacked chart by component, headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), money left over each month (folded above the results) and a full year-by-year table. |
+| **Scenarios** | Your plan is the **Baseline**. **What would it take to…** works out one change to reach a goal (see below). Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
 | **Settings** (More menu) | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
@@ -371,8 +371,8 @@ size of falls: "Grows about 4.6% a year after fees on average. In a bad year (ab
   Assumptions (**Shares, bonds & cash**, set 25 Oct 2026). A pot grows at its mix's
   average return, less its fees (investment or pension fees). **Change to shares and
   bonds returns** (in its Advanced part) adds points to both, for weaker or stronger
-  markets. Volatility isn't used in the projection; it only sizes the falls, taking
-  the three asset classes to fall together.
+  markets. The main projection uses the averages. Volatility sizes the falls (taking
+  the three asset classes to fall together) and drives the market paths on Future.
 - **A new pot is 40% shares, 60% bonds**, which grows at 5% a year before fees, as
   every pot did before mixes.
 - **Saves from before mixes** keep exactly the same growth: their investment and
@@ -394,6 +394,66 @@ level, not a recommendation for you. Consider regulated advice."
   other pot with money in it), with its trade-off, the notice, Apply, Try as a
   scenario and how to do it. It's a patch like every other action.
 - Scenarios list a changed mix among their differences.
+
+## Market paths
+
+The net worth chart on Future shows a range, not just one line. Your plan is run 1,000
+times with each year's returns for shares, bonds and cash in pots drawn at random
+around their averages, as far as their volatility in Assumptions says (each asset
+class on its own; cash savings and house prices stay at their averages). Each path
+spends your retirement goal from retirement, as "money lasts to" does.
+
+- **The chart** keeps the solid net worth line (average returns every year, the
+  figure every other screen uses) and adds the **middle path** as a dashed line and a
+  shaded range holding **8 in 10 paths** (10th to 90th percentile). The middle path is
+  usually a little below the solid line: ups and downs cost growth even when they
+  average out.
+- **The headline** above it: "Your money lasts to 95 in 8 of 10 market paths", and if
+  not every path lasts, the age the middle path runs short.
+- **Same plan, same answer:** the random numbers are seeded from your plan, so the
+  same figures always give the same paths.
+- **Never while you type:** the paths start 0.6 seconds after you stop, a slice at a
+  time between frames so the page stays responsive ("Working out market paths… 40%"),
+  and are remembered for that plan. If the first 50 paths show that 1,000 would take
+  your device more than 300ms, it runs 500 instead. (On a desktop 1,000 take about a
+  second, so most devices run 500.)
+
+## Life events
+
+Under **Life events** on Future, add costs you can see coming, or money you expect,
+in today's money: a **house move**, **childcare**, **school fees**, **university
+help**, a **career break**, a **car**, a **wedding**, an **inheritance** or something
+else. Each has a name (optional), an amount (a month for some years, or a lump sum
+once), the years and, with a partner, whose it is. Presets fill in a sensible shape
+(childcare: a month for 4 years; a wedding: a lump sum).
+
+- A cost is added to that year's spending, rising with prices. Money coming in each
+  month is added to that year's income; an inheritance goes into cash savings.
+- A **career break** stops its owner's salary, bonuses, salary sacrifice, benefits
+  and workplace pension contributions for those years (other income carries on), with
+  anything still coming in each month added after tax.
+- Each event is marked on both Future charts in the year it starts, and its amounts
+  are in the year-by-year table (in Income and Spending).
+
+## What would it take
+
+On Scenarios, **What would it take to…** asks for a goal: **retire at an age** (with
+your money lasting to your end age), **spend an amount a month in retirement** (today's
+money) or **be debt-free by an age**, and one thing to change:
+
+| Goal | What can change |
+| --- | --- |
+| Retire at an age | your pension contribution, or what you spend each month |
+| Spend in retirement | your pension contribution, when you retire, or what you spend each month |
+| Be debt-free | extra payments (the same amount a month on each debt still owing at that age: mortgage, other debts and student loan), or what you spend each month (only if some of your leftover money goes to debts or the mortgage) |
+
+It finds the least change that reaches the goal by bisection (the same approach as
+"could spend in retirement"), rounded so it still does: pension to 0.5%, spending and
+payments to £10, ages to a year. What you spend changes every category and your
+estimate by the same share, down to a quarter of what you spend now. The answer
+("To spend £4,500 a month in retirement, you'd need to pay 51% of your salary into
+your pension (now 5%)") comes with **Apply** (with Undo) and **Try as a scenario**.
+When the goal is already met, or can't be reached, it says so.
 
 ## Check-ins and Progress
 
@@ -606,6 +666,8 @@ Each year, in order:
    overpayments, so overpayments shorten the term; the payment is recalculated if the
    rate changes). Other debts are paid until cleared.
 4. **Spending** grows with spending growth and carries on unchanged in retirement.
+   Life events that year are added on (or, for money coming in, added to income; an
+   inheritance goes straight into cash savings).
 5. **Leftover money** first repays any earlier shortfall, then is shared out as you
    chose: the emergency fund (cash, up to your target), extra debt payments (most
    expensive first), cash, investments (ISA first, up to the allowance), a mortgage lump
@@ -618,21 +680,20 @@ Each year, in order:
 In the code, `initState` sets up where you start and `stepYear` runs one year in
 the order above; `project` loops it. Each year gets its rates of return (before
 fees: cash savings, your home, and shares, bonds and cash in pots) from the
-assumptions, or from an optional year-by-year path, and a list of
-life events. Nothing on screen uses a path or events yet: they're there so a later
-version can show a range of market outcomes and dated life events.
+assumptions, or from an optional year-by-year path (the market paths use one), and
+your life events.
 
 **Not modelled:** tax on savings and investments, higher-rate relief on extra pension
 contributions, student loan repayments on pension income, holding both an
-undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance, and changes to your mortgage
+undergraduate and a postgraduate loan, the pension lump-sum allowance, inheritance tax (enter an inheritance after it), and changes to your mortgage
 after its term. Money moves at the end of each year, so contributions start growing
 the following year.
 
 **Could spend in retirement** (Your plan and Scenarios) re-runs the projection
 to your end age, the same age the charts run to, to find the highest monthly
 spending from retirement (in today's money) that never runs short. It doesn't sell your
-home; mortgage and debt payments are on top. The **range on the net worth chart** re-runs
-it with shares and bonds returns 2 points a year lower and higher.
+home; mortgage and debt payments are on top. The **range on the net worth chart** comes
+from the market paths (below).
 
 ## Project layout
 
@@ -649,6 +710,8 @@ js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
 js/calc/mix.js             what each pot is invested in: growth, falls, model mixes
+js/calc/paths.js           market paths: seeded random returns, percentiles
+js/calc/goalseek.js        what would it take: one lever to reach a goal
 js/calc/patch.js           patches: what an idea or what-if changes, applying it, its impact
 js/calc/outcomes.js        the results you can tap into: drivers, levers, before/after
 js/ui/*.js                 one file per screen, plus field, chart, checklist, panel
@@ -670,7 +733,17 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-311 tests cover:
+326 tests cover:
+
+- **Market paths, life events and what would it take:** the seeded generator and a
+  seeded run repeating exactly (in chunks or all at once, and cut to fewer paths),
+  every path equal to the fixed-rate projection with zero volatility, paths spreading
+  around the fixed line, "8 of 10" in words; lump sums once and monthly amounts each
+  year in today's money, an inheritance into cash, a career break stopping its
+  owner's pay and pension only, events checked on load, version 7 saves matching the
+  golden results, a partner's events kept; goal-seek answers meeting their goal within
+  £10 a month or a year, being the least change, saying when nothing's needed or it
+  can't be done, and the spending change sticking.
 
 - **What each pot is invested in:** the asset-class assumptions, the default mix
   giving exactly 5% before fees, each pot (yours, your partner's, other pots)

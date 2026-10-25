@@ -41,7 +41,7 @@ js/app.js                routing and wiring
 tests/*.test.js          node --test
 ```
 
-## Data model (schema v7)
+## Data model (schema v8)
 
 ```
 profile = {
@@ -54,6 +54,7 @@ profile = {
   spending:   [{ id, category, monthly }],
   assumptions:{ inflation, salaryGrowth, ..., sharesReturn, bondsReturn, cashReturn, marketShift, mortgageRate, ... },
   mixes:      { isa, gia, pension }   // each { shares, bonds, cash }, % adding up to 100
+  events:     [{ id, type, name, per: 'month'|'lump', amount, startYear, endYear|null, owner }]
 }
 ```
 
@@ -65,7 +66,8 @@ with ideas that can also be marked `applied`, 5 a workspace that also keeps your
 (`workspace.checkins`, see `js/model/checkins.js`), 6 profiles that can have a `partner`, more
 `pensions` and `owners` (you stay in the profile's own fields; `FP.profile.people` gives both of
 you in one shape), 7 a mix on every ISA, investment and pension pot (`mixes`, `partner.pensionMix`,
-`pensions[].mix`), replacing the investment and pension return assumptions.
+`pensions[].mix`), replacing the investment and pension return assumptions, 8 life events
+(`events`).
 `js/model/migrate.js` upgrades older files one numbered step at a time (`{ from, to,
 up }`), so `profile.normalise` only checks and cleans today's shape. Any change to
 the saved shape adds a step and a test.

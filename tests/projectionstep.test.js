@@ -56,7 +56,7 @@ test('each year gets its returns and the events passed in', () => {
   const events = [{ age: 50, type: 'example' }];
   const row = FP.projection.stepYear(state, 1, { returns: FP.projection.returnsFor(p.assumptions, null, 1), events });
   assert.equal(row.age, 39);
-  assert.deepEqual(FP.projection.project(p, { events }), FP.projection.project(p), 'events change nothing yet');
+  assert.deepEqual(FP.projection.project(p, { events }), FP.projection.project(p), 'events in a shape the projection doesn\u2019t know change nothing');
   assert.deepEqual(FP.projection.returnsFor(p.assumptions, [{ house: 1 }], 1),
     { cash: p.assumptions.savingsRate, house: 1, shares: p.assumptions.sharesReturn, bonds: p.assumptions.bondsReturn, cashFund: p.assumptions.cashReturn });
 });

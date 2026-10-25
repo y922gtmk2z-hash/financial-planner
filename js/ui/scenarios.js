@@ -45,6 +45,7 @@
       several ? compare : presetCard(ctx),
       several ? list : null,
       several ? presetCard(ctx) : null,
+      FP.goalSeekUi.card(ctx),
       createCard(ctx),
       several ? null : compare);
     drawList();

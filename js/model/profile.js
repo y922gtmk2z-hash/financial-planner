@@ -7,7 +7,7 @@
   'use strict';
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 7;
+  const SCHEMA_VERSION = 8;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -252,6 +252,37 @@
     ] },
   ];
 
+  /*
+   * Life events: dated costs (or money coming in) on top of everyday spending,
+   * in today's money. A monthly amount runs from its start year to its end
+   * year; a lump sum happens once, in its start year. A career break also
+   * stops its owner's pay (salary, bonuses and workplace pension) for those
+   * years, with any amount being what still comes in each month, after tax.
+   * dir: 'out' (a cost) or 'in' (money coming in). Presets fill in the rest.
+   */
+  const EVENT_TYPES = [
+    { value: 'houseMove', label: 'House move', per: 'lump', dir: 'out', years: 0, help: 'Stamp duty, fees, removals and furnishing: the extra cost, not the new mortgage.' },
+    { value: 'childcare', label: 'Childcare', per: 'month', dir: 'out', years: 4, help: 'Nursery or childminder costs after any free hours or tax-free childcare.' },
+    { value: 'schoolFees', label: 'School fees', per: 'month', dir: 'out', years: 7, help: 'Fees and extras, as a monthly average.' },
+    { value: 'university', label: 'University help', per: 'month', dir: 'out', years: 3, help: 'What you\u2019d give towards rent and living costs while they study.' },
+    { value: 'careerBreak', label: 'Career break', per: 'month', dir: 'in', years: 1, pause: true, help: 'Pay, bonuses and workplace pension contributions stop for these years. Enter anything still coming in each month, after tax (for example statutory pay), or leave it blank.' },
+    { value: 'car', label: 'Car', per: 'lump', dir: 'out', years: 0, help: 'The cash you\u2019d pay, after any trade-in.' },
+    { value: 'wedding', label: 'Wedding', per: 'lump', dir: 'out', years: 0, help: 'What you\u2019d pay towards it.' },
+    { value: 'inheritance', label: 'Inheritance', per: 'lump', dir: 'in', years: 0, help: 'What you expect to receive, after any inheritance tax. It goes into your cash savings. Nobody can be sure of an inheritance, so try your plan without it too.' },
+    { value: 'other', label: 'Something else', per: 'lump', dir: 'out', years: 0, help: 'Any other cost you can see coming.' },
+  ];
+  const MAX_EVENTS = 20;
+  const EVENT_PERS = [{ value: 'month', label: 'A month, for some years' }, { value: 'lump', label: 'A lump sum, once' }];
+  const EVENT_FIELDS = [
+    { key: 'type', label: 'What', type: 'select', options: EVENT_TYPES },
+    { key: 'name', label: 'Name (optional)', type: 'text', placeholder: 'e.g. Nursery for Ava' },
+    { key: 'per', label: 'Paid as', type: 'select', options: EVENT_PERS },
+    { key: 'amount', label: 'Amount (today\u2019s money)', type: 'money' },
+    { key: 'startYear', label: 'From', type: 'int', min: 2000, max: 2120, nullable: true, placeholder: 'Year' },
+    { key: 'endYear', label: 'To (inclusive)', type: 'int', min: 2000, max: 2120, nullable: true, placeholder: 'Same year' },
+  ];
+  const eventType = (v) => EVENT_TYPES.find((t) => t.value === v) || EVENT_TYPES[EVENT_TYPES.length - 1];
+
   const MAX_BONUSES = 12;
   const BONUS_FIELDS = [
     { key: 'amount', label: 'Bonus amount', type: 'money' },
@@ -309,6 +340,8 @@
       partner: null,
       // Pensions besides your main pot (assets.pension) and your partner's (see PENSION_FIELDS).
       pensions: [],
+      // Life events (see EVENT_TYPES), in the order you added them.
+      events: [],
       // Who owns an asset or the mortgage, where it isn't you: { 'assets.isa': 'partner', mortgage: 'joint' }.
       owners: {},
       // What your ISAs, other investments and pension are invested in (your
@@ -446,7 +479,7 @@
   function removePartner(p) {
     if (!p.partner) return null;
     const kept = { partner: p.partner, pensions: p.pensions.filter((x) => x.owner === 'partner'), rows: [], owners: { ...p.owners } };
-    ['debts', 'savings'].forEach((list) => (p[list] || []).forEach((r) => {
+    ['debts', 'savings', 'events'].forEach((list) => (p[list] || []).forEach((r) => {
       if (r.owner) { kept.rows.push([list, r.id, r.owner]); delete r.owner; }
     }));
     p.pensions = p.pensions.filter((x) => x.owner !== 'partner');
@@ -619,6 +652,16 @@
         return row;
       });
     }
+    if (Array.isArray(src.events)) {
+      p.events = src.events.filter((x) => x && typeof x === 'object').slice(0, MAX_EVENTS).map((x) => {
+        const row = normaliseRow(x, EVENT_FIELDS, 'ev');
+        if (!EVENT_TYPES.some((t) => t.value === x.type)) row.type = 'other';
+        // A lump sum happens once; a monthly amount can't end before it starts.
+        if (row.per === 'lump' || (row.endYear != null && row.startYear != null && row.endYear < row.startYear)) row.endYear = null;
+        row.owner = ownerOf(x.owner) && p.partner ? x.owner : 'you';
+        return row;
+      });
+    }
     if (Array.isArray(src.spending)) {
       const rows = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40);
       const restAt = rows.findIndex((s) => s.rest === true);
@@ -679,6 +722,13 @@
     return { id: newId('sv'), type: type || 'cash', monthly: 0, grows: 'fixed' };
   }
 
+  // A new life event of a type, starting next year, with its preset's shape.
+  function newEvent(type, now) {
+    const t = eventType(type);
+    const start = (now || new Date()).getFullYear() + 1;
+    return { id: newId('ev'), type: t.value, name: '', per: t.per, amount: 0, startYear: start, endYear: t.per === 'month' ? start + Math.max(0, t.years - 1) : null, owner: 'you' };
+  }
+
   function newBonus() {
     return { id: newId('b'), amount: 0, month: 'spread' };
   }
@@ -690,6 +740,6 @@
   FP.profile = {
     SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
     who, whose, capital, personPath, asPerson, PARTNER_FIELDS, NAME_FIELD, HOUSEHOLD_FIELD, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
-    newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
+    EVENT_TYPES, EVENT_PERS, EVENT_FIELDS, MAX_EVENTS, eventType, newEvent, newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});
