@@ -49,6 +49,7 @@
 
     FP.dom.add(root,
       FP.dom.pageHead('Your plan', rough && ready ? 'A first look, from your quick answers' : 'Four questions, answered'),
+      checkLine(p),
       FP.checklist.card(p),
       noticeList(notices),
       prompts(ctx, ready && !rough),
@@ -61,6 +62,21 @@
       proj.ok && !rough ? chartCard(proj, today, a, p) : null,
       rough ? null : nextCard(p, a, ctx, root),
       rough ? null : FP.print.attach(ctx, root));
+  }
+
+  /*
+   * One line above the verdicts when a figure fails its sense check (say, a
+   * yearly amount typed as monthly), so the results below aren't taken on trust.
+   */
+  function checkLine(p) {
+    const failed = FP.welcome.failedChecks(p);
+    if (!failed.length) return null;
+    const names = failed.map((x) => `${x.label.charAt(0).toLowerCase()}${x.label.slice(1)} (${x.shown})`);
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+    return h('p', { class: 'notice warn plan-check' },
+      h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, '!'),
+      h('span', null, `${failed.length > 1 ? 'These figures look' : 'This figure looks'} wrong, so the results below may be too: ${list}. `,
+        h('a', { href: `#setup/${failed[0].path}` }, failed.length > 1 ? 'Check them' : 'Check it')));
   }
 
   // After the quick start: one clear next move.
@@ -90,10 +106,12 @@
         h(r.href ? 'a' : 'button', {
           class: 'outcome-row', type: r.href ? null : 'button', href: r.href || null,
           onclick: r.open || null,
-          'aria-label': `${r.label}: ${r.value}${r.sub ? `, ${r.sub}` : ''}. ${r.href ? 'Open' : 'See what drives it and try changes'}`,
         },
-        h('span', { class: 'row-label' }, r.label, r.sub ? h('small', null, r.sub) : null),
+        // Named by what it shows (spaced so the words don't run together), then what it does.
+        h('span', { class: 'row-label' }, r.label, r.sub ? [' ', h('small', null, r.sub)] : null),
+        ' ',
         h('strong', { class: r.warn ? 'negative' : null }, r.value),
+        h('span', { class: 'visually-hidden' }, `. ${r.href ? 'Open' : 'See what drives it and try changes'}`),
         h('span', { class: 'go', 'aria-hidden': 'true' }, '\u203a'))))),
       idea ? h('button', { type: 'button', class: `card-idea ${idea.tone}`, onclick: panel(IDEA_PANEL[idea.id] || 'leftover') },
         h('span', { class: 'idea-icon', 'aria-hidden': 'true' }, idea.tone === 'warn' ? '!' : 'i'),

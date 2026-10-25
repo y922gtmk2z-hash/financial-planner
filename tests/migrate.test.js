@@ -54,7 +54,7 @@ test('the steps run in order, one version at a time, up to the current version',
     assert.equal(typeof s.up, 'function');
   });
   assert.equal(FP.migrate.STEPS.at(-1).to, FP.migrate.CURRENT);
-  assert.equal(FP.migrate.CURRENT, 8);
+  assert.equal(FP.migrate.CURRENT, 9);
   assert.equal(FP.store.STORE_VERSION, FP.migrate.CURRENT);
   assert.equal(FP.profile.blank().schemaVersion, FP.migrate.CURRENT);
 });
@@ -128,7 +128,7 @@ test('files with no version are read by what they hold', () => {
   assert.equal(FP.migrate.versionOf({ profile: {} }), 1);
   assert.equal(FP.migrate.versionOf({ workspace: { scenarios: [] } }), 2);
   assert.equal(FP.migrate.versionOf({ schemaVersion: 2, profile: {} }), 1);
-  assert.equal(FP.migrate.versionOf({ schemaVersion: 9, profile: {} }), 9);
+  assert.equal(FP.migrate.versionOf({ schemaVersion: FP.migrate.CURRENT + 1, profile: {} }), FP.migrate.CURRENT + 1);
   assert.equal(FP.migrate.versionOf({ schemaVersion: 1, workspace: {} }), 2);
   assert.equal(FP.migrate.versionOf({ schemaVersion: 0.5, workspace: {} }), 2);
   assert.equal(FP.migrate.versionOf({ schemaVersion: 2.5, workspace: {} }), 2);

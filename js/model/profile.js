@@ -7,7 +7,7 @@
   'use strict';
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 8;
+  const SCHEMA_VERSION = 9;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];

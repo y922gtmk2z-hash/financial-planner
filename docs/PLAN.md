@@ -41,7 +41,7 @@ js/app.js                routing and wiring
 tests/*.test.js          node --test
 ```
 
-## Data model (schema v8)
+## Data model (schema v9)
 
 ```
 profile = {
@@ -58,8 +58,11 @@ profile = {
 }
 ```
 
-Stage 4 wraps this in a workspace, `{ activeId, scenarios: [{ id, name, profile }] }`;
-a scenario is a full copy of the profile, so any input or assumption can differ.
+Stage 4 wraps this in a workspace, `{ activeId, scenarios: [{ id, name, profile }] }`.
+Since version 9 only the first scenario (the Baseline) is saved in full; each other
+scenario is saved as a patch, `{ id, name, patch }`, of what differs from the Baseline
+(`js/model/scenarios.js`), so any input or assumption can differ and changes to the
+Baseline carry into every scenario.
 Bonuses are a list since Stage 2. Saved files carry a `schemaVersion`: 1 held one
 profile, 2 a workspace, 3 a workspace with every profile in today's shape, 4 the same
 with ideas that can also be marked `applied`, 5 a workspace that also keeps your check-ins
@@ -67,7 +70,7 @@ with ideas that can also be marked `applied`, 5 a workspace that also keeps your
 `pensions` and `owners` (you stay in the profile's own fields; `FP.profile.people` gives both of
 you in one shape), 7 a mix on every ISA, investment and pension pot (`mixes`, `partner.pensionMix`,
 `pensions[].mix`), replacing the investment and pension return assumptions, 8 life events
-(`events`).
+(`events`), 9 scenarios stored as the Baseline plus a patch each.
 `js/model/migrate.js` upgrades older files one numbered step at a time (`{ from, to,
 up }`), so `profile.normalise` only checks and cleans today's shape. Any change to
 the saved shape adds a step and a test.

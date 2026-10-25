@@ -1,10 +1,19 @@
 /*
- * Scenarios. A workspace holds one or more scenarios; each scenario is a full,
- * independent copy of the profile (every input and assumption), so anything can
- * differ between them. The first scenario is the baseline. Every screen edits
- * the active scenario.
+ * Scenarios. A workspace holds one or more scenarios. The first is the
+ * baseline, your plan; every other scenario is the baseline plus a patch (its
+ * changes, as FP.patch changes), so a change to the baseline carries into
+ * every scenario and each one keeps only what it changes. Anything can differ.
+ * Every screen edits the active scenario.
  *
- * workspace = { activeId, scenarios: [{ id, name, profile }] }
+ * In memory, each scenario also holds its whole profile, so screens can read
+ * and edit it like any plan; sync() works out what changed since:
+ *   workspace = { activeId, scenarios: [{ id, name, profile, patch? }], checkins }
+ * Saved (toSaved), the baseline keeps its profile and the others only a patch:
+ *   { activeId, scenarios: [{ id, name, profile }, { id, name, patch }, ...], checkins }
+ *
+ * A patch's paths can name a row in a list by its id ('spending.#s12.monthly'),
+ * so they still point at the same row when the baseline's list changes. A
+ * list whose rows were added, removed or reordered is replaced whole.
  */
 (function (FP) {
   'use strict';
@@ -23,6 +32,107 @@
     return n || fallback;
   }
 
+  const copy = (x) => (x === undefined ? undefined : JSON.parse(JSON.stringify(x)));
+  const isObj = (x) => x != null && typeof x === 'object' && !Array.isArray(x);
+  const ROW_ID = /^[\w-]{1,40}$/;
+  const BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+  // Lists whose rows match one for one, by id, in the same order.
+  function sameRows(a, b) {
+    if (a.length !== b.length || !a.length) return false;
+    const ids = new Set();
+    return a.every((x, i) => isObj(x) && isObj(b[i]) && typeof x.id === 'string' && ROW_ID.test(x.id)
+      && x.id === b[i].id && !ids.has(x.id) && ids.add(x.id));
+  }
+
+  /*
+   * The patch that turns profile `a` into profile `b`: a 'set' for each value
+   * that differs, as deep as it can go. Objects whose keys hold dots (owners)
+   * are set whole.
+   */
+  function diffPatch(a, b) {
+    const out = [];
+    const walk = (x, y, path) => {
+      if (JSON.stringify(x) === JSON.stringify(y)) return;
+      const join = (k) => (path ? `${path}.${k}` : k);
+      if (Array.isArray(x) && Array.isArray(y) && sameRows(x, y)) {
+        x.forEach((row, i) => walk(row, y[i], join(`#${row.id}`)));
+      } else if (isObj(x) && isObj(y) && ![...Object.keys(x), ...Object.keys(y)].some((k) => k.includes('.') || k.startsWith('#'))) {
+        new Set([...Object.keys(x), ...Object.keys(y)]).forEach((k) => walk(x[k], y[k], join(k)));
+      } else {
+        out.push({ path, op: 'set', value: copy(y) });
+      }
+    };
+    walk(a, b, '');
+    return out;
+  }
+
+  // A patch read from a file: only well-formed changes, and no paths that could reach past the plan.
+  function cleanPatch(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(0, 1000).filter((c) => isObj(c) && typeof c.path === 'string' && c.path.length <= 200
+      && c.path.split('.').every((k) => k && !BAD_KEYS.includes(k) && !BAD_KEYS.includes(k.slice(1)))
+      && (c.op === 'set' || (c.op === 'add' && typeof c.value === 'number' && Number.isFinite(c.value))))
+      .map((c) => ({ path: c.path, op: c.op, value: copy(c.value) }));
+  }
+
+  // Row ids in a patch's paths → today's positions in `base`. Changes to rows it no longer has are dropped.
+  function resolve(base, patch) {
+    return patch.map((c) => {
+      let at = base;
+      const keys = c.path.split('.').map((k) => {
+        let key = k;
+        if (k.startsWith('#')) {
+          const i = Array.isArray(at) ? at.findIndex((x) => isObj(x) && x.id === k.slice(1)) : -1;
+          if (i < 0) return null;
+          key = String(i);
+        }
+        at = at == null ? undefined : at[key];
+        return key;
+      });
+      return keys.includes(null) ? null : { ...c, path: keys.join('.') };
+    }).filter(Boolean);
+  }
+
+  // The baseline with a scenario's patch made, cleaned up like any plan.
+  function materialise(base, patch) {
+    return FP.profile.normalise(FP.patch.applyPatch(base, resolve(base, patch || [])));
+  }
+
+  /*
+   * Brings patches and profiles back into step after edits. A scenario whose
+   * profile changed since the last sync was edited: its patch becomes what
+   * now differs from the baseline. Otherwise, if the baseline changed, the
+   * scenario is the new baseline plus its patch.
+   */
+  const seen = new WeakMap(); // scenario → its profile as JSON at the last sync
+  function sync(ws) {
+    const [base, ...others] = ws.scenarios;
+    if (!base) return ws;
+    const baseJson = JSON.stringify(base.profile);
+    const baseChanged = seen.get(base) !== baseJson;
+    delete base.patch;
+    others.forEach((sc) => {
+      if (!Array.isArray(sc.patch) || seen.get(sc) !== JSON.stringify(sc.profile)) sc.patch = diffPatch(base.profile, sc.profile);
+      else if (baseChanged) sc.profile = materialise(base.profile, sc.patch);
+      seen.set(sc, JSON.stringify(sc.profile));
+    });
+    seen.set(base, baseJson);
+    return ws;
+  }
+
+  // The workspace as it's saved and exported: the baseline's profile and every other scenario's patch.
+  function toSaved(ws) {
+    sync(ws);
+    return {
+      activeId: ws.activeId,
+      scenarios: ws.scenarios.map((sc, i) => (i === 0
+        ? { id: sc.id, name: sc.name, profile: sc.profile }
+        : { id: sc.id, name: sc.name, patch: sc.patch })),
+      checkins: ws.checkins,
+    };
+  }
+
   function fromProfile(profile, name) {
     const id = newId();
     return { activeId: id, scenarios: [{ id, name: cleanName(name, 'Baseline'), profile }], checkins: FP.checkins.normalise(null) };
@@ -32,20 +142,24 @@
   function normalise(input) {
     const src = input && typeof input === 'object' ? input : {};
     if (!Array.isArray(src.scenarios)) return fromProfile(FP.profile.blank());
-    const seen = new Set();
+    const ids = new Set();
+    let base = null;
     const scenarios = src.scenarios
       .filter((s) => s && typeof s === 'object')
       .slice(0, MAX_SCENARIOS)
       .map((s, i) => {
         let id = typeof s.id === 'string' && s.id ? s.id.slice(0, 40) : newId();
-        if (seen.has(id)) id = newId();
-        seen.add(id);
-        return { id, name: cleanName(s.name, i === 0 ? 'Baseline' : `Scenario ${i + 1}`), profile: FP.profile.normalise(s.profile) };
+        if (ids.has(id)) id = newId();
+        ids.add(id);
+        // A scenario is the baseline plus its patch (or, held in memory, a whole profile).
+        const profile = i === 0 || isObj(s.profile) ? FP.profile.normalise(s.profile) : materialise(base, cleanPatch(s.patch));
+        if (i === 0) base = profile;
+        return { id, name: cleanName(s.name, i === 0 ? 'Baseline' : `Scenario ${i + 1}`), profile };
       });
     if (!scenarios.length) return fromProfile(FP.profile.blank());
     const activeId = scenarios.some((s) => s.id === src.activeId) ? src.activeId : scenarios[0].id;
     // Your check-in history belongs to the workspace, not to one scenario.
-    return { activeId, scenarios, checkins: FP.checkins.normalise(src.checkins) };
+    return sync({ activeId, scenarios, checkins: FP.checkins.normalise(src.checkins) });
   }
 
   function find(ws, id) {
@@ -107,12 +221,21 @@
   function makeBaseline(ws, id, dateText) {
     const chosen = find(ws, id);
     if (!chosen || isBaseline(ws, id)) return false;
+    sync(ws);
     const old = ws.scenarios[0];
+    // The new baseline is the old one plus its patch. The old baseline becomes
+    // what differs from it; the others keep their own patches, now on the new one.
+    old.patch = diffPatch(chosen.profile, old.profile);
+    ws.scenarios.forEach((sc) => {
+      if (sc !== old && sc !== chosen) sc.profile = materialise(chosen.profile, sc.patch);
+      if (sc !== chosen) seen.set(sc, JSON.stringify(sc.profile));
+    });
     const others = (except) => ({ scenarios: ws.scenarios.filter((x) => !except.includes(x)) });
     old.name = uniqueName(others([old, chosen]), cleanName(`Previous plan (${dateText})`, 'Previous plan'));
     chosen.name = uniqueName(others([chosen]), 'Baseline');
     ws.scenarios = [chosen].concat(ws.scenarios.filter((x) => x !== chosen));
     ws.activeId = chosen.id;
+    sync(ws);
     return true;
   }
 
@@ -254,5 +377,6 @@
   FP.scenarios = {
     MAX_SCENARIOS, PRESETS, fromProfile, normalise, find, active, isBaseline,
     clone, fromPreset, addProfile, rename, remove, setActive, makeBaseline, differences,
+    diffPatch, cleanPatch, materialise, sync, toSaved,
   };
 })(globalThis.FP = globalThis.FP || {});

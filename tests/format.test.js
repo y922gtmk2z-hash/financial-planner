@@ -49,3 +49,14 @@ test('each measure has one name, and the detail sheet uses the same ones', () =>
   ['savingsPensions', 'pensionPots', 'couldSpend'].forEach((id) => assert.ok(src.includes(`'${MEASURES[id].label}`), `${MEASURES[id].label} in outcomes.js`));
   assert.ok(!/Pension pot when|You could spend in retirement/.test(src));
 });
+
+test('very large figures step up to £bn and never show an exponent', () => {
+  const a = (n) => money(n, { approx: true });
+  assert.equal(a(1.16e11), '£116bn');
+  assert.equal(a(4.2e9), '£4.20bn');
+  assert.equal(a(999.6e6), '£1.00bn');
+  assert.equal(a(999.4e6), '£999m');
+  assert.equal(a(-4.2e9), '-£4.20bn');
+  assert.equal(a(1.16e12), '£1,160bn');
+  [1e9, 3.3e10, 7.77e13, 1e15, 9.99e20].forEach((n) => assert.ok(!/e/i.test(a(n)), `${n} → ${a(n)}`));
+});
