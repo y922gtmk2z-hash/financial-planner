@@ -350,8 +350,9 @@
     return (list || []).reduce((t, b) => t + Math.max(0, b.yearly || 0), 0);
   }
 
-  function inputFromProfile(profile) {
-    const inc = profile.income;
+  // Take-home inputs for one person (see FP.profile.people): their pay, as of today.
+  function inputFromPerson(person) {
+    const inc = person.income;
     return {
       salary: inc.grossSalary,
       bonuses: inc.bonuses,
@@ -363,21 +364,39 @@
       taxCode: inc.taxCode || '',
       benefitsInCode: inc.benefitsTaxed === 'code',
       taxFreeIncome: inc.taxFreeIncome || 0,
-      employeePensionPct: profile.assumptions.employeePensionPct,
-      employerPensionPct: profile.assumptions.employerPensionPct,
-      pensionMethod: profile.income.pensionMethod,
-      studentLoanPlan: profile.income.studentLoanPlan,
-      region: profile.income.region,
+      employeePensionPct: person.employeePensionPct,
+      employerPensionPct: person.employerPensionPct,
+      pensionMethod: inc.pensionMethod,
+      studentLoanPlan: inc.studentLoanPlan,
+      region: inc.region,
     };
   }
 
+  // Your take-home inputs (person 1).
+  function inputFromProfile(profile) {
+    return inputFromPerson(FP.profile.people(profile)[0]);
+  }
+
+  // Your take-home pay (person 1). For the household's, see household().
   function forProfile(profile, cfg) {
     return takeHome(inputFromProfile(profile), cfg);
   }
 
+  /*
+   * The household's take-home: each person's worked out on its own (their own
+   * allowance, bands, NI, student loan and taper), then added together.
+   * Returns { people: [takeHome result per person], takeHome, takeHomeMonthly }.
+   */
+  function household(profile, cfg) {
+    const people = FP.profile.people(profile).map((x) => takeHome(inputFromPerson(x), cfg));
+    if (people.length === 1) return { people, takeHome: people[0].takeHome, takeHomeMonthly: people[0].takeHomeMonthly };
+    // Each person's monthly take-home is their regular month (bonus months add more), so add those.
+    return { people, takeHome: people.reduce((t, r) => t + r.takeHome, 0), takeHomeMonthly: people.reduce((t, r) => t + r.takeHomeMonthly, 0) };
+  }
+
   FP.tax = {
     personalAllowance, incomeTax, nationalInsurance, studentLoan, parseTaxCode, describeTaxCode,
-    MONTHS, bonusList, sacrificeForYear, benefitsTotal, takeHome, keepOfNext, inputFromProfile, forProfile,
+    MONTHS, bonusList, sacrificeForYear, benefitsTotal, takeHome, keepOfNext, inputFromPerson, inputFromProfile, forProfile, household,
   };
 })(globalThis.FP = globalThis.FP || {});
 

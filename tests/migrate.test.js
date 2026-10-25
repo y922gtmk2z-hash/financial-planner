@@ -54,7 +54,7 @@ test('the steps run in order, one version at a time, up to the current version',
     assert.equal(typeof s.up, 'function');
   });
   assert.equal(FP.migrate.STEPS.at(-1).to, FP.migrate.CURRENT);
-  assert.equal(FP.migrate.CURRENT, 5);
+  assert.equal(FP.migrate.CURRENT, 6);
   assert.equal(FP.store.STORE_VERSION, FP.migrate.CURRENT);
   assert.equal(FP.profile.blank().schemaVersion, FP.migrate.CURRENT);
 });

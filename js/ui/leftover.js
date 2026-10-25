@@ -36,7 +36,7 @@
 
     const changed = () => { if (opts.onChange) opts.onChange(); };
 
-    const leftNow = () => FP.summary.compute(ctx.profile(), FP.tax.forProfile(ctx.profile()).takeHomeMonthly).cashFlow.surplus;
+    const leftNow = () => FP.summary.compute(ctx.profile(), FP.tax.household(ctx.profile()).takeHomeMonthly).cashFlow.surplus;
 
     function drawFields() {
       const p = ctx.profile();

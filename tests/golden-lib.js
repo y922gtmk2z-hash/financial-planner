@@ -64,9 +64,12 @@ function clean(v) {
 function snapshot(profile) {
   const pay = FP.tax.forProfile(profile);
   const ideas = FP.suggest.analyse(profile);
+  // A household's take-home is both people's together; with just you, it's yours.
+  const household = FP.tax.household(profile);
   return clean({
     tax: pay,
-    summary: FP.summary.compute(profile, pay.takeHomeMonthly),
+    ...(profile.partner ? { taxPartner: household.people[1], household: { takeHome: household.takeHome, takeHomeMonthly: household.takeHomeMonthly } } : {}),
+    summary: FP.summary.compute(profile, household.takeHomeMonthly),
     projection: FP.projection.project(profile),
     retirementSpend: FP.projection.retirementSpend(profile),
     retirementNeed: FP.projection.retirementNeed(profile),

@@ -41,12 +41,12 @@
   const CHECKS = {
     'goals.retirementIncome': (v, p) => {
       if (!(v > 0)) return null;
-      const takeHome = FP.tax.forProfile(p).takeHomeMonthly;
+      const takeHome = FP.tax.household(p).takeHomeMonthly;
       const out = FP.summary.compute(p, takeHome).cashFlow.outgoings;
       return (out > 0 && v > out * 2) || (takeHome > 0 && v > takeHome) ? maybeYearly(v) : null;
     },
     'outgoings.estimate': (v, p) => {
-      const takeHome = FP.tax.forProfile(p).takeHomeMonthly;
+      const takeHome = FP.tax.household(p).takeHomeMonthly;
       return v > 0 && takeHome > 0 && v > takeHome * 1.5 ? maybeYearly(v) : null;
     },
     'income.grossSalary': (v) => {

@@ -379,6 +379,40 @@ not-advice notice. The browser's own Print gives the same summary. No header, ta
 buttons, and always black on white, even in dark mode. The sample household fits on
 two A4 pages.
 
+## Households (in progress)
+
+The planner can now plan for **you and a partner** together, and for **more than one
+pension**. The calculations are in place; the screens for entering a partner and
+your other pensions follow. A plan with just you works exactly as before: every
+result is the same, to the penny and in fact to the last decimal.
+
+How a couple is worked out:
+
+- **Each of you** has your own salary, bonuses, salary sacrifice, tax code, where you
+  pay tax, student loan, other income, retirement age and State Pension (amount and
+  age). Income tax, National Insurance, student loan repayments and the personal
+  allowance taper over £100,000 are worked out for each of you separately (no
+  marriage allowance), then added together for the household's take-home.
+- **Spending, money left over, regular savings and the emergency fund** are the
+  household's. Each regular saving uses its owner's ISA allowance; money left over
+  for investments fills your ISA allowance, then your partner's. Its pension share is
+  split equally between those of you still working.
+- **Retirement comes in stages:** each salary stops at that person's retirement age,
+  and each State Pension starts at its owner's State Pension age. Your retirement
+  goal, and "money lasts to", start when the later of you retires. Ages on the charts
+  and the plan's end age are yours.
+- **Pensions:** besides each of your main pots, a pension can be a **pot** (defined
+  contribution: its value, the age you can draw it from, 57 unless you say, and
+  anything you pay in each month from your take-home pay, with 20% relief added) or a
+  **defined benefit pension** (a yearly income in today's money from its start age,
+  rising with inflation and taxed as its owner's income, with your pay if you're still
+  working; no lump sum). A shortfall in retirement is met from pots whose owner has
+  retired and reached the pot's access age, shared in proportion to their size, each
+  taxed with that owner's income.
+- **Who owns what** (you, your partner or joint) is recorded on assets, the mortgage,
+  debts and regular savings. Apart from ISAs and pensions, which follow their owner,
+  it doesn't change the figures.
+
 ## Regular savings
 
 Under **Regular savings** in Your figures, add monthly amounts into **cash savings**, a
@@ -565,7 +599,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-269 tests cover:
+290 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -592,6 +626,12 @@ npm test   # Node 18+, no dependencies to install
   the biggest gain), the two figures on each card, the Applied mark (and saves from
   version 3 loading), making a scenario your plan, and the calendar file (dates,
   escaping, 75-octet lines).
+- **Households:** every single-person result unchanged; you and your partner in the
+  same shape; tax, NI, student loans and the taper per person, added together;
+  retiring in stages with each State Pension at its owner's age; an ISA allowance
+  each; defined benefit income from its start age (taxed with pay while working);
+  other pots taking contributions and being drawn; owners; and version 5 saves
+  loading. Two more golden fixtures: a couple and a defined benefit pension.
 - **Check-ins:** balances prefilled and put into every scenario, what the plan
   expected (from the previous check-in, between yearly points), a second check-in
   in a day replacing the first, since last time (net worth, debts paid down,

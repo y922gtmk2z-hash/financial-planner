@@ -14,7 +14,7 @@
     const p = ctx.profile();
     const a = p.assumptions;
     const pay = FP.tax.forProfile(p);
-    const s = FP.summary.compute(p, pay.takeHomeMonthly);
+    const s = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly);
 
     FP.dom.add(root,
       h('h1', null, 'Today'),

@@ -58,8 +58,7 @@
    * Any figure that can't be worked out yet is null.
    */
   function measure(profile) {
-    const pay = FP.tax.forProfile(profile);
-    const leftover = FP.summary.compute(profile, pay.takeHomeMonthly).cashFlow.surplus;
+    const leftover = FP.summary.compute(profile, FP.tax.household(profile).takeHomeMonthly).cashFlow.surplus;
     const proj = FP.projection.project(profile);
     const spend = FP.projection.retirementSpend(profile);
     const need = FP.projection.retirementNeed(profile);

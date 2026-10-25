@@ -49,7 +49,7 @@
     const a = p.assumptions;
     const ws = ctx.workspace();
     const sc = FP.scenarios.active(ws);
-    const pay = FP.tax.forProfile(p);
+    const pay = FP.tax.household(p);
     const cf = FP.summary.compute(p, pay.takeHomeMonthly).cashFlow;
     const proj = FP.projection.project(p, { maxYears: a.endAge - p.about.age });
     const need = FP.projection.retirementNeed(p);

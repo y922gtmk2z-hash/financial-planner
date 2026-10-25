@@ -36,7 +36,9 @@
     const a = profile.assumptions;
     const warnings = [];
 
-    const assetItems = ASSET_ITEMS.map((i) => ({ key: i.key, label: i.label, value: num(profile.assets[i.key]) }));
+    // Pension pots: your main pot, plus your partner's and any others (not defined benefit pensions, which pay an income).
+    const otherPots = (profile.partner ? num(profile.partner.pension) : 0) + (profile.pensions || []).filter((x) => x.type === 'dc').reduce((t, x) => t + num(x.value), 0);
+    const assetItems = ASSET_ITEMS.map((i) => ({ key: i.key, label: i.label, value: num(profile.assets[i.key]) + (i.key === 'pension' && otherPots ? otherPots : 0) }));
     const totalAssets = assetItems.reduce((s, i) => s + i.value, 0);
 
     const m = profile.mortgage;

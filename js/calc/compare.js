@@ -10,7 +10,7 @@
    * real: true to express projected amounts in today's money.
    */
   function summarise(profile, real) {
-    const pay = FP.tax.forProfile(profile);
+    const pay = FP.tax.household(profile);
     const today = FP.summary.compute(profile, pay.takeHomeMonthly);
     const proj = FP.projection.project(profile);
     const out = {

@@ -27,7 +27,7 @@
   }
 
   function cashFlow(p) {
-    return FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow;
+    return FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow;
   }
 
   // Ages along the bottom, one value per year.

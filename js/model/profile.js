@@ -7,7 +7,7 @@
   'use strict';
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 5;
+  const SCHEMA_VERSION = 6;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -270,7 +270,7 @@
     return {
       schemaVersion: SCHEMA_VERSION,
       isSample: false,
-      about: { age: null, riskAppetite: '' },
+      about: { age: null, riskAppetite: '', name: '' },
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
       mortgage: { balance: 0, remainingTermYears: 0, monthlyPayment: null, monthlyOverpayment: 0 },
       debts: [],
@@ -288,6 +288,59 @@
       ideas: {},
       spending: [newRest()],
       assumptions: FP.assumptions.defaults(),
+      // A partner, planned together with you (see partnerOf), or null for just you.
+      partner: null,
+      // Pensions besides your main pot (assets.pension) and your partner's (see PENSION_FIELDS).
+      pensions: [],
+      // Who owns an asset or the mortgage, where it isn't you: { 'assets.isa': 'partner', mortgage: 'joint' }.
+      owners: {},
+    };
+  }
+
+  /*
+   * Household mode: up to two people. You are person 1, in the profile's own
+   * fields (about, income, and retirement and State Pension in assumptions);
+   * a partner, if there is one, is profile.partner, in the same shape:
+   * { name, age, retirementAge, statePension, statePensionAge,
+   *   employeePensionPct, employerPensionPct, pension (their main pot), income }.
+   */
+  const OWNERS = ['you', 'partner', 'joint'];
+  const MAX_PENSIONS = 12;
+  const PENSION_TYPES = [
+    { value: 'dc', label: 'Defined contribution (a pot)' },
+    { value: 'db', label: 'Defined benefit (a yearly income)' },
+  ];
+  // Pensions besides the main pots. A pot (dc) grows and you draw on it from its
+  // access age; a defined benefit pension (db) pays a yearly income from its start age.
+  const PENSION_FIELDS = [
+    { key: 'type', label: 'Type', type: 'select', options: PENSION_TYPES },
+    { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. Old workplace pension' },
+    { key: 'value', label: 'Value today', type: 'money' },
+    { key: 'income', label: 'Income', type: 'money', suffix: 'a year',
+      help: 'From your statement, in today\u2019s money. It rises with inflation and is taxed as income.' },
+    { key: 'accessAge', label: 'From age', type: 'int', min: 50, max: 80, nullable: true, placeholder: 'e.g. 57' },
+    { key: 'monthly', label: 'You pay in', type: 'money', suffix: 'a month',
+      help: 'From your take-home pay, with 20% tax relief added, until its owner retires.' },
+  ];
+
+  // Each person, in the same shape: you (from your own fields), then any partner.
+  function people(p) {
+    const a = p.assumptions;
+    const you = {
+      index: 0, id: 'you', name: (p.about && p.about.name) || '', age: p.about.age,
+      retirementAge: a.retirementAge, statePension: a.statePension, statePensionAge: a.statePensionAge,
+      employeePensionPct: a.employeePensionPct, employerPensionPct: a.employerPensionPct,
+      pension: p.assets.pension || 0, income: p.income,
+    };
+    return p.partner ? [you, { index: 1, id: 'partner', ...p.partner }] : [you];
+  }
+
+  function newPartner(p) {
+    const a = (p && p.assumptions) || FP.assumptions.defaults();
+    return {
+      name: '', age: null, retirementAge: a.retirementAge, statePension: a.statePension, statePensionAge: a.statePensionAge,
+      employeePensionPct: FP.assumptions.def('employeePensionPct').default, employerPensionPct: FP.assumptions.def('employerPensionPct').default,
+      pension: 0, income: blank().income,
     };
   }
 
@@ -422,6 +475,23 @@
       p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
         .map((x) => normaliseRow(x, SAVING_FIELDS, 'sv'));
     }
+    p.about.name = typeof (src.about || {}).name === 'string' ? src.about.name.replace(/\s+/g, ' ').trim().slice(0, 30) : '';
+    // Owners other than you, on rows (debts, regular savings) and on assets and the mortgage.
+    const ownerOf = (v) => (v === 'partner' || v === 'joint' ? v : null);
+    if (Array.isArray(src.debts)) src.debts.filter((d) => d && typeof d === 'object').slice(0, 20).forEach((d, i) => { if (ownerOf(d.owner)) p.debts[i].owner = d.owner; });
+    if (Array.isArray(src.savings)) src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS).forEach((x, i) => { if (ownerOf(x.owner)) p.savings[i].owner = x.owner; });
+    if (src.owners && typeof src.owners === 'object') {
+      ['assets.homeValue', 'assets.cashSavings', 'assets.isa', 'assets.gia', 'assets.other', 'mortgage'].forEach((k) => { if (ownerOf(src.owners[k])) p.owners[k] = src.owners[k]; });
+    }
+    p.partner = normalisePartner(src.partner, p);
+    if (Array.isArray(src.pensions)) {
+      p.pensions = src.pensions.filter((x) => x && typeof x === 'object').slice(0, MAX_PENSIONS).map((x) => {
+        const row = normaliseRow(x, PENSION_FIELDS, 'pn');
+        // A partner's pension only while there's a partner.
+        row.owner = x.owner === 'partner' && p.partner ? 'partner' : 'you';
+        return row;
+      });
+    }
     if (Array.isArray(src.spending)) {
       const rows = src.spending.filter((s) => s && typeof s === 'object').slice(0, 40);
       const restAt = rows.findIndex((s) => s.rest === true);
@@ -432,6 +502,24 @@
       });
     }
     return p;
+  }
+
+  // A partner's figures, cleaned up like your own (their pay with the same rules), or null.
+  function normalisePartner(src, p) {
+    if (!src || typeof src !== 'object') return null;
+    const d = newPartner(p);
+    const field = (f, v, fallback) => (v === undefined ? fallback : coerce(f, v, fallback));
+    return {
+      name: typeof src.name === 'string' ? src.name.replace(/\s+/g, ' ').trim().slice(0, 30) : '',
+      age: field({ type: 'int', min: 16, max: 100, nullable: true }, src.age, null),
+      retirementAge: field(assumptionField('retirementAge'), src.retirementAge, d.retirementAge),
+      statePension: field(assumptionField('statePension'), src.statePension, d.statePension),
+      statePensionAge: field(assumptionField('statePensionAge'), src.statePensionAge, d.statePensionAge),
+      employeePensionPct: field(assumptionField('employeePensionPct'), src.employeePensionPct, d.employeePensionPct),
+      employerPensionPct: field(assumptionField('employerPensionPct'), src.employerPensionPct, d.employerPensionPct),
+      pension: field({ type: 'money' }, src.pension, 0),
+      income: normalise({ income: src.income }).income,
+    };
   }
 
   function normaliseRow(src, fields, prefix) {
@@ -472,7 +560,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, IDEA_MARKS, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
+    SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});

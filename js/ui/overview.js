@@ -22,7 +22,8 @@
     const p = ctx.profile();
     // Until the quick start's done: say what this is and how to start.
     if (!FP.summary.checklist(p).ready) { FP.welcome.render(root, ctx); return; }
-    const pay = FP.tax.forProfile(p);
+    // The household's take-home (yours, with just you).
+    const pay = FP.tax.household(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
     const ready = FP.summary.checklist(p).ready;
     const proj = ready ? FP.projection.project(p, toEnd(p)) : { ok: false };

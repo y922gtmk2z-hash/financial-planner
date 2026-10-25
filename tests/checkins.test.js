@@ -119,5 +119,5 @@ test('version 4 saves load with an empty check-in history', () => {
   const up = FP.migrate.upgrade(v4);
   assert.equal(up.from, 4);
   assert.deepEqual(up.workspace.checkins, { snapshots: [], projection: null });
-  assert.equal(FP.migrate.STEPS.at(-1).to, 5);
+  assert.equal(FP.migrate.STEPS.at(-1).to, FP.migrate.CURRENT);
 });

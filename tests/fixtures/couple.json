@@ -1,0 +1,17 @@
+{
+  "about": { "age": 41, "name": "Alex" },
+  "income": { "grossSalary": 62000 },
+  "assets": { "homeValue": 360000, "cashSavings": 18000, "isa": 15000, "pension": 70000 },
+  "owners": { "assets.homeValue": "joint", "assets.cashSavings": "joint", "assets.isa": "joint", "mortgage": "joint" },
+  "mortgage": { "balance": 210000, "remainingTermYears": 22 },
+  "outgoings": { "estimate": 3900 },
+  "spending": [{ "id": "cp-rest", "category": "Rest of your estimate", "monthly": 0, "group": "other", "rest": true }],
+  "savings": [{ "id": "cp-sv1", "type": "ssIsa", "monthly": 200, "grows": "fixed", "owner": "partner" }],
+  "leftover": { "unit": "pct", "emergency": 10, "debts": 0, "cash": 10, "invest": 40, "mortgage": 10, "pension": 30, "emergencyMonths": 3 },
+  "goals": { "retirementIncome": 3200 },
+  "assumptions": { "retirementAge": 63, "mortgageRate": 4.2 },
+  "partner": {
+    "name": "Sam", "age": 39, "retirementAge": 60, "pension": 28000,
+    "income": { "grossSalary": 38000, "studentLoanPlan": "plan2", "studentLoanBalance": 22000, "studentLoanStartYear": 2014 }
+  }
+}
