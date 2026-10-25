@@ -45,7 +45,7 @@
 
   /*
    * £ to the pound, or with { approx: true } to three significant figures:
-   * £1.20m, £292k, £45.7k, £3,800. For projected figures five or more years
+   * £4.20bn, £1.20m, £292k, £45.7k, £3,800. For projected figures five or more years
    * ahead, so they don't look more exact than they are.
    */
   function money(n, opts) {
@@ -55,9 +55,13 @@
     return s === '-£0' ? '£0' : s;
   }
 
+  // Three significant figures, never as an exponent (1,160 rather than 1.16e+3).
+  const sig3 = (x) => (x >= 1000 ? Math.round(x).toLocaleString('en-GB') : x.toPrecision(3));
+
   function approxMoney(n) {
     const a = Math.abs(n);
     const sign = n < 0 && Number(a.toPrecision(3)) >= 0.5 ? '-' : '';
+    if (Number((a / 1e6).toPrecision(3)) >= 1000) return `${sign}£${sig3(a / 1e9)}bn`;
     if (Number((a / 1e3).toPrecision(3)) >= 1000) return `${sign}£${(a / 1e6).toPrecision(3)}m`;
     if (Number(a.toPrecision(3)) >= 1e4) return `${sign}£${(a / 1e3).toPrecision(3)}k`;
     return `${sign}${gbp0.format(Math.round(Number(a.toPrecision(3))))}`;

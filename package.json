@@ -5,6 +5,11 @@
   "description": "Mobile-first UK personal finance planner. Plain HTML/CSS/JS, data stays in your browser.",
   "scripts": {
     "test": "node --test \"tests/*.test.js\"",
-    "golden:update": "node tests/golden-update.js"
+    "golden:update": "node tests/golden-update.js",
+    "test:journey": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "axe-core": "4.14.0"
   }
 }

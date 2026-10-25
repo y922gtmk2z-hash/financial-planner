@@ -942,6 +942,8 @@ a.button { text-decoration: none; }
 .notice.prompt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .notice.prompt > span:nth-child(2) { flex: 1; min-width: 12em; }
 .notice.prompt a { color: var(--accent); font-weight: 600; }
+.plan-check { margin: 12px 0; }
+.plan-check a { color: inherit; font-weight: 600; }
 
 /* ---------- Print: a one- or two-page summary of Your plan ---------- */
 .print-summary { display: none; }

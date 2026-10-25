@@ -69,7 +69,7 @@
     const s = storage();
     if (!s) return false;
     try {
-      s.setItem(KEY, JSON.stringify({ schemaVersion: STORE_VERSION, savedAt: new Date().toISOString(), workspace }));
+      s.setItem(KEY, JSON.stringify({ schemaVersion: STORE_VERSION, savedAt: new Date().toISOString(), workspace: FP.scenarios.toSaved(workspace) }));
       return true;
     } catch (e) {
       return false;
@@ -93,7 +93,7 @@
       app: APP_ID,
       schemaVersion: STORE_VERSION,
       exportedAt: new Date().toISOString(),
-      workspace,
+      workspace: FP.scenarios.toSaved(workspace),
     }, null, 2);
   }
 

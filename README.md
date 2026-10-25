@@ -82,8 +82,18 @@ spend in retirement is more than twice what goes out now, or more than you take 
 it asks: "That's £480,000 a year. Did you mean £40,000 a year (£3,333 a month)?",
 with a button to use that figure. The same goes for everything going out each month
 when it's more than 50% over your take-home, and for a salary under £1,000 (did you
-mean that a month?) or over £1,000,000 (did you mean a tenth of it?). They never
-stop you carrying on.
+mean that a month?) or over £1,000,000 (did you mean a tenth of it?). These never
+stop you carrying on. Figures that can't be right are errors instead, shown in red
+under the box and not kept: more than £100,000 a month to spend in retirement, or more
+than £200,000 a month going out ("More than £100,000 a month can't be right. Check the
+figure: is it a yearly amount?"). The quick start won't go on until they're fixed. While
+any figure fails a sense check, **Plan** shows one warning line above the verdicts, naming
+the figure ("This figure looks wrong, so the results below may be too: what you'd like to
+spend in retirement (£40,000 a month). Check it"), with a link to the box.
+
+**Money boxes** show thousands separators except while you're in them. Tab or
+Shift+Tab into a box selects the whole figure, so typing replaces it; a click puts the
+caret by the digit you clicked.
 
 **The planner opens up in stages**, so there's only a little to take in at a time:
 
@@ -112,7 +122,8 @@ is shown in full once in this browser, then as one line.
 
 **Figures ahead are rounded:** anything five or more years ahead (at retirement, in
 the charts, the year-by-year table and the "So what" lines) is shown to three
-significant figures, such as £1.20m, £292k or £3,800 a month, so it doesn't look more
+significant figures, such as £4.20bn, £1.20m, £292k or £3,800 a month (never as an
+exponent), so it doesn't look more
 exact than an estimate can be. Today's figures stay to the pound.
 
 **How it's laid out:** four tabs, one for each step of the journey: **Plan** (where
@@ -217,7 +228,7 @@ The same measure has the same name on every screen (the names live in one place,
 | **Pay and tax** | sheet on Plan, `#plan/pay-and-tax` | Income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links. With a partner, a **Whose pay?** switch and what you take home together. |
 | **Year by year** | from Plan, `#plan/year-by-year` | The projection to your end age (95 unless you change it), in today's or future money: **Life events** and money left over each month (folded above the results), headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), net worth and home equity with the **market paths** (a dashed middle path, a shaded range holding 8 in 10 paths and "Your money lasts to 95 in 8 of 10 market paths"), a stacked chart by component, life events marked on both charts, and a full year-by-year table. |
 | **Actions** | second tab, `#actions` | One card per idea, ranked, with Apply, Try as a scenario, Done, Not for me, how to do it and a reminder. |
-| **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. Each scenario is your Baseline plus its own changes, so a change to the Baseline (in Your figures, or an action you apply) carries into every scenario, and each scenario's list of differences stays just its own; editing a scenario changes only that scenario. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm, and the other scenarios keep their own changes on top of it; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Progress** | fourth tab, `#progress` | Since last time, a chart of what you had against what your plan expected, and every check-in. **Check in** is `#checkin`. |
 | **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal and risk), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
 | **Assumptions** | More menu, `#assumptions` | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
@@ -236,7 +247,8 @@ is checked as you type, with plain-English errors. Blank boxes count as £0.
 - Everything is saved in your browser's **local storage on this device only**. There
   are no accounts and no server, and the page's Content Security Policy blocks all
   network connections (`connect-src 'none'`).
-- **Export** saves every scenario to a JSON file; **Import** loads one back (it is
+- **Export** saves every scenario to a JSON file (your Baseline in full, and each
+  other scenario as just what it changes); **Import** loads one back (it is
   checked and cleaned up first). Saves and backups from every earlier version still
   load: each is upgraded one numbered step at a time (`js/model/migrate.js`). A save
   or backup from a newer version than the page is refused with a message saying so.
@@ -727,7 +739,8 @@ css/styles.css             mobile-first styles; light and dark themes
 js/config/assumptions.js   every assumption: label, unit, default, range, help, date set
 js/config/tax-2026-27.js   UK tax, NI and student loan rules for one tax year
 js/model/profile.js        the shared data model: fields, parsing, validation, normalising
-js/model/scenarios.js      workspace of scenarios: copy, rename, delete, differences
+js/model/scenarios.js      workspace of scenarios: the Baseline plus a patch each; copy, rename,
+                           delete, differences
 js/model/sample.js         fictional sample household and example scenarios
 js/model/migrate.js        numbered steps that upgrade older saves and backups
 js/model/store.js          localStorage, export/import, clear
@@ -744,6 +757,7 @@ js/app.js                  routing, saving and the scenario picker
 tests/*.test.js            node:test unit tests
 tests/fixtures/*.json      five example households for the golden snapshots
 tests/golden/*.json        today's results for each fixture (see Tests)
+tests/journey/*.spec.js    journey tests in a real browser (Playwright, axe-core)
 docs/PLAN.md               build plan
 ```
 
@@ -754,10 +768,42 @@ so the tests load it straight into Node.
 ## Tests
 
 ```
-npm test   # Node 18+, no dependencies to install
+npm test               # Node 18+, no dependencies needed
+npm run test:journey   # needs `npm install` and `npx playwright install chromium`
 ```
 
-326 tests cover:
+Playwright and axe-core are development dependencies for the journey tests only;
+the site loads nothing new. A GitHub Actions workflow (`.github/workflows/tests.yml`)
+runs both on every pull request.
+
+**Journey tests** (`tests/journey/*.spec.js`) open the planner from `file://` in
+Chromium at 390px and 1280px wide, and fail on any console error:
+
+- the quick-start persona (38, £85,000, £3,200 a month, retire at 60, £3,000 a month)
+  reaching a verdict;
+- Tab, Shift+Tab, click and select-all on every money box in the quick start, with
+  the typed figure replacing the old one;
+- £40,000 a month in retirement showing the yearly check and Plan's warning line,
+  and impossible figures as errors;
+- the sample household with **Use your ISA allowance** applied to the Baseline: the
+  other scenarios' change summaries on What if stay the same;
+- old links (`#now`, `#now/month`, `#future`, `#scenarios`, `#overview`) landing on
+  the right screen;
+- printing Plan in at most 3 pages;
+- every screen opening without console errors, and axe-core on every screen in light
+  and dark mode with no serious or critical violations.
+
+342 unit tests cover:
+
+- **Scenarios as patches:** a scenario's patch rebuilding it exactly (every fixture),
+  rows patched by id following the row, patches from files cleaned, an action applied
+  to the Baseline reaching every scenario with their differences unchanged, editing a
+  scenario changing only its patch, Make this my plan keeping the others' patches,
+  saving and exporting only patches, and version 8 workspaces upgrading (migration 9)
+  with the same figures and golden results.
+- **Sense checks and big figures:** the yearly check at £40,000 a month, errors over
+  £100,000 (retirement) and £200,000 (outgoings) a month, Plan's warning line naming
+  the figure, and £bn rounding (£116bn, £4.20bn) with no exponent.
 
 - **Market paths, life events and what would it take:** the seeded generator and a
   seeded run repeating exactly (in chunks or all at once, and cut to fewer paths),
@@ -874,7 +920,7 @@ npm test   # Node 18+, no dependencies to install
 ## Accessibility
 
 Checked with axe-core on every screen and in an open detail panel, in light and dark mode (WCAG 2.1 AA, no
-violations). Inputs have labels and help text, errors are announced, charts have a
+violations); the journey tests re-check every screen in both modes on each pull request. Inputs have labels and help text, errors are announced, charts have a
 table or keyboard readout (arrow keys), colour is never the only signal, and the layout
 works from 320px wide with no sideways scrolling.
 

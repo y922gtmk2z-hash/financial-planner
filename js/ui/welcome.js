@@ -32,8 +32,9 @@
 
   /*
    * Sense checks on the figures most often typed in the wrong period (a yearly
-   * amount in a monthly box, or the other way round). Never blocking: each asks,
-   * and offers the likely figure. Returns null or { text, fix, fixLabel }.
+   * amount in a monthly box, or the other way round). Most never block: each asks,
+   * and offers the likely figure. Returns null or { text, fix, fixLabel }, or
+   * { error } for a figure that can't be right (the box shows it as an error).
    */
   const maybeYearly = (v) => ({
     text: `That\u2019s ${money(v * 12)} a year. Did you mean ${money(v)} a year (${money(v / 12)} a month)?`,
@@ -41,14 +42,19 @@
     fix: Math.round((v / 12) * 100) / 100,
     fixLabel: `Use ${money(v / 12)} a month`,
   });
+  // Figures no household could have (a month): an error in the box, not a question.
+  const LIMITS = { 'goals.retirementIncome': 100000, 'outgoings.estimate': 200000 };
+  const tooHigh = (path) => ({ error: `More than ${money(LIMITS[path])} a month can\u2019t be right. Check the figure: is it a yearly amount?` });
   const CHECKS = {
     'goals.retirementIncome': (v, p) => {
       if (!(v > 0)) return null;
+      if (v > LIMITS['goals.retirementIncome']) return tooHigh('goals.retirementIncome');
       const takeHome = FP.tax.household(p).takeHomeMonthly;
       const out = FP.summary.compute(p, takeHome).cashFlow.outgoings;
       return (out > 0 && v > out * 2) || (takeHome > 0 && v > takeHome) ? maybeYearly(v) : null;
     },
     'outgoings.estimate': (v, p) => {
+      if (v > LIMITS['outgoings.estimate']) return tooHigh('outgoings.estimate');
       const takeHome = FP.tax.household(p).takeHomeMonthly;
       return v > 0 && takeHome > 0 && v > takeHome * 1.5 ? maybeYearly(v) : null;
     },
@@ -68,6 +74,24 @@
   function senseCheck(path, profile) {
     const c = CHECKS[path] || (path === 'partner.income.grossSalary' ? CHECKS['income.grossSalary'] : null);
     return c ? (v) => c(v, profile()) : undefined;
+  }
+
+  /*
+   * Every figure in this profile that fails its sense check, for Plan's
+   * warning line: [{ path, label, value, shown ("£40,000 a month"), error }] (error: an impossible figure,
+   * saved before it was refused).
+   */
+  function failedChecks(p) {
+    const paths = Object.keys(CHECKS).concat(p.partner ? ['partner.income.grossSalary'] : []);
+    return paths.map((path) => {
+      const v = FP.profile.get(p, path);
+      const c = senseCheck(path, () => p)(v);
+      if (!c) return null;
+      const partner = path === 'partner.income.grossSalary';
+      const f = partner ? FP.profile.fieldFor('income.grossSalary') : FP.profile.fieldFor(path);
+      const label = partner ? `${FP.profile.capital(FP.profile.whose(p, 1))} salary` : f.label;
+      return { path, label, value: v, shown: `${money(v)} ${f.suffix}`, error: !!c.error };
+    }).filter(Boolean);
   }
 
   // How many of the quick-start questions have an answer.
@@ -260,5 +284,5 @@
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, householdToggle, isRough, senseCheck, answerCount };
+  FP.welcome = { render, householdToggle, isRough, senseCheck, failedChecks, answerCount, LIMITS };
 })(globalThis.FP = globalThis.FP || {});

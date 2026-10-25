@@ -18,6 +18,8 @@
  *      (investmentReturn, pensionGrowth) become mixes and a market shift that
  *      give exactly the same rates.
  *   8  Life events (profile.events). Older plans have none.
+ *   9  Scenarios are the baseline plus a patch: every scenario after the
+ *      first keeps only what differs from the baseline, not a whole profile.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -138,6 +140,24 @@
       // Life events started: older plans have none yet.
       up(data) {
         profilesOf(data).forEach((p) => { if (!Array.isArray(p.events)) p.events = []; });
+        return data;
+      },
+    },
+    {
+      from: 8, to: 9,
+      // Each scenario's patch is what differs from the baseline. The baseline
+      // is cleaned up first, so rows it gave new ids keep them.
+      up(data) {
+        if (!isObj(data.workspace) || !Array.isArray(data.workspace.scenarios)) return data;
+        const list = data.workspace.scenarios.filter(isObj);
+        if (!list.length) return data;
+        const base = FP.profile.normalise(list[0].profile);
+        list[0].profile = base;
+        list.slice(1).forEach((sc) => {
+          sc.patch = FP.scenarios.diffPatch(base, FP.profile.normalise(sc.profile));
+          delete sc.profile;
+        });
+        data.workspace.scenarios = list;
         return data;
       },
     },

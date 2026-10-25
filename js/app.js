@@ -81,6 +81,8 @@
       ctx.changed();
     },
     changed() {
+      // A change to the baseline carries into every scenario; a scenario keeps only what it changes.
+      FP.scenarios.sync(workspace);
       changedSinceLoad = true;
       clearTimeout(saveTimer);
       status.textContent = 'Saving…';
@@ -253,6 +255,7 @@
   }
 
   function route() {
+    FP.scenarios.sync(workspace);
     let { id, target } = parseHash();
     const s = stage();
     drawStage(s);

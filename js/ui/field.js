@@ -92,9 +92,21 @@
       });
       input.addEventListener('input', () => commit(input.value));
       // Money shows thousands separators, except while you're typing in it.
-      input.addEventListener('focus', () => {
-        if (field.type === 'money' && input.value.includes(',')) input.value = input.value.replace(/,/g, '');
-      });
+      // Taking them out clears what the browser selected on focus, so put it
+      // back: all of it (as Tab selects), or the caret by the same digit. A
+      // microtask later, once the browser has placed its selection.
+      input.addEventListener('focus', () => queueMicrotask(() => {
+        if (field.type !== 'money' || !input.value.includes(',')) return;
+        const v = input.value;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const all = start === 0 && end === v.length;
+        const digitsBefore = (i) => v.slice(0, i).replace(/,/g, '').length;
+        const at = [digitsBefore(start), digitsBefore(end)];
+        input.value = v.replace(/,/g, '');
+        if (all) input.select();
+        else input.setSelectionRange(at[0], at[1]);
+      }));
       input.addEventListener('blur', () => {
         const r = FP.profile.parseValue(field, input.value);
         if (r.ok && field.type === 'money') input.value = FP.dom.inputText(field, r.value);
@@ -116,12 +128,23 @@
     if (perNote) input.setAttribute('aria-describedby', `${input.getAttribute('aria-describedby')} ${periodId}`);
     showPeriod(opts.value);
 
-    // A sense check: never blocks, just asks, with a one-tap fix when there's an obvious one.
+    // A sense check: just asks, with a one-tap fix when there's an obvious one.
+    // A figure that can't be right ({ error }) is an error instead, and isn't kept.
     const checkNote = opts.check ? h('p', { class: 'help sense-check', role: 'status' }) : null;
     let current = opts.value;
+    function showError(text) {
+      err.hidden = !text;
+      err.textContent = text || '';
+      if (text) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+    }
     function recheck() {
       if (!checkNote) return;
       const c = input.getAttribute('aria-invalid') ? null : opts.check(current);
+      if (c && c.error) {
+        showError(c.error);
+        checkNote.hidden = true;
+        return;
+      }
       FP.dom.fill(checkNote, c ? [c.text, c.fix != null ? [' ', h('button', {
         type: 'button', class: 'link',
         onclick: () => {
@@ -137,19 +160,16 @@
 
     function commit(raw) {
       const r = FP.profile.parseValue(field, raw);
-      if (r.ok) {
+      const c = r.ok && opts.check ? opts.check(r.value) : null;
+      if (r.ok && !(c && c.error)) {
         current = r.value;
         showPeriod(r.value);
         if (blank) blank.hidden = r.value > 0;
-        err.hidden = true;
-        err.textContent = '';
-        input.removeAttribute('aria-invalid');
+        showError(null);
         opts.onChange(r.value);
         recheck();
       } else {
-        err.hidden = false;
-        err.textContent = r.error;
-        input.setAttribute('aria-invalid', 'true');
+        showError(r.ok ? c.error : r.error);
         recheck();
       }
     }

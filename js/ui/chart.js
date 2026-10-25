@@ -72,10 +72,11 @@
     return el;
   }
 
-  // £1.2m, £250k, £900
+  // £4.2bn, £1.2m, £250k, £900
   function compactMoney(n) {
     const a = Math.abs(n);
     const sign = n < 0 ? '\u2212' : '';
+    if (a >= 1e9) return `${sign}\u00a3${Number((a / 1e9).toFixed(a >= 1e10 ? 0 : 1)).toLocaleString('en-GB')}bn`;
     if (a >= 1e6) return `${sign}\u00a3${Number((a / 1e6).toFixed(a >= 1e7 ? 0 : 1))}m`;
     if (a >= 1e3) return `${sign}\u00a3${Math.round(a / 1e3)}k`;
     return `${sign}\u00a3${Math.round(a)}`;
