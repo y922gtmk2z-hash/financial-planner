@@ -79,7 +79,7 @@
 
   /*
    * Where "Add your pensions and savings" (and any "add more detail" link) opens
-   * Your figures, in this order: Assets, Debts, Income (its Advanced part) and
+   * Your figures, in this order: Assets, Debts, Income (beyond your salary) and
    * Outgoings (itemised). The first section you haven't been to yet; if you've
    * been to them all, the first that's still empty; otherwise Assets. Never
    * About you, which the quick start has filled.

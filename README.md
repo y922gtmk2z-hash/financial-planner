@@ -67,7 +67,7 @@ spend your goal to the end of your plan. A line says it's based on your answers 
 either that it includes your rough figure for pensions and savings or, if you left
 that blank, that pensions and savings you already have aren't included yet; the button under it
 is **Add your pensions and savings**. It opens Your figures where the gaps are: the
-first of Assets, Debts, Income (its Advanced part) and Outgoings (itemised) you
+first of Assets, Debts, Income (beyond your salary) and Outgoings (itemised) you
 haven't been to yet, or if you've been to them all, the first that's still empty
 (never About you, which the quick start has filled).
 
@@ -76,7 +76,7 @@ bar) sits on Plan (in that card on the first look, under Next steps after)
 and at the top of Your figures, where it follows what you type. It counts your age,
 what goes out, your salary, pension pots, cash savings and your debts (done once
 you've added any or been through Debts, so having none counts), and names the next
-one missing. Your figures also starts with **Have these to hand**: your latest
+one missing. Your figures also starts with **Have these to hand** (folded to one line until you open it): your latest
 payslip and P60 (for Income), pension statements or your provider's app (Assets),
 your State Pension forecast (About you), your mortgage statement and credit card and
 loan statements (Debts) and your student loan balance (Income). Where it helps, each
@@ -163,8 +163,8 @@ wide the tabs become a side menu next to a wider page.
      adventurous or not sure yet). Under it, the three typical mixes, each with its
      trade-off in one line and the not-a-recommendation notice (see
      [What each pot is invested in](#what-each-pot-is-invested-in)).
-   - **Income:** your salary. **Advanced** (folded away) holds the rest, each part
-     folding open on its own with a one-line summary: workplace pension, **student
+   - **Income:** your salary, then the rest of your pay, each part shown
+     folded with a one-line summary: workplace pension, **student
      loan** (repaid from your pay, so it lives here rather than under Debts),
      bonuses, salary sacrifice, **workplace benefits**, tax code and where you live,
      and other income.
@@ -201,6 +201,9 @@ wide the tabs become a side menu next to a wider page.
      · Pay and tax") or from your net worth today: **This month** (cash flow),
      **What you own and owe** (net worth, owned against owed, home equity and the
      mortgage) and **Pay and tax**. Closing a sheet takes you back to your plan.
+   - **Net worth over time** is a stacked chart of what it's made of: home
+     equity, cash savings, ISAs, other investments, pensions and other assets,
+     with debts, your student loan and any shortfall below zero.
    - **See year by year** (under the net worth chart) opens the full projection,
      with a link back to your plan.
 3. **Tap any figure** to open its detail panel: the result and a chart, the inputs
@@ -253,7 +256,7 @@ The same measure has the same name on every screen (the names live in one place,
 | **Actions** | second tab, `#actions` | One card per idea, ranked, with Apply, Try as a scenario, Done, Not for me, how to do it and a reminder. |
 | **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), a **life what-if** (go four days a week, six months out of work, move house, have a child, help a child through university: each a life event starting next year that you can edit, from **Edit it**), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. Each scenario is your Baseline plus its own changes, so a change to the Baseline (in Your figures, or an action you apply) carries into every scenario, and each scenario's list of differences stays just its own; editing a scenario changes only that scenario. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm, and the other scenarios keep their own changes on top of it; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Progress** | fourth tab, `#progress` | Since last time, a chart of what you had against what your plan expected, and every check-in. **Check in** is `#checkin`. |
-| **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal, your State Pension amount and age under a fold, with the link to check your forecast, and risk), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
+| **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal, your State Pension amount and age under a fold, with the link to check your forecast, and risk), **Income** (salary, then each part folded: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. The Back and Next buttons sit straight under the section, above the strip. |
 | **Assumptions** | More menu, `#assumptions` | Economic assumptions only (growth, inflation, returns, fees, tax policy), editable, with the date each default was set, per-item reset and **Reset all to defaults**. Personal facts entered in Your figures (retirement age, State Pension amount and age, mortgage rate, pension %) are listed in one line with a link there, and resetting leaves them alone. |
 | **Settings** | More menu, `#settings` | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** | More menu, `#data` | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
@@ -262,7 +265,8 @@ The same measure has the same name on every screen (the names live in one place,
 `#now/own` and `#now/pay` (and the even older `#today` and `#income`) open the
 matching detail sheet; `#future` opens Year by year; `#scenarios` opens What if.
 
-Basic inputs are shown first; less common ones are under **Advanced**. Every input
+Basic inputs are shown first; less common ones are folded away. Opening a folded
+section closes the others beside it, so one is open at a time. Every input
 is checked as you type, with plain-English errors. Blank boxes count as £0.
 
 ## Your data and privacy
