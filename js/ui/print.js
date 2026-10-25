@@ -118,5 +118,5 @@
     return h('button', { type: 'button', class: 'secondary print-btn', onclick: () => { fill(ctx, root); window.print(); } }, 'Print or save as PDF');
   }
 
-  FP.print = { attach, button, fill, build };
+  FP.print = { attach, button, fill };
 })(globalThis.FP = globalThis.FP || {});

@@ -166,7 +166,7 @@
           ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
           return;
         }
-        ctx.go('overview');
+        ctx.go('plan');
       } }, 'See my plan'));
     drawPartner();
     (root || card).addEventListener('input', (e) => {
@@ -260,5 +260,5 @@
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, quickStart, householdToggle, isRough, senseCheck, answerCount };
+  FP.welcome = { render, householdToggle, isRough, senseCheck, answerCount };
 })(globalThis.FP = globalThis.FP || {});

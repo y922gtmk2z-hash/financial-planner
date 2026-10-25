@@ -79,14 +79,15 @@ test('GitHub Pages: no code builds absolute paths', () => {
 test('navigation: every route has a screen; Setup is in the header, views are tabs', () => {
   const routes = JSON.parse(read('js/app.js').match(/const ROUTES = (\[[^\]]+\])/)[1].replace(/'/g, '"'));
   const ui = jsFiles('js/ui').map((f) => read(f)).join('\n');
-  routes.forEach((r) => assert.match(ui, new RegExp(`FP\\.screens\\.${r} = \\{`), `no screen for #${r}`));
+  const esc = (r) => r.replace(/-/g, '\\-');
+  routes.forEach((r) => assert.match(ui, new RegExp(`FP\\.screens(\\.${esc(r)}|\\['${esc(r)}'\\]) = \\{`), `no screen for #${r}`));
   const html = read('index.html');
   const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
   const tabs = html.slice(html.indexOf('<nav class="tabbar"'), html.indexOf('</nav>', html.indexOf('<nav class="tabbar"')));
   assert.match(header, /href="#setup"/);
   assert.doesNotMatch(tabs, /href="#setup"/);
   const tabRoutes = [...tabs.matchAll(/data-route="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(tabRoutes, ['overview', 'now', 'future', 'scenarios']);
+  assert.deepEqual(tabRoutes, ['plan', 'actions', 'what-if', 'progress']);
   assert.match(header, /href="#assumptions"/);
   assert.match(header, /href="#data"/);
   assert.match(header, /href="#settings"/);
@@ -123,4 +124,13 @@ test('informational small text is at least 0.8rem', () => {
     assert.ok(rem >= 0.75, `${sel.trim()} font-size ${m[0]}`);
     if (!names.includes('.tabbar a')) assert.ok(rem >= 0.8, `${sel.trim()} font-size ${m[0]}`);
   });
+});
+
+test('older links still lead somewhere: Your plan, Today, Income, Future and Scenarios', () => {
+  const app = read('js/app.js');
+  const aliases = app.slice(app.indexOf('const ALIASES = {'), app.indexOf('};', app.indexOf('const ALIASES = {')));
+  [['overview', "'plan'"], ['now', "'plan/cash-flow'"], ['today', "'plan/own-and-owe'"], ['income', "'plan/pay-and-tax'"], ['future', "'plan/year-by-year'"], ['scenarios', "'what-if'"]]
+    .forEach(([from, to]) => assert.match(aliases, new RegExp(`${from}: [^\\n]*${to}`), `#${from} → ${to}`));
+  // The screens they used to be are gone.
+  ['js/ui/today.js', 'js/ui/now.js'].forEach((f) => assert.ok(!require('node:fs').existsSync(require('node:path').join(__dirname, '..', f)), f));
 });

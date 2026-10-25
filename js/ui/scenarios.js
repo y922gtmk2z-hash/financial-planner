@@ -18,11 +18,11 @@
   function render(root, ctx) {
     const ws = ctx.workspace();
     if (ws.scenarios.length === 1 && FP.checklist.isEmpty(ctx.profile())) {
-      FP.dom.add(root, FP.dom.pageHead('Scenarios', 'What if\u2026'), FP.checklist.emptyCard('and compare what-ifs'));
+      FP.dom.add(root, FP.dom.pageHead('What if', 'Try a change and compare'), FP.checklist.emptyCard('and compare what-ifs'));
       return;
     }
     const results = h('div');
-    let view = FP.screens.future.getView();
+    let view = FP.yearByYear.getView();
     const draw = () => FP.dom.fill(results, compareView(ctx, view, draw));
     const list = h('div');
     const drawList = () => FP.dom.fill(list, listCard(ctx));
@@ -35,12 +35,12 @@
         options: [{ value: 'real', label: 'Today’s money' }, { value: 'nominal', label: 'Future money' }],
       }, {
         value: view,
-        onChange: (v) => { view = v; FP.screens.future.setView(v); draw(); },
+        onChange: (v) => { view = v; FP.yearByYear.setView(v); draw(); },
       })),
       results];
     const several = ws.scenarios.length > 1;
     FP.dom.add(root,
-      FP.dom.pageHead('Scenarios', 'What if\u2026'),
+      FP.dom.pageHead('What if', 'Try a change and compare'),
       several ? null : h('p', { class: 'lead' }, 'Try a change to your plan \u2014 retire earlier, overpay the mortgage, weaker markets \u2014 and compare it side by side.'),
       several ? compare : presetCard(ctx),
       several ? list : null,
@@ -102,7 +102,7 @@
                 S.makeBaseline(ws, sc.id, when);
                 ctx.changed();
                 ctx.rerender();
-                ctx.toast('This is now your plan. Your previous plan is kept under Scenarios.');
+                ctx.toast('This is now your plan. Your previous plan is kept under What if.');
               },
             }, 'Make this my plan'),
             baseline ? null : h('button', {
@@ -326,7 +326,7 @@
           h('p', { class: 'muted small' }, `Projected amounts in ${moneyNote}. Coloured figures show the difference from the baseline.`),
           table),
         sums.some(({ s }) => s.ok && s.projection.warnings.some((w) => w.key === 'shortfall'))
-          ? h('p', { class: 'notice warn' }, 'At least one scenario runs short of money. Open it on the Future screen to see when.')
+          ? h('p', { class: 'notice warn' }, 'At least one scenario runs short of money. Open it and see Year by year on your plan to see when.')
           : null),
       h('section', { class: 'card', 'aria-labelledby': 'ovl-h' },
         h('h2', { id: 'ovl-h' }, 'Over time'),
@@ -343,5 +343,5 @@
   }
 
   FP.screens = FP.screens || {};
-  FP.screens.scenarios = { title: 'Scenarios', render };
+  FP.screens['what-if'] = { title: 'What if', render };
 })(globalThis.FP = globalThis.FP || {});

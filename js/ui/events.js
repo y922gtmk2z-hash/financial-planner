@@ -1,5 +1,5 @@
 /*
- * Life events on Future: dated costs or money coming in (a house move,
+ * Life events on Year by year: dated costs or money coming in (a house move,
  * childcare, a career break, an inheritance...), one card each, with presets.
  * They go into the projection and show as markers on the charts.
  */
@@ -20,7 +20,7 @@
     return `${name}: ${money(e.amount)}${e.per === 'lump' ? '' : ' a month'} ${when}${t.dir === 'in' ? ' coming in' : ''}`;
   }
 
-  // The fold on Future. onChange: the projection needs drawing again.
+  // The fold on Year by year. onChange: the projection needs drawing again.
   function card(ctx, onChange) {
     const sum = h('span', { class: 'muted small' });
     const list = h('div', { class: 'events-body' });

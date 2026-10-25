@@ -122,7 +122,7 @@
       drawFund(r, shares, left);
       rows.querySelectorAll('.fund-target').forEach((el) => { el.hidden = !(shares.emergency > 0); });
       drawAlloc(shares, left);
-      FP.screens.future.drawSplitStatus(status, p.leftover, r.left);
+      FP.yearByYear.drawSplitStatus(status, p.leftover, r.left);
       // Under 100% is said in the allocation notice; the line below covers the rest.
       status.hidden = shares.status === 'under';
 

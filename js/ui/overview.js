@@ -1,7 +1,9 @@
 /*
- * Overview: your plan as answers to four questions (each month, debt-free,
+ * Plan (#plan): your plan as answers to four questions (each month, debt-free,
  * retirement, next steps). Every figure opens a detail panel where you can
- * change what drives it and see the effect.
+ * change what drives it and see the effect. Where you stand today opens as
+ * detail sheets (#plan/cash-flow, #plan/own-and-owe, #plan/pay-and-tax; see
+ * FP.planSheets) and the full projection as #plan/year-by-year (FP.yearByYear).
  */
 (function (FP) {
   'use strict';
@@ -18,10 +20,15 @@
   };
   const IDEA_PANEL = { noSurplus: 'leftover', emergency: 'emergency', isa: 'leftover', debt: 'leftover', mortgage: 'mortgage', studentLoan: 'studentLoan', taper: 'retirement', relief: 'retirement', match: 'retirement' };
 
-  function render(root, ctx) {
+  const isSheet = (target) => FP.planSheets.SHEETS.some((x) => x.id === target);
+
+  function render(root, ctx, target) {
     const p = ctx.profile();
     // Until the quick start's done: say what this is and how to start.
     if (!FP.summary.checklist(p).ready) { FP.welcome.render(root, ctx); return; }
+    if (target === 'year-by-year') { FP.yearByYear.render(root, ctx); return; }
+    // A detail sheet opens over your plan once it's drawn.
+    if (isSheet(target)) setTimeout(() => { if (root.isConnected && location.hash === `#plan/${target}`) FP.planSheets.open(ctx, target); }, 0);
     // The household's take-home (yours, with just you).
     const pay = FP.tax.household(p);
     const today = FP.summary.compute(p, pay.takeHomeMonthly);
@@ -114,7 +121,7 @@
       { label: 'Take-home pay', value: money(pay.takeHomeMonthly), sub: 'a month', open: panel('takeHome') },
       { label: left < 0 ? 'Short each month' : 'Left over each month', value: money(Math.abs(left)), sub: 'after spending, debts and saving', warn: left < 0, open: panel('leftover') },
       e && Number.isFinite(e.months) ? { label: 'Emergency fund', value: `${e.months >= 24 ? '24+' : e.months.toFixed(1)} months`, sub: `target ${e.targetMonths} ${e.targetMonths === 1 ? 'month' : 'months'}`, warn: e.short, open: panel('emergency') } : null,
-    ], ideaFor('month', ideas), panel, null, '#setup/income');
+    ], ideaFor('month', ideas), panel, FP.planSheets.links(), '#setup/income');
   }
 
   function debtCard(p, proj, ideas, panel) {
@@ -245,7 +252,7 @@
         n ? link('#actions', `${n} ${n === 1 ? 'action' : 'actions'} to look at`, 'Apply them, try them as a scenario, or set a reminder \u2014 general rules of thumb, not advice') : null,
         checkinLink(ctx),
         link('#progress', 'Your progress', 'What you have against what your plan expected'),
-        link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
+        link('#what-if', 'What if\u2026', 'Compare what-ifs, or work out what it would take to reach a goal'),
         link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, ISAs ${pct(FP.mix.netRate(p.mixes.isa, a, 'invest'))} after fees, retire at ${a.retirementAge}`)),
       h('div', { class: 'button-row backup-row' },
         h('button', { type: 'button', class: 'secondary', onclick: () => FP.backup.exportFile(ctx) }, 'Export a backup'),
@@ -311,7 +318,7 @@
   }
 
   function chartCard(proj, today, a, p) {
-    const real = FP.screens.future.getView() === 'real';
+    const real = FP.yearByYear.getView() === 'real';
     const rows = real ? proj.rows.map(FP.projection.toReal) : proj.rows;
     const ev = proj.events;
     const moneyNote = real ? 'today\u2019s money' : 'future pounds';
@@ -322,7 +329,7 @@
     ].filter(Boolean);
     return h('section', { class: 'card', 'aria-labelledby': 'ov-chart-h' },
       h('h2', { id: 'ov-chart-h' }, 'Net worth over time'),
-      h('p', { class: 'muted' }, h('a', { href: '#now/own' }, `${money(today.netWorth)} today`), ` (${money(today.assets.total)} owned \u2212 ${money(today.liabilities.total)} owed)`),
+      h('p', { class: 'muted' }, h('a', { href: '#plan/own-and-owe', 'data-sheet': 'own-and-owe' }, `${money(today.netWorth)} today`), ` (${money(today.assets.total)} owned \u2212 ${money(today.liabilities.total)} owed)`),
       FP.chart.timeChart({
         type: 'line', series, markers,
         xLabels: rows.map((x) => String(x.age)),
@@ -330,7 +337,7 @@
         ariaLabel: `Line chart of projected net worth by age, in ${moneyNote}`,
       }),
       FP.dom.soWhat(netWorthSoWhat(rows, ev)),
-      h('p', { class: 'muted small' }, `Ages along the bottom, to ${rows[rows.length - 1].age}, in ${moneyNote}. `, h('a', { href: '#future' }, 'See the full projection')),
+      h('p', { class: 'muted small' }, `Ages along the bottom, to ${rows[rows.length - 1].age}, in ${moneyNote}. `, h('a', { href: '#plan/year-by-year' }, 'See year by year')),
       FP.dom.cardFoot('#setup/assets'));
   }
 
@@ -345,5 +352,10 @@
 
 
   FP.screens = FP.screens || {};
-  FP.screens.overview = { title: 'Your plan', render, netWorthSoWhat, taxYearStale };
+  FP.screens.plan = {
+    title: 'Your plan', render, netWorthSoWhat,
+    // Its sub-pages: the year by year view and the detail sheets.
+    handles: (target) => target === 'year-by-year' || isSheet(target),
+    titleFor: (target) => (target === 'year-by-year' ? 'Year by year' : null),
+  };
 })(globalThis.FP = globalThis.FP || {});

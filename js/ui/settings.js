@@ -19,9 +19,9 @@
         h('h2', { id: 'set-proj' }, 'Projections'),
         FP.field.render({
           label: 'Show amounts in', type: 'toggle',
-          help: 'Today\u2019s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Future and Scenarios.',
+          help: 'Today\u2019s money removes inflation so amounts are comparable with now. Future money shows the actual pounds in each year. You can also switch on Year by year and What if.',
           options: [{ value: 'real', label: 'Today\u2019s money' }, { value: 'nominal', label: 'Future money' }],
-        }, { value: FP.screens.future.getView(), onChange: (v) => FP.screens.future.setView(v) })),
+        }, { value: FP.yearByYear.getView(), onChange: (v) => FP.yearByYear.setView(v) })),
       h('p', { class: 'muted small' }, 'Backups, import and clearing your data are in ', h('a', { href: '#data' }, 'Your data'), '.'));
   }
 

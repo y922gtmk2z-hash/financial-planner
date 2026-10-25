@@ -889,7 +889,7 @@
       ctx.toast(`Add ${missing.map((i) => i.label.toLowerCase()).join(' and ')} first.`);
       return;
     }
-    ctx.go('overview');
+    ctx.go('plan');
   }
 
   // Changes save as you type; this takes you to your plan.
