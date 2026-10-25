@@ -5,6 +5,7 @@ const FILES = [
   'js/config/assumptions.js',
   'js/config/tax-2026-27.js',
   'js/model/profile.js',
+  'js/model/commitments.js',
   'js/model/scenarios.js',
   'js/model/checkins.js',
   'js/model/sample.js',

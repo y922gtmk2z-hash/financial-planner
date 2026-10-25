@@ -21,6 +21,8 @@ jobs:
       - run: npm ci
       - name: Unit and golden snapshot tests
         run: npm test
+      - name: Every GOV.UK link resolves
+        run: npm run check:links
       - name: Install Chromium for the journey tests
         run: npx playwright install --with-deps chromium
       - name: Journey tests (390px and 1280px)

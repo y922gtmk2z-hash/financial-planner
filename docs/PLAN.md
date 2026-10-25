@@ -41,7 +41,7 @@ js/app.js                routing and wiring
 tests/*.test.js          node --test
 ```
 
-## Data model (schema v10)
+## Data model (schema v11)
 
 ```
 profile = {
@@ -72,7 +72,8 @@ you in one shape), 7 a mix on every ISA, investment and pension pot (`mixes`, `p
 `pensions[].mix`), replacing the investment and pension return assumptions, 8 life events
 (`events`), 9 scenarios stored as the Baseline plus a patch each, 10 the mortgage's fixed rate
 ending as a month and year with the rate expected after (replacing two assumptions), and
-rough figures (`rough`, e.g. a pension figure from the quick start).
+rough figures (`rough`, e.g. a pension figure from the quick start), 11 your commitments
+(`commitments`: what you said you'd do from Actions, see `js/model/commitments.js`).
 `js/model/migrate.js` upgrades older files one numbered step at a time (`{ from, to,
 up }`), so `profile.normalise` only checks and cleans today's shape. Any change to
 the saved shape adds a step and a test.

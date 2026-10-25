@@ -3710,8 +3710,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": null,
+        "commitment": {
+          "action": "emergencyOk",
+          "what": "Emergency fund in place",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null
@@ -3756,12 +3764,20 @@
           }
         },
         "howTo": [
-          "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
+          "Ask payroll or HR to raise your contribution from 5% to 8%: about £155 a month going in, costing you about £93 after tax relief.",
           "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
-          "Check your next payslip to see the new amount going in."
+          "Check your next payslip: about £155 more a month should be going in."
         ],
+        "due": null,
         "safety": false,
         "kind": "retirement",
+        "commitment": {
+          "action": "relief",
+          "what": "Raise your pension contribution from 5% to 8%",
+          "amount": 155,
+          "per": "month",
+          "due": null
+        },
         "valuePerYear": 381,
         "highlights": [
           {
@@ -3783,8 +3799,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": null,
+        "commitment": {
+          "action": "match",
+          "what": "Check for employer matching",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null
@@ -3829,12 +3853,20 @@
           }
         },
         "howTo": [
-          "Check your lender’s yearly overpayment limit first (often 10% of the balance), so you don’t pay an early repayment charge.",
-          "Ask whether overpaying shortens your term or lowers your monthly payment.",
-          "Set it up with your lender as a regular monthly amount or a lump sum."
+          "Ask your lender to set up a regular overpayment of £200 a month (£2,400 a year).",
+          "Stay within your deal’s yearly limit, often 10% of the balance: about £21,000 this year. Above it you may pay an early repayment charge.",
+          "Ask whether overpaying shortens your term or lowers your monthly payment."
         ],
+        "due": null,
         "safety": false,
         "kind": "interest",
+        "commitment": {
+          "action": "mortgage",
+          "what": "Overpay your mortgage by £200 a month",
+          "amount": 200,
+          "per": "month",
+          "due": null
+        },
         "valuePerYear": 736.94,
         "highlights": [
           {
@@ -3909,12 +3941,20 @@
           }
         },
         "howTo": [
-          "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
-          "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
-          "Set up a monthly payment on payday so it happens without thinking about it."
+          "Set up £2,000 a month into a stocks & shares ISA (or a cash ISA for money you’ll need within five years). Open one, or top up one you already have.",
+          "You have about £37,600 of this year’s allowance left, and 163 days until it resets on 5 April 2027.",
+          "Set the payment for payday so it happens without thinking about it."
         ],
+        "due": "2027-04-05",
         "safety": false,
         "kind": "retirement",
+        "commitment": {
+          "action": "isa",
+          "what": "Pay £2,000 a month into an ISA",
+          "amount": 2000,
+          "per": "month",
+          "due": "2027-04-05"
+        },
         "valuePerYear": 1180.02,
         "highlights": [
           {
@@ -3936,8 +3976,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": "retirement",
+        "commitment": {
+          "action": "studentLoan",
+          "what": "Don’t rush to overpay Sam’s student loan",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null

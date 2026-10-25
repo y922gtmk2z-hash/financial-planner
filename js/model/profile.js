@@ -10,7 +10,7 @@
   const ROUGH_PATHS = ['assets.pension'];
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 10;
+  const SCHEMA_VERSION = 11;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -82,6 +82,11 @@
         { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
           nullPlaceholder: 'Same as now',
           help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
+        // Your own State Pension: a personal fact, entered here (the Assumptions panel links to it).
+        { path: 'assumptions.statePension', label: 'Your State Pension', type: 'money', min: 0, max: 50000, suffix: 'a year', statePension: true,
+          help: 'In today\u2019s money, from your forecast on GOV.UK. The full new State Pension (\u00a3241.30 a week, \u00a312,548 a year) is the default; set 0 if you won\u2019t get one. It rises with inflation in your projection.' },
+        { path: 'assumptions.statePensionAge', label: 'Your State Pension age', type: 'int', min: 60, max: 75, suffix: 'years old', statePension: true,
+          help: 'From your forecast. It depends on your date of birth: 67 for most people now, rising to 68.' },
         // Picks which model mix (an illustration, not a recommendation) is shown beside each pot.
         { path: 'about.riskAppetite', label: 'How do you feel about investment risk?', type: 'select', options: RISK_LEVELS,
           help: 'Cautious: you\u2019d rather grow slowly than see big falls. Adventurous: you can ride out big falls for more growth over the long run. It shows a typical mix for your risk level beside each pot; it doesn\u2019t change your plan unless you use that mix.' },
@@ -344,6 +349,8 @@
       ideas: {},
       // Figures that are only a rough answer from the quick start, until you edit them: { 'assets.pension': true }.
       rough: {},
+      // What you've committed to doing, from Actions (see FP.commitments).
+      commitments: [],
       spending: [newRest()],
       assumptions: FP.assumptions.defaults(),
       // A partner, planned together with you (see partnerOf), or null for just you.
@@ -406,7 +413,7 @@
     { path: 'partner.retirementAge', label: 'When they’d like to retire', type: 'int', min: 40, max: 80, suffix: 'years old',
       help: 'When their salary and workplace pension contributions stop. Your plan’s retirement goal starts once you’ve both retired.' },
     { path: 'partner.statePension', label: 'Their State Pension', type: 'money', max: 50000, suffix: 'a year', more: true,
-      help: 'In today’s money, from their forecast on GOV.UK. The full new State Pension is the default.' },
+      help: 'In today’s money, from their forecast on GOV.UK. The full new State Pension is the default; set 0 if they won’t get one.' },
     { path: 'partner.statePensionAge', label: 'Their State Pension age', type: 'int', min: 60, max: 75, suffix: 'years old', more: true,
       help: 'From their forecast. It depends on their date of birth.' },
   ];
@@ -647,6 +654,7 @@
         if (/^[a-zA-Z]{1,30}$/.test(k) && IDEA_MARKS.includes(v)) p.ideas[k] = v;
       });
     }
+    if (Array.isArray(src.commitments) && FP.commitments) p.commitments = FP.commitments.normalise(src.commitments);
     if (src.rough && typeof src.rough === 'object') {
       ROUGH_PATHS.forEach((k) => { if (src.rough[k] === true && get(p, k) > 0) p.rough[k] = true; });
     }

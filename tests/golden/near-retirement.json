@@ -2397,8 +2397,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": null,
+        "commitment": {
+          "action": "emergencyOk",
+          "what": "Emergency fund in place",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null
@@ -2411,8 +2419,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": null,
+        "commitment": {
+          "action": "match",
+          "what": "Check for employer matching",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null
@@ -2464,12 +2480,20 @@
           }
         },
         "howTo": [
-          "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
-          "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
-          "Set up a monthly payment on payday so it happens without thinking about it."
+          "Set up £640 a month into a stocks & shares ISA (or a cash ISA for money you’ll need within five years). Open one, or top up one you already have.",
+          "You have about £20,000 of this year’s allowance left, and 163 days until it resets on 5 April 2027.",
+          "Set the payment for payday so it happens without thinking about it."
         ],
+        "due": "2027-04-05",
         "safety": false,
         "kind": "retirement",
+        "commitment": {
+          "action": "isa",
+          "what": "Pay £640 a month into an ISA",
+          "amount": 640,
+          "per": "month",
+          "due": "2027-04-05"
+        },
         "valuePerYear": -2.13,
         "highlights": [
           {

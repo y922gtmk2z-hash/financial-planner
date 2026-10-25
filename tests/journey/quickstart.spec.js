@@ -18,7 +18,7 @@ test('the quick-start persona reaches a verdict', async ({ page }) => {
 
 // Moves focus with Tab (or Shift+Tab) until it reaches `target`, as you would.
 async function tabTo(page, target, key) {
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 12; i += 1) {
     await page.keyboard.press(key);
     if (await target.evaluate((el) => el === document.activeElement)) return;
   }

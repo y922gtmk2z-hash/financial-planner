@@ -112,8 +112,9 @@
 
   /*
    * About you: who the plan is for, then what the quick start asked. With a
-   * partner, your name and theirs, their age and retirement age, and their
-   * State Pension under More (their pay is under Income).
+   * partner, your name and theirs, their age and retirement age. Each of
+   * your State Pensions (amount and age) is folded under its own heading,
+   * with the link to check your forecast (their pay is under Income).
    */
   function aboutCard(ctx) {
     const p = ctx.profile();
@@ -128,7 +129,9 @@
         if (back) back.focus();
       }, { confirm: true }),
       p.partner ? make(P.NAME_FIELD) : null,
-      section('about').fields.map((f) => (f.path === 'about.riskAppetite' ? riskField(ctx, make(f)) : make(f))),
+      section('about').fields.filter((f) => !f.statePension).map((f) => (f.path === 'about.riskAppetite' ? riskField(ctx, make(f)) : make(f))),
+      h('details', { class: 'advanced', id: 'your-state-pension' }, h('summary', null, p.partner ? 'Your State Pension' : 'State Pension'),
+        section('about').fields.filter((f) => f.statePension).map(make)),
       p.partner ? h('div', { class: 'field-group person-group', role: 'group', 'aria-labelledby': 'grp-partner' },
         h('h3', { id: 'grp-partner' }, p.partner.name || 'Your partner'),
         theirs.filter((f) => !f.more).map(make),
@@ -364,7 +367,7 @@
     drawLists();
     const card = h('section', { class: 'card', id: 'spending', 'aria-labelledby': 'sec-spend' },
       h('h2', { id: 'sec-spend' }, 'Outgoings'),
-      make(P.fieldFor('outgoings.estimate')),
+      (() => { const el = make(P.fieldFor('outgoings.estimate')); return [el, FP.welcome.estimateHelper(() => el)]; })(),
       status,
       h('div', { class: 'parts' }, bills.el, debts.el, other.el),
       FP.savingsEditor.render(ctx, { embedded: true }));
@@ -815,13 +818,15 @@
    * What's worth finding before you start, and which section each fills. Open
    * the first time you see Your figures, then folded to one line.
    */
+  const L = () => FP.field.LINKS;
   const TO_HAND = [
     ['Your latest payslip', 'Income', 'income', 'salary, pension contributions, tax code and any student loan or salary sacrifice'],
-    ['Your P60', 'Income', 'income', 'last tax year\u2019s pay and tax code'],
-    ['Pension statements (or your pension provider\u2019s app)', 'Assets', 'assets', 'your pension pots'],
-    ['Your mortgage statement', 'Debts', 'debts', 'balance, rate and time left'],
+    ['Your P60', 'Income', 'income', 'last tax year\u2019s pay and tax code', () => [L().taxCode, 'Your tax code: personal tax account (or the HMRC app)']],
+    ['Pension statements (or your pension provider\u2019s app)', 'Assets', 'assets', 'your pension pots', () => [L().findPension, 'Find old pensions']],
+    ['Your State Pension forecast', 'About you', 'your-state-pension', 'how much you\u2019ll get, and from what age', () => [L().statePension, 'Check your State Pension forecast']],
+    ['Your mortgage statement', 'Debts', 'debts', 'balance, rate, time left and when any fixed rate ends'],
     ['Credit card and loan statements', 'Debts', 'debts', 'balances, monthly payments and interest rates'],
-    ['Your student loan balance (your Student Loans Company online account)', 'Income', 'income', 'what you owe and when you started repaying'],
+    ['Your student loan balance', 'Income', 'income', 'what you owe and when you started repaying', () => [L().studentLoan, 'Sign in to manage your student loan balance']],
   ];
   function toHand() {
     const first = FP.store.pref('seenToHand') !== '1';
@@ -829,10 +834,11 @@
     return h('details', { class: 'card fold-card to-hand', id: 'to-hand', open: first || null },
       h('summary', null, h('span', { class: 'fold-title' }, 'Have these to hand'), h('span', { class: 'fold-sum' }, 'Payslip, P60, pension and debt statements')),
       h('div', { class: 'fold-body' },
-        h('p', { class: 'help' }, 'Not essential: a rough figure is fine for anything you don\u2019t have.'),
-        h('ul', { class: 'to-hand-list' }, TO_HAND.map(([what, section, id, fills]) => h('li', null,
+        h('p', { class: 'help' }, 'Not essential: a rough figure is fine for anything you don\u2019t have. Links open GOV.UK in a new tab.'),
+        h('ul', { class: 'to-hand-list' }, TO_HAND.map(([what, section, id, fills, online]) => h('li', null,
           h('strong', null, what),
-          h('span', null, ' for ', h('a', { href: `#setup/${id}` }, section), `: ${fills}.`))))));
+          h('span', null, ' for ', h('a', { href: `#setup/${id}` }, section), `: ${fills}.`),
+          online ? h('span', { class: 'to-hand-link' }, ' ', FP.field.link(...online())) : null)))));
   }
 
   /*

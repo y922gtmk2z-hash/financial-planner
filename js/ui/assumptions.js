@@ -11,12 +11,14 @@
       h('h1', null, 'Assumptions'),
       h('p', { class: 'lead' }, 'These numbers drive every result. Change them to match your view; the defaults are reasonable starting points, not predictions.'),
       h('div', { class: 'card actions' },
-        h('p', { class: 'muted' }, `${countEdited(p)} of ${A.DEFS.length} changed from the defaults (set ${FP.dom.date(A.DEFS[0].setOn)}). Resetting doesn’t touch your balances, salary or spending.`),
+        h('p', { class: 'muted' }, `${countEdited(p)} of ${A.DEFS.filter((d) => !IN_SETUP.has(d.key)).length} changed from the defaults (set ${FP.dom.date(A.DEFS[0].setOn)}). Economic assumptions only: your own figures, like your State Pension, are in Your figures, and resetting doesn’t touch them.`),
         h('button', {
           type: 'button', class: 'secondary',
           onclick: () => {
-            if (!confirm('Reset every assumption to its default? This includes your mortgage rate and pension contribution %.')) return;
-            p.assumptions = A.defaults();
+            if (!confirm('Reset every assumption to its default? Your own figures (retirement age, State Pension, mortgage rate and pension contributions) stay as they are.')) return;
+            // Personal facts entered in Your figures aren't assumptions: they stay.
+            const kept = Object.fromEntries([...IN_SETUP].map((k) => [k, p.assumptions[k]]));
+            p.assumptions = { ...A.defaults(), ...kept };
             ctx.changed();
             ctx.rerender();
             ctx.toast('Assumptions reset to defaults');
@@ -115,7 +117,7 @@
   }
 
   function countEdited(p) {
-    return A.DEFS.filter((d) => p.assumptions[d.key] !== d.default).length;
+    return A.DEFS.filter((d) => !IN_SETUP.has(d.key) && p.assumptions[d.key] !== d.default).length;
   }
 
   FP.screens = FP.screens || {};

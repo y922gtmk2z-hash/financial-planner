@@ -155,7 +155,7 @@ test('a first visit starts empty, not with sample data', () => {
 
 test('Your figures sections: About you, Income (with the student loan), Assets, Debts', () => {
   const paths = (id) => FP.profile.SECTIONS.find((s) => s.id === id).fields.map((f) => f.path);
-  assert.deepEqual(paths('about'), ['about.age', 'assumptions.retirementAge', 'goals.retirementIncome', 'about.riskAppetite']);
+  assert.deepEqual(paths('about'), ['about.age', 'assumptions.retirementAge', 'goals.retirementIncome', 'assumptions.statePension', 'assumptions.statePensionAge', 'about.riskAppetite']);
   assert.ok(paths('income').includes('income.studentLoanPlan'));
   assert.ok(!paths('debts').some((x) => x.includes('studentLoan')));
 });
