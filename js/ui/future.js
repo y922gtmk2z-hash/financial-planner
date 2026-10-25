@@ -48,6 +48,7 @@
         onChange: (v) => { view = v; setView(v); draw(); },
       })),
       leftoverFold(ctx, draw),
+      FP.checklist.isEmpty(ctx.profile()) ? null : FP.eventsUi.card(ctx, draw),
       results);
     draw();
   }
@@ -119,18 +120,26 @@
       studentLoanTile(sl, rows, end),
     ].filter(Boolean);
 
-    // Net worth if shares and bonds return 2 points a year less or more.
-    const range = (shift) => {
-      const q = JSON.parse(JSON.stringify(p));
-      q.assumptions.marketShift += shift;
-      const rr = FP.projection.project(q, toEnd(q));
-      return (real ? rr.rows.map(FP.projection.toReal) : rr.rows).map((x) => x.netWorth);
-    };
-    const band = { label: 'Returns \u00b12 points', color: '--series-7', low: range(-2), high: range(2) };
+    // Life events, marked on both charts.
+    markers.push(...FP.eventsUi.markers(p, rows));
     const netSeries = [
       { label: 'Net worth', color: '--series-7', values: rows.map((x) => x.netWorth) },
       { label: 'Home equity', color: '--series-1', values: rows.map((x) => x.equity) },
     ];
+    // The net worth chart, with the market paths once they've run (see marketPaths).
+    const netCard = (paths) => netWorthCard({ p, rows, ev, end, real, moneyNote, markers, netSeries, xTitle, keyAssumptions, paths });
+    let netNode = netCard(marketPaths.cached(p));
+    if (!netNode.dataset.done) {
+      marketPaths.schedule(p, (paths) => {
+        if (!netNode.isConnected) return;
+        const next = netCard(paths);
+        netNode.replaceWith(next);
+        netNode = next;
+      }, (status) => {
+        const el = netNode.querySelector('.paths-status');
+        if (el) el.textContent = status;
+      });
+    }
     const compSeries = COMPONENTS.map((c) => ({
       label: c.label, color: c.color,
       values: rows.map((x) => (c.key === 'owed' ? -(x.debts + x.shortfall) : c.negative ? -x[c.key] : x[c.key])),
@@ -143,21 +152,7 @@
       h('p', { class: 'muted small' }, `Amounts ${moneyNote}; figures five or more years ahead are rounded. Projection runs ${r.years} years, to age ${end.age}. ${M.savingsPensions.label}: ${M.savingsPensions.includes}`),
       FP.dom.cardFoot('#setup/assets'),
 
-      h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
-        h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
-        FP.chart.keys(netSeries.map((x) => ({ label: x.label, color: x.color, line: true }))
-          .concat({ label: 'If returns are 2 points lower or higher', color: '--series-7', band: true })),
-        h('p', { class: 'small chart-note' }, h('span', { class: 'swatch swatch-band', style: 'background:var(--series-7)', 'aria-hidden': 'true' }), ' Shaded area: returns 2 points lower or higher.'),
-        FP.chart.timeChart({
-          type: 'line', series: netSeries, markers, band, directLabels: true,
-          xLabels: rows.map((x) => String(x.age)), xTitle,
-          ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}`,
-        }),
-        FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)} With returns 2 points lower it would be ${at(band.low[ev.retirement ? ev.retirement.y : rows.length - 1], ev.retirement ? ev.retirement.y : rows.length - 1)}.`),
-        h('details', { class: 'advanced', id: 'nw-based-on' },
-          h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
-          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if shares and bonds return 2 points a year less or more than your assumptions (by ${end.age}: ${at(band.low[band.low.length - 1], end.y)} to ${at(band.high[band.high.length - 1], end.y)}). Real returns vary from year to year, so the actual path could fall outside it.`),
-          keyAssumptions)),
+      netNode,
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },
         h('h2', { id: 'comp-chart-h' }, 'What your net worth is made of'),
@@ -173,6 +168,101 @@
       tableCard(rows, a, moneyNote),
       notesCard(a, p.leftover, p)];
   }
+
+  /*
+   * Net worth and home equity, with the range from market paths: the middle
+   * path as a dashed line and a band from the 10th to the 90th percentile,
+   * and how many paths your money lasts to your end age in. `paths` is null
+   * while they're being worked out.
+   */
+  function netWorthCard(o) {
+    const { p, rows, ev, end, real, moneyNote, markers, netSeries, xTitle, keyAssumptions, paths } = o;
+    const conv = (row, v) => (real ? v / row.inflationFactor : v);
+    const ok = paths && paths.rows.length === rows.length;
+    const band = ok ? {
+      label: 'Market paths, 10th to 90th percentile', color: '--series-7',
+      low: paths.rows.map((x) => conv(x, x.low)), high: paths.rows.map((x) => conv(x, x.high)),
+    } : null;
+    const series = ok ? netSeries.concat({ label: 'Middle market path', color: '--series-7', dashed: true, values: paths.rows.map((x) => conv(x, x.mid)) }) : netSeries;
+    const yr = ev.retirement ? ev.retirement.y : rows.length - 1;
+    const headline = ok ? lastsHeadline(paths) : null;
+    const card = h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
+      h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
+      ok ? (headline ? h('p', { class: 'paths-headline' }, h('strong', null, headline.main), headline.sub ? ` ${headline.sub}` : null) : null)
+        : h('p', { class: 'muted small paths-status', role: 'status' }, 'Working out market paths\u2026'),
+      FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true, dashed: !!x.dashed }))
+        .concat(band ? { label: '8 in 10 market paths', color: '--series-7', band: true } : [])),
+      FP.chart.timeChart({
+        type: 'line', series, markers, band, directLabels: true,
+        xLabels: rows.map((x) => String(x.age)), xTitle,
+        ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}${band ? ', with the range of market paths' : ''}`,
+      }),
+      FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)}${band ? ` In 8 of 10 market paths it would be between ${at(band.low[yr], yr)} and ${at(band.high[yr], yr)}.` : ''}`),
+      h('details', { class: 'advanced', id: 'nw-based-on' },
+        h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
+        h('p', { class: 'muted small' }, 'Ages along the bottom. Home equity = home value minus mortgage. The solid line uses your assumptions\u2019 average returns every year.'),
+        ok ? h('p', { class: 'muted small' }, `Market paths: your plan run ${paths.paths.toLocaleString('en-GB')} times with yearly returns for shares, bonds and cash drawn at random around their averages, as much as their volatility in Assumptions says (cash savings and house prices stay at their averages). Each path spends your retirement goal from retirement. The dashed line is the middle path and the shaded range holds 8 in 10 of them (by ${end.age}: ${at(conv(paths.rows[end.y], paths.rows[end.y].low), end.y)} to ${at(conv(paths.rows[end.y], paths.rows[end.y].high), end.y)}). The middle path is usually a little below the solid line: ups and downs cost growth even when they average out. The same plan always gives the same paths. Real markets can do better or worse than any of them.`) : null,
+        keyAssumptions));
+    if (ok) card.dataset.done = '1';
+    return card;
+  }
+
+  // "Your money lasts to 95 in 8 of 10 market paths." and, if not all, the middle path's age.
+  function lastsHeadline(paths) {
+    if (paths.lasting == null) return null;
+    const share = FP.paths.outOfTen(paths.lasting, paths.paths);
+    const main = `Your money lasts to ${paths.endAge} in ${share} market paths.`;
+    const sub = paths.lasting < paths.paths && paths.midLastsTo < paths.endAge
+      ? `In the middle path it runs short at ${Math.floor(paths.midLastsTo)}.` : null;
+    return { main, sub };
+  }
+
+  /*
+   * Market paths run after you stop typing (debounced), a slice at a time
+   * between frames so the page stays responsive, and are remembered for the
+   * plan they were run for. 1,000 paths, or 500 if the first 50 show that
+   * 1,000 would take this device more than 300ms.
+   */
+  const marketPaths = (() => {
+    const WAIT = 600;
+    const SLICE_MS = 12;
+    let timer = null;
+    let job = 0;
+    let cache = null;
+    const keyOf = (p) => JSON.stringify(p);
+    return {
+      cached(p) { return cache && cache.key === keyOf(p) ? cache.result : null; },
+      schedule(p, done, status) {
+        clearTimeout(timer);
+        job += 1;
+        const mine = job;
+        const plan = JSON.parse(JSON.stringify(p));
+        const key = keyOf(plan);
+        timer = setTimeout(() => {
+          const runner = FP.paths.runner(plan, { paths: FP.paths.PATHS });
+          if (!runner) return;
+          const t0 = performance.now();
+          runner.next(50);
+          if ((performance.now() - t0) * (FP.paths.PATHS / 50) > 300) runner.limit(FP.paths.FEWER_PATHS);
+          const step = () => {
+            if (mine !== job) return;
+            const start = performance.now();
+            let finished = runner.done >= runner.total;
+            while (!finished && performance.now() - start < SLICE_MS) finished = runner.next(5);
+            if (!finished) {
+              status(`Working out market paths\u2026 ${Math.round((runner.done / runner.total) * 100)}%`);
+              setTimeout(step, 0);
+              return;
+            }
+            const result = runner.result();
+            cache = { key, result };
+            done(result);
+          };
+          step();
+        }, WAIT);
+      },
+    };
+  })();
 
   // Which part of your net worth matters most at retirement (or the end).
   function mixSoWhat(series, y, rows) {
@@ -202,8 +292,8 @@
   function tableCard(rows, a, moneyNote) {
     // Flows (first four) have no value for today's row.
     const cols = [
-      ['Income after tax', (x) => x.netIncome, true],
-      ['Spending', (x) => x.spending, true],
+      ['Income after tax', (x) => x.netIncome + (x.eventsIn || 0), true],
+      ['Spending', (x) => x.spending + (x.eventsOut || 0), true],
       ['Mortgage & debts', (x) => x.mortgagePaid + x.debtPaid + (x.studentLoanExtra || 0), true],
       ['Regular savings', (x) => x.regularSaving, true],
       ['Left over', (x) => x.surplus, true],
@@ -216,7 +306,7 @@
       ['Net worth', (x) => x.netWorth],
     ];
     return FP.dom.foldCard('year-table', 'Year-by-year table', 'Income, spending and balances for every year',
-      h('p', { class: 'muted small' }, `Amounts ${moneyNote}, rounded from five years ahead. Flows (income, spending, left over) are for the year; balances are at the end of it.`),
+      h('p', { class: 'muted small' }, `Amounts ${moneyNote}, rounded from five years ahead. Flows (income, spending, left over) are for the year, with any life events; balances are at the end of it.`),
       h('div', { class: 'table-scroll tall', tabindex: '0', role: 'region', 'aria-label': 'Year-by-year table' }, h('table', { class: 'data-table year-table' },
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, 'Age'), h('th', { scope: 'col' }, 'Year'),

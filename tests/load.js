@@ -19,8 +19,10 @@ const FILES = [
   'js/calc/growth.js',
   'js/calc/mix.js',
   'js/calc/projection.js',
+  'js/calc/paths.js',
   'js/calc/patch.js',
   'js/calc/compare.js',
+  'js/calc/goalseek.js',
   'js/calc/suggest.js',
   'js/calc/outcomes.js',
 ];
