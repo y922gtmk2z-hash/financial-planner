@@ -141,5 +141,18 @@
       h('div', { class: 'fold-body' }, children));
   }
 
-  FP.dom = { h, append, add, fill, money, far, APPROX_YEARS, pct, months, date, inputText, chips, pageHead, cardFoot, soWhat, foldCard, MEASURES, measure, lastsTo };
+  /*
+   * When your plan's retirement goal starts, on your age: when you retire, or
+   * with a partner, once you've both retired (need: from retirementNeed, if worked out).
+   */
+  function retireAt(p, need) {
+    return need && need.retirementAge != null ? need.retirementAge : p.assumptions.retirementAge;
+  }
+  // "you at 63 and Sam at 60": each of you and the age you retire, or '' for just you.
+  function bothRetire(p) {
+    if (!p.partner) return '';
+    return FP.profile.people(p).map((x, i) => `${FP.profile.who(p, i)} at ${x.retirementAge}`).join(' and ');
+  }
+
+  FP.dom = { h, append, add, fill, money, far, APPROX_YEARS, pct, months, date, inputText, chips, pageHead, cardFoot, soWhat, foldCard, MEASURES, measure, lastsTo, retireAt, bothRetire };
 })(globalThis.FP = globalThis.FP || {});

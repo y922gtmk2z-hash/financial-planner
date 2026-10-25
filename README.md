@@ -45,9 +45,12 @@ The first time you open it, it starts **empty**, on a **front page**: the app's 
 three steps (answer five quick questions, see your first plan, add detail when you're
 ready), a **Get started** button, links to a fictional example or to import a backup,
 and the not-advice notice. It has no header, tabs or footer. Get started opens the
-**Quick start**: your age, salary, everything going out each month (including
+**Quick start**: first, who the plan is for (**Just me** or **Me and a partner**);
+then your age, salary, everything going out each month (including
 mortgage, bills and debt payments; an estimate is fine), retirement
-age and (optionally) what you'd like to spend in retirement. Those answers give a
+age and (optionally) what you'd like to spend in retirement. With a partner, four
+more questions appear after your salary: their name (optional), age, salary and
+when they'd like to retire. Those answers give a
 **first look** at Your plan: what you take home and have left each month, and for
 retirement a verdict marked **Rough**: "On course for about £X by 60. You'd need
 about £Y." then "Short by about £Z" or "On course". Both figures are in today's
@@ -379,12 +382,35 @@ not-advice notice. The browser's own Print gives the same summary. No header, ta
 buttons, and always black on white, even in dark mode. The sample household fits on
 two A4 pages.
 
-## Households (in progress)
+## Households
 
-The planner can now plan for **you and a partner** together, and for **more than one
-pension**. The calculations are in place; the screens for entering a partner and
-your other pensions follow. A plan with just you works exactly as before: every
-result is the same, to the penny and in fact to the last decimal.
+The planner can plan for **you and a partner** together, and for **more than one
+pension**. A plan with just you works exactly as before: every result is the same,
+to the penny.
+
+On screen:
+
+- **Quick start and About you** ask who the plan is for, **Just me** or **Me and a
+  partner**. Your partner's questions only appear once you choose a partner. About
+  you then also has your name and theirs (both optional), their age and retirement
+  age, and their State Pension (amount and age) under a fold. Switching back to Just
+  me asks first if you've entered anything for them; their figures are kept until you
+  close the planner, so choosing a partner again brings them back.
+- **Income** in Your figures has a **Whose pay?** switch: the same boxes and editors
+  (pension, student loan, bonuses, salary sacrifice, benefits, tax code, other
+  income) for you or for your partner. **Today → Pay and tax** has the same switch,
+  each payslip on its owner's own allowance, and what you take home together.
+- **Assets** has each of your pension pots, a **Who owns what** fold (you, your
+  partner or both of you), and **Other pensions**, with **Add a pension**: each is a
+  pot (its value, the age it can be taken from, and anything paid in each month) or a
+  defined benefit pension (what it pays a year, and from what age). With a partner,
+  each pension, debt and regular saving says whose it is.
+- **Results name the person where it matters:** "Sam's ISA allowance", "Use Sam's
+  pension to avoid the 60% band", "Sam's student loan written off", and retirement
+  "once you've both retired (you at 63 and Sam at 60)". You are always "you"; your
+  partner goes by their name, or "your partner" without one. The pension and student
+  loan ideas are for whichever of you they apply to (you first); the ISA idea fills
+  your allowance, then your partner's.
 
 How a couple is worked out:
 
@@ -599,7 +625,7 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-290 tests cover:
+295 tests cover:
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and
@@ -630,8 +656,10 @@ npm test   # Node 18+, no dependencies to install
   same shape; tax, NI, student loans and the taper per person, added together;
   retiring in stages with each State Pension at its owner's age; an ISA allowance
   each; defined benefit income from its start age (taxed with pay while working);
-  other pots taking contributions and being drawn; owners; and version 5 saves
-  loading. Two more golden fixtures: a couple and a defined benefit pension.
+  other pots taking contributions and being drawn; owners; version 5 saves
+  loading; names ("you", "Sam's", "your partner's"); your partner's figures as a plan
+  of their own; taking a partner off and bringing them back; and the pension, ISA and
+  student loan ideas for whichever of you they apply to. Two more golden fixtures: a couple and a defined benefit pension.
 - **Check-ins:** balances prefilled and put into every scenario, what the plan
   expected (from the previous check-in, between yearly points), a second check-in
   in a day replacing the first, since last time (net worth, debts paid down,

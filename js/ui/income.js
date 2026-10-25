@@ -19,7 +19,8 @@
   }
 
   // What the figures above are based on, each with a link to change it in Setup.
-  function yourPayCard(p) {
+  // person 1: your partner's (p is then the plan as theirs, from FP.profile.asPerson).
+  function yourPayCard(p, person) {
     const inc = p.income;
     const a = p.assumptions;
     const total = (list, key) => list.reduce((t, x) => t + (x[key] || 0), 0);
@@ -34,7 +35,7 @@
       })(), 'income.region'],
       ['Tax code', inc.taxCode || 'Standard (1257L)', 'income.taxCode'],
       ['Gross salary', inc.grossSalary > 0 ? `${money(inc.grossSalary)} a year` : 'Not entered', 'income.grossSalary'],
-      ['Your pension', `${pct(a.employeePensionPct, 1)} of salary${method ? ` \u00b7 ${method}` : ''}`, 'assumptions.employeePensionPct'],
+      [person ? 'Their pension' : 'Your pension', `${pct(a.employeePensionPct, 1)} of salary${method ? ` \u00b7 ${method}` : ''}`, 'assumptions.employeePensionPct'],
       ['Employer pension', `${pct(a.employerPensionPct, 1)} of salary`, 'assumptions.employerPensionPct'],
       ['Bonuses', bonuses.length ? `${money(total(bonuses, 'amount'))} a year (${bonuses.map((b) => monthName(b.month)).join(', ')})` : 'None', 'bonuses'],
       ['Salary sacrifice', inc.sacrifices.length ? `${money(total(inc.sacrifices, 'monthly'))} a month` : 'None', 'sacrifices'],
@@ -53,7 +54,7 @@
     return FP.dom.foldCard('pay-based-on', 'Based on', summary,
       h('dl', { class: 'facts' }, rows.map(([label, value, target]) => h('div', null,
         h('dt', null, label),
-        h('dd', null, value, ' ', h('a', { href: `#setup/${target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Your figures` }, 'Change'))))),
+        h('dd', null, value, ' ', h('a', { href: `#setup/${person ? FP.profile.personPath(1, target) || `partner:${target}` : target}`, class: 'edit-link', 'aria-label': `Change ${label.toLowerCase()} in Your figures` }, 'Change'))))),
       h('p', { class: 'muted small' }, 'Everything is entered in Your figures, so there\u2019s one place to change it.'));
   }
 
@@ -70,7 +71,8 @@
         h('ul', null, cfg.sources.map((s) => h('li', null, h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.label))))));
   }
 
-  function resultsView(p) {
+  // whose: "Sam’s" for your partner's pay (p then the plan as theirs), or nothing for yours.
+  function resultsView(p, whose) {
     const input = FP.tax.inputFromProfile(p);
     const r = FP.tax.takeHome(input);
     const cfg = FP.taxConfig;
@@ -101,7 +103,7 @@
 
     return [
       h('section', { class: 'card hero', 'aria-labelledby': 'th-h' },
-        h('h2', { id: 'th-h', class: 'eyebrow' }, 'Take-home pay'),
+        h('h2', { id: 'th-h', class: 'eyebrow' }, whose ? `${whose} take-home pay` : 'Take-home pay'),
         h('p', { class: 'hero-number' }, `${money(r.takeHomeMonthly)}`, h('span', { class: 'per' }, ' a month')),
         h('p', { class: 'muted' }, `${money(r.takeHome)} a year from ${money(r.gross)} gross`,
           regular ? ` \u00b7 ${money(r.bonusSpread)} of bonus spread evenly; ${money(regular.takeHomeMonthly)} a month without it` : ''),
@@ -121,7 +123,7 @@
           input.studentLoanPlan !== 'none' ? `Student loan ${PLAN_LABELS[input.studentLoanPlan]}` : 'No student loan',
         ])),
       breakdownCard(r),
-      studentLoanCard(p, r),
+      studentLoanCard(p, r, whose),
       bandsCard(r),
       FP.dom.foldCard('pay-notes', 'How this is worked out', 'Your pension method, bonuses and what isn\u2019t included',
         h('ul', { class: 'notes' },
@@ -184,11 +186,12 @@
   }
 
   // Balance, interest and when the loan ends (from the projection).
-  function studentLoanCard(p, r) {
+  function studentLoanCard(p, r, whose) {
+    const title = `${whose || 'Your'} student loan`;
     const inc = p.income;
     const plan = inc.studentLoanPlan;
     if (plan === 'none') return null;
-    const head = h('h2', { id: 'sl-h' }, 'Your student loan');
+    const head = h('h2', { id: 'sl-h' }, title);
     const writeOff = FP.studentLoan.writeOffYear(plan, inc.studentLoanStartYear);
     if (!FP.studentLoan.tracked(p)) {
       return h('section', { class: 'card', 'aria-labelledby': 'sl-h' }, head,
@@ -216,7 +219,7 @@
     const headline = sl && sl.clearedRow ? `${money(inc.studentLoanBalance)} \u00b7 repaid in ${sl.clearedRow.year}`
       : sl && sl.writtenOffRow ? `${money(inc.studentLoanBalance)} \u00b7 written off April ${writeOff}`
         : `${money(inc.studentLoanBalance)} owed`;
-    return FP.dom.foldCard('pay-student-loan', 'Your student loan', headline,
+    return FP.dom.foldCard('pay-student-loan', title, headline,
       h('dl', { class: 'rows' }, [
         ['Balance today', money(inc.studentLoanBalance)],
         ['Interest rate now', `${pct(rate, 2)}${plan === 'plan2' && override == null ? ' (depends on income)' : ''}`],

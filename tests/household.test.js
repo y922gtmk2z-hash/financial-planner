@@ -87,7 +87,7 @@ test('ISA allowances are per person: regular ISA savings use their owner’s', (
   assert.ok(FP.projection.project(FP.profile.normalise(p)).warnings.some((w) => w.key === 'isaAllowance'), '£36,000 for one person doesn’t');
   // Ideas count an allowance each.
   const isa = FP.suggest.analyse(couple()).suggestions.find((s) => s.id === 'isa');
-  assert.match(isa.text, /£37,600 of this year’s £20,000/);
+  assert.match(isa.text, /^You have about £20,000 of your ISA allowance left this year, and Sam has £17,600 \(£20,000 each\)\./);
 });
 
 test('a defined benefit pension adds taxable income from its start age', () => {
@@ -150,4 +150,84 @@ test('version 5 saves load as just you, with no other pensions', () => {
   const ws = FP.scenarios.fromProfile(couple());
   const back = FP.store.importJson(FP.store.exportJson(ws));
   assert.deepEqual(back.workspace.scenarios[0].profile, ws.scenarios[0].profile);
+});
+
+test('names: you are always "you"; a partner goes by their name, or "your partner"', () => {
+  const p = couple();
+  assert.equal(FP.profile.who(p, 0), 'you');
+  assert.equal(FP.profile.whose(p, 0), 'your');
+  assert.equal(FP.profile.who(p, 1), 'Sam');
+  assert.equal(FP.profile.whose(p, 1), 'Sam’s');
+  p.partner.name = '';
+  assert.equal(FP.profile.whose(p, 1), 'your partner’s');
+  assert.equal(FP.profile.capital(FP.profile.whose(p, 1)), 'Your partner’s');
+});
+
+test('personPath and asPerson: your partner’s figures in your own fields', () => {
+  assert.equal(FP.profile.personPath(0, 'income.grossSalary'), 'income.grossSalary');
+  assert.equal(FP.profile.personPath(1, 'income.bonuses.0.amount'), 'partner.income.bonuses.0.amount');
+  assert.equal(FP.profile.personPath(1, 'assumptions.employeePensionPct'), 'partner.employeePensionPct');
+  assert.equal(FP.profile.personPath(1, 'mortgage.balance'), null, 'not a person’s own');
+  const p = couple();
+  const sam = FP.profile.asPerson(p, 1);
+  assert.equal(sam.partner, null);
+  assert.equal(sam.about.age, 39);
+  assert.equal(sam.income, p.partner.income, 'shared, so edits land in the plan');
+  assert.equal(sam.assumptions.retirementAge, 60);
+  assert.deepEqual(FP.tax.forProfile(sam), FP.tax.household(p).people[1]);
+  assert.equal(FP.profile.asPerson(p, 0), p);
+});
+
+test('taking a partner off keeps what’s needed to bring them back', () => {
+  const p = couple();
+  p.pensions = [FP.profile.newPension('dc', 'partner'), FP.profile.newPension('db')];
+  const before = JSON.parse(JSON.stringify(p));
+  const kept = FP.profile.removePartner(p);
+  assert.equal(p.partner, null);
+  assert.equal(p.pensions.length, 1, 'their pension goes with them');
+  assert.equal(p.savings[0].owner, undefined, 'what they owned becomes yours');
+  assert.deepEqual(p.owners, {});
+  assert.ok(FP.projection.project(p).ok);
+  FP.profile.addPartner(p, kept);
+  assert.deepEqual(JSON.parse(JSON.stringify(p)), { ...before, pensions: [before.pensions[1], before.pensions[0]] });
+  const q = fixture('sample');
+  FP.profile.addPartner(q);
+  assert.equal(q.partner.income.grossSalary, 0);
+  assert.equal(FP.profile.normalise(q).partner.retirementAge, q.assumptions.retirementAge);
+});
+
+test('ideas name the person: a partner in the taper gets the pension idea, changing their pension', () => {
+  const p = couple();
+  p.partner.income.grossSalary = 110000;
+  const ideas = FP.suggest.analyse(p).suggestions;
+  const taper = ideas.find((s) => s.id === 'taper');
+  assert.equal(taper.title, 'Use Sam’s pension to avoid the 60% band');
+  assert.match(taper.text, /Sam loses some personal allowance/);
+  assert.equal(taper.patch[0].path, 'partner.employeePensionPct');
+  const after = FP.patch.applyPatch(p, taper.patch);
+  assert.ok(FP.tax.forProfile(FP.profile.asPerson(after, 1)).adjustedNetIncome <= 100000, 'brings their income to the taper');
+  assert.equal(after.assumptions.employeePensionPct, p.assumptions.employeePensionPct, 'yours unchanged');
+  // Higher-rate (not taper), and you're a basic-rate taxpayer: relief for them.
+  p.partner.income.grossSalary = 70000;
+  p.income.grossSalary = 40000;
+  const relief = FP.suggest.analyse(p).suggestions.find((s) => s.id === 'relief');
+  assert.equal(relief.title, 'Higher-rate pension relief for Sam');
+  assert.equal(relief.patch[0].path, 'partner.employeePensionPct');
+  // Your partner's loan, written off before it's repaid.
+  const sl = FP.suggest.analyse(couple()).suggestions.find((s) => s.id === 'studentLoan');
+  assert.equal(sl.title, 'Don’t rush to overpay Sam’s student loan');
+});
+
+test('the ISA idea fills your allowance, then your partner’s', () => {
+  const p = couple();
+  const isa = FP.suggest.analyse(p).suggestions.find((s) => s.id === 'isa');
+  const added = isa.patch[0].value.filter((x) => String(x.id).startsWith('idea-isa'));
+  assert.equal(added[0].owner, undefined);
+  assert.equal(added[0].monthly, 1660, 'your £20,000 a year, in £10s');
+  assert.equal(added[1].owner, 'partner');
+  // Yours used up: only theirs.
+  p.savings.push({ id: 'x', type: 'ssIsa', monthly: 20000 / 12, grows: 'fixed' });
+  const only = FP.suggest.analyse(p).suggestions.find((s) => s.id === 'isa');
+  assert.equal(only.title, 'Use Sam’s ISA allowance');
+  assert.match(only.text, /^Sam has about £17,600 of Sam’s £20,000 ISA allowance left this year \(yours is used up\)\./);
 });

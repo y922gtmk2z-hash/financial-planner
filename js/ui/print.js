@@ -55,12 +55,15 @@
     const need = FP.projection.retirementNeed(p);
     const rs = FP.projection.retirementSpend(p);
     const far = { approx: ahead(p) };
+    const ra = FP.dom.retireAt(p, need);
     // The verdicts, word for word as on screen.
     const verdicts = [...root.querySelectorAll('.outcome')].map((c) => [c.querySelector('h2').textContent, c.querySelector('.verdict').textContent.replace(/^[✓!•]\s*/, '').replace(/^Rough\s*/i, '')]);
     const ev = proj.ok ? proj.events : null;
     const debts0 = (p.debts || []).reduce((t, d) => t + (d.balance || 0), 0);
     const debtsFree = proj.ok && debts0 > 0 ? proj.rows.find((r, i) => i > 0 && r.debts <= 0) : null;
     const sl = ev && ev.studentLoan;
+    // Each of your student loans (with a partner, at their own age).
+    const loans = ev ? (p.partner && ev.studentLoans) || [sl] : [];
     const actions = FP.suggest.rankActions(FP.screens.actions.openActions(p)).slice(0, 3);
     const notice = document.querySelector('#disclaimer p').textContent;
     return h('div', { class: 'print-body' },
@@ -78,15 +81,15 @@
         ]),
         table('Debt-free', [
           ev && ev.hasMortgage ? ['Mortgage-free', ev.mortgageFree ? `Age ${ev.mortgageFree.age} (${ev.mortgageFree.year})` : 'Not within the plan'] : null,
-          sl && sl.tracked ? ['Student loan', sl.clearedRow ? `Repaid at ${sl.clearedRow.age}` : sl.writtenOffRow ? `Written off at ${sl.writtenOffAge}` : 'Still owing'] : null,
+          ...loans.map((x, i) => (x && x.tracked ? [p.partner ? `${FP.profile.capital(FP.profile.whose(p, i))} student loan` : 'Student loan', x.clearedRow ? `Repaid at ${x.clearedRow.age}` : x.writtenOffRow ? `Written off at ${x.writtenOffAge}` : 'Still owing'] : null)),
           debts0 > 0 ? ['Other debts cleared', debtsFree ? `Age ${debtsFree.age} (${debtsFree.year})` : 'Not within the plan'] : null,
-          !(ev && ev.hasMortgage) && !(sl && sl.tracked) && !(debts0 > 0) ? ['Debts', 'None entered'] : null,
+          !(ev && ev.hasMortgage) && !loans.some((x) => x && x.tracked) && !(debts0 > 0) ? ['Debts', 'None entered'] : null,
         ])),
-      need ? table(`Retirement at ${a.retirementAge}, in today’s money`, [
+      need ? table(`Retirement at ${ra}${p.partner ? ` (${FP.dom.bothRetire(p)})` : ''}, in today’s money`, [
         [measure('moneyLastsTo'), lastsTo(need), `at ${money(need.goal)} a month`],
         rs ? [measure('couldSpend'), `${money(rs.monthly, far)} a month`, `to ${rs.endAge}`] : null,
-        [measure('savingsPensions', a.retirementAge), money(need.have, far), 'on course to have'],
-        [`Needed by ${a.retirementAge}`, money(need.needed, far), `to last to ${need.endAge}`],
+        [measure('savingsPensions', ra), money(need.have, far), 'on course to have'],
+        [`Needed by ${ra}`, money(need.needed, far), `to last to ${need.endAge}`],
       ]) : null,
       actions.length ? h('section', null, h('h2', null, 'Top actions'),
         h('ol', { class: 'print-actions' }, actions.map((x) => h('li', null, h('strong', null, x.title),

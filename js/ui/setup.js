@@ -19,16 +19,24 @@
       summary: (p) => `Age ${p.about.age == null ? '\u2014' : p.about.age} \u00b7 retire at ${p.assumptions.retirementAge}` },
     { id: 'income', title: 'Income', short: 'Income',
       summary: (p) => {
-        const extras = INCOME_PARTS.filter((part) => part.id !== 'pension' && part.status(p)).length;
-        return [p.income.grossSalary > 0 ? `${money(p.income.grossSalary)} salary` : 'No salary', extras ? `${extras} extra${extras === 1 ? '' : 's'}` : null].filter(Boolean).join(' \u00b7 ');
+        const extras = P.people(p).reduce((t, x) => t + INCOME_PARTS.filter((part) => part.id !== 'pension' && part.status(P.asPerson(p, x.index))).length, 0);
+        const pay = P.people(p).map((x) => x.income.grossSalary || 0);
+        const salary = pay.length > 1 ? `${pay.map((n) => money(n)).join(' + ')} salaries` : pay[0] > 0 ? `${money(pay[0])} salary` : 'No salary';
+        return [salary, extras ? `${extras} extra${extras === 1 ? '' : 's'}` : null].filter(Boolean).join(' \u00b7 ');
       } },
     { id: 'outgoings', title: 'Outgoings', short: 'Outgoings',
       summary: (p) => [`${money(FP.summary.outgoings(p).total)} a month`, sum(p.savings, 'monthly') > 0 ? `${money(sum(p.savings, 'monthly'))} saved` : null].filter(Boolean).join(' \u00b7 ') },
     { id: 'assets', title: 'Assets', short: 'Assets',
-      summary: (p) => { const t = Object.values(p.assets).reduce((a, v) => a + (v || 0), 0); return t > 0 ? money(t) : 'None added'; } },
+      summary: (p) => { const t = assetTotal(p); return t > 0 ? money(t) : 'None added'; } },
     { id: 'debts', title: 'Debts', short: 'Debts',
       summary: (p) => { const t = (p.mortgage.balance || 0) + sum(p.debts, 'balance'); return t > 0 ? `${money(t)} owed` : 'None added'; } },
   ];
+
+  // Everything you own today, with your partner's pension and other pension pots.
+  function assetTotal(p) {
+    return Object.values(p.assets).reduce((a, v) => a + (v || 0), 0) + ((p.partner && p.partner.pension) || 0)
+      + sum(p.pensions.filter((x) => x.type === 'dc'), 'value');
+  }
 
   // Steps that need something before a projection can be shown.
   function stepMissing(step, p) {
@@ -40,18 +48,26 @@
 
   // Fields that only matter once something else is set (e.g. a student loan's
   // balance once you've chosen a plan) stay hidden until then.
+  // A box in your partner's figures (data-person="1") follows their choices.
+  const personOf = (el) => Number((el && el.closest && el.closest('[data-person]') || { dataset: {} }).dataset.person) || 0;
   const NEEDS = {
-    plan: (p) => p.income.studentLoanPlan !== 'none',
+    plan: (p, el) => P.asPerson(p, personOf(el)).income.studentLoanPlan !== 'none',
     mortgage: (p) => p.mortgage.balance > 0,
   };
   function showNeeded(root, p) {
     Object.entries(NEEDS).forEach(([k, test]) => {
-      root.querySelectorAll(`[data-needs="${k}"]`).forEach((el) => { el.hidden = !test(p); });
+      root.querySelectorAll(`[data-needs="${k}"]`).forEach((el) => { el.hidden = !test(p, el); });
     });
   }
 
-  function maker(ctx) {
-    return (f) => {
+  /*
+   * Draws a field of yours, or with `person` 1 the same field of your
+   * partner's (its path under partner.*, and "Your" in its label their name).
+   */
+  function maker(ctx, person) {
+    return (field) => {
+      const path = P.personPath(person || 0, field.path);
+      const f = person ? { ...field, path, shared: false, label: field.label.replace(/^Your /, `${P.capital(P.whose(ctx.profile(), person))} `) } : field;
       // The tax code says what it means as you type.
       const note = f.type === 'taxcode' ? h('p', { class: 'help tax-code-note', role: 'status' }) : null;
       const explain = () => { if (note) note.textContent = FP.tax.describeTaxCode(P.get(ctx.profile(), f.path)); };
@@ -66,7 +82,7 @@
       const needs = f.needsPlan ? 'plan' : f.needsMortgage ? 'mortgage' : null;
       if (needs) {
         el.dataset.needs = needs;
-        el.hidden = !NEEDS[needs](ctx.profile());
+        el.hidden = !NEEDS[needs](P.asPerson(ctx.profile(), person || 0));
       }
       return el;
     };
@@ -94,11 +110,29 @@
   // Kept in the profile, but not asked until a later version uses it.
   const HIDDEN = ['about.riskAppetite'];
 
-  // About you: what the quick start asked.
+  /*
+   * About you: who the plan is for, then what the quick start asked. With a
+   * partner, your name and theirs, their age and retirement age, and their
+   * State Pension under More (their pay is under Income).
+   */
   function aboutCard(ctx) {
+    const p = ctx.profile();
+    const make = maker(ctx);
+    const theirs = P.PARTNER_FIELDS.filter((f) => f.path !== 'partner.income.grossSalary');
     return h('section', { class: 'card', id: 'about', 'aria-labelledby': 'sec-about' },
       h('h2', { id: 'sec-about' }, 'About you'),
-      section('about').fields.filter((f) => !HIDDEN.includes(f.path)).map(maker(ctx)));
+      FP.welcome.householdToggle(ctx, () => {
+        // Income, Assets and regular savings change with a partner, so draw everything again.
+        ctx.rerender();
+        const back = document.querySelector('#about [data-path="household"] input:checked');
+        if (back) back.focus();
+      }, { confirm: true }),
+      p.partner ? make(P.NAME_FIELD) : null,
+      section('about').fields.filter((f) => !HIDDEN.includes(f.path)).map(make),
+      p.partner ? h('div', { class: 'field-group person-group', role: 'group', 'aria-labelledby': 'grp-partner' },
+        h('h3', { id: 'grp-partner' }, p.partner.name || 'Your partner'),
+        theirs.filter((f) => !f.more).map(make),
+        h('details', { class: 'advanced' }, h('summary', null, 'Their State Pension'), theirs.filter((f) => f.more).map(make))) : null);
   }
 
   /*
@@ -133,28 +167,60 @@
       || p.income.pensionMethod !== 'netPay';
   }
 
-  // Income: your salary, and everything else about your pay under Advanced.
+  /*
+   * Income: your salary, and everything else about your pay under Advanced.
+   * With a partner, a switch at the top shows their pay instead, in the same
+   * boxes (the editors below see the plan as theirs alone: P.asPerson).
+   */
+  let incomePerson = 0;
   function incomeCard(ctx) {
-    const p = ctx.profile();
+    // A link to your partner's pay ("#setup/partner.income.taxCode", "#setup/partner:bonuses") opens theirs.
+    incomePerson = /^#setup\/partner[.:]/.test(location.hash) ? 1 : 0;
     const sec = section('income');
-    const make = maker(ctx);
+    const body = h('div', { class: 'person-pay' });
     const statuses = [];
-    const parts = INCOME_PARTS.map((part) => {
-      const status = h('span', { class: 'part-status' });
-      const draw = () => { status.textContent = part.status(ctx.profile()); };
-      draw();
-      statuses.push(draw);
-      return h('details', { class: 'part', id: part.group === 'otherIncome' ? 'other-income' : `part-${part.id}` },
-        h('summary', null, h('span', { id: `${part.id}-h` }, part.title), status),
-        part.group ? groupFields(sec, part.group, make) : part.editor().render(ctx));
-    });
+    const switcher = h('div');
+    const label = (p, i) => (i ? (p.partner.name || 'Your partner') : (p.about.name ? `${p.about.name} (you)` : 'You'));
+    const draw = () => {
+      const p = ctx.profile();
+      if (!p.partner) incomePerson = 0;
+      const i = incomePerson;
+      // Their pay, for the editors: the plan as theirs, and paths under partner.*.
+      const pctx = i ? { ...ctx, profile: () => P.asPerson(ctx.profile(), 1), update: (path, v) => ctx.update(P.personPath(1, path), v) } : ctx;
+      const make = maker(ctx, i);
+      const pp = P.asPerson(p, i);
+      statuses.length = 0;
+      const parts = INCOME_PARTS.map((part) => {
+        const status = h('span', { class: 'part-status' });
+        const drawStatus = () => { status.textContent = part.status(P.asPerson(ctx.profile(), i)); };
+        drawStatus();
+        statuses.push(drawStatus);
+        return h('details', { class: 'part', id: part.group === 'otherIncome' ? 'other-income' : `part-${part.id}` },
+          h('summary', null, h('span', { id: `${part.id}-h` }, part.title), status),
+          part.group ? groupFields(sec, part.group, make) : part.editor().render(pctx));
+      });
+      FP.dom.fill(switcher, p.partner ? FP.field.render({ path: 'income-person', label: 'Whose pay?', type: 'toggle',
+        options: [{ value: '0', label: label(p, 0) }, { value: '1', label: label(p, 1) }] }, {
+        value: String(i), compact: true,
+        onChange: (v) => {
+          incomePerson = Number(v);
+          draw();
+          const on = switcher.querySelector('input:checked');
+          if (on) on.focus();
+        },
+      }) : null);
+      body.dataset.person = String(i);
+      FP.dom.fill(body,
+        i ? h('p', { class: 'notice info small' }, `${P.capital(P.whose(p, 1))} pay. Where the help says ‘you’, it means ${P.who(p, 1)}.`) : null,
+        sec.fields.filter((f) => !f.group).map(make),
+        h('details', { class: 'advanced more-details', id: 'pay-details', open: hasPayDetail(pp) || null },
+          h('summary', null, 'Advanced: pension, student loan, bonuses and more'),
+          h('p', { class: 'help' }, `Optional. Leave this closed if you only want to give ${i ? 'their' : 'your'} salary: a 5% pension with 3% from ${i ? 'their' : 'your'} employer is assumed.`),
+          h('div', { class: 'parts' }, parts)));
+    };
+    draw();
     const card = h('section', { class: 'card', id: 'income', 'aria-labelledby': 'sec-income' },
-      h('h2', { id: 'sec-income' }, 'Income'),
-      sec.fields.filter((f) => !f.group).map(make),
-      h('details', { class: 'advanced more-details', id: 'pay-details', open: hasPayDetail(p) || null },
-        h('summary', null, 'Advanced: pension, student loan, bonuses and more'),
-        h('p', { class: 'help' }, 'Optional. Leave this closed if you only want to give your salary: a 5% pension with 3% from your employer is assumed.'),
-        h('div', { class: 'parts' }, parts)));
+      h('h2', { id: 'sec-income' }, 'Income'), switcher, body);
     card.refreshStatus = () => statuses.forEach((d) => d());
     return card;
   }
@@ -308,14 +374,102 @@
     return card;
   }
 
+  /*
+   * Who owns something, where there's a partner: you, them or (for a home,
+   * savings and debts) both of you. Owners are labels, except for regular ISA
+   * savings and pensions, which use their owner's allowance and ages.
+   * get() → 'you' | 'partner' | 'joint'; put(v) stores it.
+   */
+  function ownerField(ctx, { label, get, put, joint }) {
+    const p = ctx.profile();
+    const options = [{ value: 'you', label: p.about.name ? `${p.about.name} (you)` : 'You' }, { value: 'partner', label: p.partner.name || 'Your partner' }]
+      .concat(joint ? [{ value: 'joint', label: 'Both of you' }] : []);
+    return FP.field.render({ label: 'Whose?', type: 'select', options }, {
+      value: get() || 'you', compact: true, ariaLabel: `${label}: whose?`,
+      onChange: (v) => { put(v); ctx.changed(); },
+    });
+  }
+
+  /*
+   * Assets: what you own today. With a partner, their pension pots too, and
+   * who owns each of the rest. Then any other pensions, one entry each.
+   */
   function assetsCard(ctx) {
     const sec = section('assets');
     const make = maker(ctx);
+    const p = ctx.profile();
+    const mainPot = p.partner ? { ...P.fieldFor('assets.pension'), label: 'Your pension pots' } : null;
+    const fields = sec.fields.filter((f) => !f.advanced).map((f) => (mainPot && f.path === 'assets.pension' ? [make(mainPot), maker(ctx, 1)({ ...mainPot, help: 'Total of their defined-contribution pension pots.' })] : make(f)));
+    const owned = sec.fields.filter((f) => f.path !== 'assets.pension');
     return h('section', { class: 'card', id: 'assets', 'aria-labelledby': 'sec-assets' },
       h('h2', { id: 'sec-assets' }, 'Assets'),
       h('p', { class: 'muted' }, sec.intro),
-      sec.fields.filter((f) => !f.advanced).map(make),
-      h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(make)));
+      fields,
+      h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(make)),
+      p.partner ? h('details', { class: 'advanced', id: 'asset-owners' }, h('summary', null, 'Who owns what'),
+        h('p', { class: 'help' }, 'For your own reference: the plan adds everything together either way.'),
+        h('div', { class: 'owner-list' }, owned.map((f) => h('div', { class: 'owner-row' },
+          h('span', null, f.label),
+          ownerField(ctx, { label: f.label, joint: true, get: () => ctx.profile().owners[f.path], put: (v) => { if (v === 'you') delete ctx.profile().owners[f.path]; else ctx.profile().owners[f.path] = v; } }))))) : null,
+      pensionsList(ctx));
+  }
+
+  /*
+   * Other pensions: an old workplace pot, a personal pension, or a defined
+   * benefit (final salary) pension paying a yearly income. Each is drawn as a
+   * card; its boxes depend on its type, so changing the type draws it again.
+   */
+  function pensionsList(ctx) {
+    const wrap = h('div', { class: 'field-group', role: 'group', 'aria-labelledby': 'grp-pensions', id: 'pensions' });
+    const F = (key) => P.PENSION_FIELDS.find((f) => f.key === key);
+    const draw = (focus) => {
+      const p = ctx.profile();
+      const a = p.assumptions;
+      const list = p.pensions;
+      FP.dom.fill(wrap,
+        h('h3', { id: 'grp-pensions' }, 'Other pensions'),
+        h('p', { class: 'help' }, 'An old workplace pension, a personal pension or SIPP, or a defined benefit (final salary) pension. Add each one, so each can have its own age to take it from.'),
+        list.length ? h('ul', { class: 'pension-list' }, list.map((x, i) => {
+          const at = (key) => `pensions.${i}.${key}`;
+          const db = x.type === 'db';
+          const owner = x.owner === 'partner' ? 1 : 0;
+          const name = () => (ctx.profile().pensions[i] || {}).name || `Pension ${i + 1}`;
+          const box = (key, over) => FP.field.render({ ...F(key), path: at(key), ...over }, {
+            value: x[key], nullPlaceholder: over && over.placeholder,
+            onChange: (v) => {
+              ctx.update(at(key), v);
+              if (key === 'type') {
+                draw();
+                const again = wrap.querySelector(`[data-path="${at('type')}"] select`);
+                if (again) again.focus();
+              }
+              if (key === 'name') legend.textContent = name();
+            },
+          });
+          const legend = h('legend', null, name());
+          return h('li', { class: 'pension-item' }, h('fieldset', { class: 'row-card' },
+            legend,
+            box('type'),
+            box('name'),
+            p.partner ? ownerField(ctx, { label: name(), get: () => x.owner, put: (v) => { x.owner = v; draw(); } }) : null,
+            db ? box('income', { label: 'How much it pays' }) : box('value'),
+            box('accessAge', db
+              ? { label: 'Pays from age', placeholder: String(P.people(p)[owner].statePensionAge), help: 'From your statement: the scheme’s normal pension age. Left blank, it starts at the owner’s State Pension age.' }
+              : { label: 'Can be taken from age', placeholder: String(a.pensionAccessAge), help: `Left blank, from ${a.pensionAccessAge} (the minimum pension age in Assumptions). Drawn on to cover any shortfall once its owner has retired.` }),
+            db ? null : box('monthly', { label: owner ? 'They pay in' : 'You pay in' }),
+            h('button', { type: 'button', class: 'link danger', onclick: () => { list.splice(i, 1); ctx.changed(); draw(); } }, 'Remove this pension')));
+        })) : null,
+        h('button', {
+          type: 'button', class: 'secondary', disabled: list.length >= P.MAX_PENSIONS,
+          onclick: () => { list.push(P.newPension('dc')); ctx.changed(); draw(true); },
+        }, '+ Add a pension'));
+      if (focus) {
+        const types = wrap.querySelectorAll('.pension-item select');
+        if (types.length) types[types.length - 1].closest('.pension-item').querySelector('input').focus();
+      }
+    };
+    draw();
+    return wrap;
   }
 
   /*
@@ -392,8 +546,11 @@
     };
 
     const mortgagePaths = { rate: 'assumptions.mortgageRate', payment: 'mortgage.monthlyPayment', months: 'mortgage.remainingTermYears' };
+    // With a partner, whose each debt is (a label only).
+    const whoseDebt = (label, get, put) => (ctx.profile().partner ? ownerField(ctx, { label, joint: true, get, put }) : null);
     const mortgage = loanFold('mortgage-item', () => 'Mortgage',
-      [sec.fields.filter((f) => f.group === 'mortgage' && !f.more).map(make),
+      [whoseDebt('Mortgage', () => ctx.profile().owners.mortgage, (v) => { if (v === 'you') delete ctx.profile().owners.mortgage; else ctx.profile().owners.mortgage = v; }),
+        sec.fields.filter((f) => f.group === 'mortgage' && !f.more).map(make),
         h('details', { class: 'advanced' }, h('summary', null, 'Overpayments'), sec.fields.filter((f) => f.group === 'mortgage' && f.more).map(make))],
       () => FP.loan.forMortgage(ctx.profile()), mortgagePaths, '% a year');
     let debtDraws = [];
@@ -405,7 +562,8 @@
         const paths = { rate: `debts.${i}.rate`, payment: `debts.${i}.monthlyPayment`, months: `debts.${i}.termMonths` };
         const name = () => (ctx.profile().debts[i] || {}).name || `Debt ${i + 1}`;
         const { fold, draw } = loanFold(`debt-${d.id}`, name,
-          [P.DEBT_FIELDS.map((f) => FP.field.render({ ...f, path: `debts.${i}.${f.key}` }, {
+          [whoseDebt(name(), () => d.owner, (v) => { if (v === 'you') delete d.owner; else d.owner = v; }),
+            P.DEBT_FIELDS.map((f) => FP.field.render({ ...f, path: `debts.${i}.${f.key}` }, {
             value: d[f.key],
             nullPlaceholder: 'Not sure',
             onChange: (v) => {

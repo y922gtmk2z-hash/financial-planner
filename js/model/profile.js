@@ -323,6 +323,30 @@
       help: 'From your take-home pay, with 20% tax relief added, until its owner retires.' },
   ];
 
+  // Who the plan is for: asked first in the quick start and About you.
+  const HOUSEHOLD_FIELD = {
+    path: 'household', label: 'Who is this plan for?', type: 'toggle',
+    options: [{ value: 'me', label: 'Just me' }, { value: 'couple', label: 'Me and a partner' }],
+    help: 'With a partner, each of you has your own pay, tax, pensions and State Pension; spending and savings are worked out together.',
+  };
+  const NAME_FIELD = { path: 'about.name', label: 'Your name (optional)', type: 'text', placeholder: 'e.g. Alex',
+    help: 'Shown on the switch between your figures and your partner’s.' };
+  // Your partner's figures in About you (and the first four in the quick start).
+  const PARTNER_FIELDS = [
+    { path: 'partner.name', label: 'Your partner’s name (optional)', type: 'text', placeholder: 'e.g. Sam',
+      help: 'So results can say whose is whose, as in “Sam’s ISA allowance”.' },
+    { path: 'partner.age', label: 'Their age', type: 'int', min: 16, max: 100, suffix: 'years', nullable: true,
+      help: 'Their age today, in whole years. Left blank, they’re taken to be your age.' },
+    { path: 'partner.income.grossSalary', label: 'Their gross salary', type: 'money', suffix: 'a year',
+      help: 'Their yearly salary before tax. Leave blank if they’re not working.' },
+    { path: 'partner.retirementAge', label: 'When they’d like to retire', type: 'int', min: 40, max: 80, suffix: 'years old',
+      help: 'When their salary and workplace pension contributions stop. Your plan’s retirement goal starts once you’ve both retired.' },
+    { path: 'partner.statePension', label: 'Their State Pension', type: 'money', max: 50000, suffix: 'a year', more: true,
+      help: 'In today’s money, from their forecast on GOV.UK. The full new State Pension is the default.' },
+    { path: 'partner.statePensionAge', label: 'Their State Pension age', type: 'int', min: 60, max: 75, suffix: 'years old', more: true,
+      help: 'From their forecast. It depends on their date of birth.' },
+  ];
+
   // Each person, in the same shape: you (from your own fields), then any partner.
   function people(p) {
     const a = p.assumptions;
@@ -333,6 +357,84 @@
       pension: p.assets.pension || 0, income: p.income,
     };
     return p.partner ? [you, { index: 1, id: 'partner', ...p.partner }] : [you];
+  }
+
+  /*
+   * Names for results: person 0 is always "you" (the planner speaks to you);
+   * a partner goes by their name, or "your partner" without one.
+   * whose(p, 1) → "Sam’s"; who(p, 1) → "Sam"; whose(p, 0) → "your".
+   */
+  function who(p, index) {
+    if (!index) return 'you';
+    return (p.partner && p.partner.name) || 'your partner';
+  }
+  function whose(p, index) {
+    if (!index) return 'your';
+    return p.partner && p.partner.name ? `${p.partner.name}’s` : 'your partner’s';
+  }
+  const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Where a field of yours lives for a person: income.* and your pension and
+  // retirement figures under partner.* for your partner; unchanged for you.
+  const PARTNER_PATHS = {
+    'about.age': 'partner.age', 'about.name': 'partner.name', 'assets.pension': 'partner.pension',
+    'assumptions.retirementAge': 'partner.retirementAge', 'assumptions.statePension': 'partner.statePension',
+    'assumptions.statePensionAge': 'partner.statePensionAge',
+    'assumptions.employeePensionPct': 'partner.employeePensionPct', 'assumptions.employerPensionPct': 'partner.employerPensionPct',
+  };
+  function personPath(index, path) {
+    if (!index) return path;
+    if (PARTNER_PATHS[path]) return PARTNER_PATHS[path];
+    return path.startsWith('income.') ? `partner.${path}` : null;
+  }
+
+  /*
+   * The plan as one person's alone, in your own fields, so pay and tax can be
+   * worked out (and edited) for them with the same code as yours. Their income
+   * object is shared, not copied: edits to its lists land in the plan.
+   */
+  function asPerson(p, index) {
+    if (!index || !p.partner) return p;
+    const x = p.partner;
+    return {
+      ...p,
+      about: { ...p.about, age: x.age == null ? p.about.age : x.age, name: x.name },
+      income: x.income,
+      assets: { ...p.assets, pension: x.pension },
+      assumptions: { ...p.assumptions, retirementAge: x.retirementAge, statePension: x.statePension, statePensionAge: x.statePensionAge,
+        employeePensionPct: x.employeePensionPct, employerPensionPct: x.employerPensionPct },
+      partner: null,
+    };
+  }
+
+  /*
+   * Adds a partner (or brings back the one `kept` holds), or takes yours off
+   * the plan. Taking them off returns what's needed to bring them back: their
+   * figures, their pensions, and what they owned. What they owned becomes
+   * yours; their pensions go with them.
+   */
+  function addPartner(p, kept) {
+    if (p.partner) return;
+    if (!kept) { p.partner = newPartner(p); return; }
+    p.partner = kept.partner;
+    p.pensions = p.pensions.concat(kept.pensions);
+    kept.rows.forEach(([list, id, owner]) => { const r = (p[list] || []).find((x) => x.id === id); if (r) r.owner = owner; });
+    Object.assign(p.owners, kept.owners);
+  }
+  function removePartner(p) {
+    if (!p.partner) return null;
+    const kept = { partner: p.partner, pensions: p.pensions.filter((x) => x.owner === 'partner'), rows: [], owners: { ...p.owners } };
+    ['debts', 'savings'].forEach((list) => (p[list] || []).forEach((r) => {
+      if (r.owner) { kept.rows.push([list, r.id, r.owner]); delete r.owner; }
+    }));
+    p.pensions = p.pensions.filter((x) => x.owner !== 'partner');
+    p.owners = {};
+    p.partner = null;
+    return kept;
+  }
+
+  function newPension(type, owner) {
+    return { id: newId('pn'), type: type || 'dc', name: '', value: 0, income: 0, accessAge: null, monthly: 0, owner: owner || 'you' };
   }
 
   function newPartner(p) {
@@ -560,7 +662,8 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
+    SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
+    who, whose, capital, personPath, asPerson, PARTNER_FIELDS, NAME_FIELD, HOUSEHOLD_FIELD, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});

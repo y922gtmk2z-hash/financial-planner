@@ -16,15 +16,20 @@
     const drawTotals = () => {
       const p = ctx.profile();
       const t = FP.savings.monthlyTotals(p.savings);
-      const isaYear = (t.cashIsa + t.ssIsa) * 12;
       const a = p.assumptions;
+      // Each of you has your own ISA allowance: a saving is yours unless it's your partner's.
+      const isaLines = FP.profile.people(p).map((x) => {
+        const mine = FP.savings.monthlyTotals(p.savings.filter((sv) => (sv.owner === 'partner' && p.partner ? 1 : 0) === x.index));
+        const isaYear = (mine.cashIsa + mine.ssIsa) * 12;
+        return mine.cashIsa + mine.ssIsa > 0
+          ? h('p', { class: `muted small${isaYear > a.isaAllowance ? ' negative' : ''}` },
+            `ISA payments: ${money(isaYear)} of ${FP.profile.whose(p, x.index)} ${money(a.isaAllowance)} allowance this year.`,
+            mine.cashIsa * 12 > a.cashIsaLimit ? ` From April 2027, under-65s can put at most ${money(a.cashIsaLimit)} a year into cash ISAs.` : '')
+          : null;
+      });
       FP.dom.fill(totals,
         h('div', { class: 'total-row' }, h('span', null, 'Total saved'), h('strong', null, `${money(t.total)} a month`)),
-        t.cashIsa + t.ssIsa > 0
-          ? h('p', { class: `muted small${isaYear > a.isaAllowance ? ' negative' : ''}` },
-            `ISA payments: ${money(isaYear)} of your ${money(a.isaAllowance)} allowance this year.`,
-            t.cashIsa * 12 > a.cashIsaLimit ? ` From April 2027, under-65s can put at most ${money(a.cashIsaLimit)} a year into cash ISAs.` : '')
-          : null);
+        isaLines);
     };
 
     const draw = () => {
@@ -52,6 +57,12 @@
             value: sv[f.key], compact: true,
             onChange: (v) => { ctx.update(`savings.${i}.${f.key}`, v); drawTotals(); },
           })),
+          // With a partner, whose it is: an ISA uses its owner's allowance.
+          ctx.profile().partner ? FP.field.render({ label: 'Whose', type: 'select', options: [
+            { value: 'you', label: ctx.profile().about.name || 'You' }, { value: 'partner', label: ctx.profile().partner.name || 'Partner' }] }, {
+            value: sv.owner === 'partner' ? 'partner' : 'you', compact: true, ariaLabel: `Saving ${i + 1}: whose`,
+            onChange: (v) => { if (v === 'partner') sv.owner = v; else delete sv.owner; ctx.changed(); drawTotals(); },
+          }) : null,
           h('button', {
             type: 'button', class: 'icon-btn', 'aria-label': `Remove saving ${i + 1}`,
             onclick: () => { list.splice(i, 1); ctx.changed(); draw(); },
