@@ -224,9 +224,11 @@
     return { id: ROUTES.includes(name) ? name : 'overview', target };
   }
 
+  // "partner:bonuses" is the part of your partner's pay with that id (Setup shows their pay first).
   function goToTarget(target) {
-    const el = document.getElementById(target)
-      || main.querySelector(`[data-path="${CSS.escape(target)}"]`);
+    const id = target.replace(/^partner:/, '');
+    const el = document.getElementById(id)
+      || main.querySelector(`[data-path="${CSS.escape(id)}"]`);
     if (!el) return false;
     el.dispatchEvent(new CustomEvent('fp:reveal', { bubbles: true })); // e.g. Setup opens the right step
     for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;

@@ -83,11 +83,25 @@
         at >= 0 ? [{ path: `debts.${at}.monthlyPayment`, op: 'add', value: 50 }] : null);
     }
 
-    const topRate = Math.max(0, ...pay.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate));
     // Judged on income, not the allowance: a reduced tax code also lowers the allowance.
     const cfg = FP.taxConfig;
     const taperTop = cfg.taperThreshold + cfg.personalAllowance / cfg.taperRate;
-    const inTaper = pay.adjustedNetIncome > cfg.taperThreshold && pay.adjustedNetIncome < taperTop;
+    // Each person's top rate and whether they're in the taper. The pension ideas
+    // are for whoever is in the taper, or else pays higher-rate tax (you first).
+    const people = FP.profile.people(profile);
+    const bands = people.map((x, i) => {
+      const own = i ? FP.tax.forProfile(FP.profile.asPerson(profile, i)) : pay;
+      return {
+        i,
+        topRate: Math.max(0, ...own.taxByBand.filter((b) => b.amount > 0).map((b) => b.rate)),
+        inTaper: own.adjustedNetIncome > cfg.taperThreshold && own.adjustedNetIncome < taperTop,
+      };
+    });
+    const forPension = bands.find((b) => b.inTaper) || bands.find((b) => b.topRate >= 40) || bands[0];
+    const { topRate, inTaper } = forPension;
+    // "your" or "Sam’s", for the person an idea is about.
+    const whose = (i) => FP.profile.whose(profile, i);
+    const who = (i) => FP.profile.who(profile, i);
     const m = today.mortgage;
     const { split, reason } = suggestSplit({ emergency, inTaper, topRate, hasMortgage: !!(m && m.balance > 0), mortgageBeatsCash: !!(m && m.rate > a.savingsRate), expensive: expensive.length > 0 });
 
@@ -104,10 +118,19 @@
     }
 
     // 3. Pension tax relief
-    if (inTaper) {
+    const pi = forPension.i;
+    if (inTaper && pi) {
+      add('taper', 'tip', `Use ${whose(pi)} pension to avoid the 60% band`,
+        `Between £100,000 and £125,140 ${who(pi)} loses some personal allowance, so keeps only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(FP.profile.asPerson(profile, pi))))} of each extra £100. ${FP.profile.capital(whose(pi))} pension contributions (or salary sacrifice) bring ${whose(pi)} income down and win that back.`,
+        taperPatch(profile, cfg.taperThreshold, pi));
+    } else if (inTaper) {
       add('taper', 'tip', 'Use your pension to avoid the 60% band',
         `Between £100,000 and £125,140 you lose some personal allowance, so you keep only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(profile)))} of each extra £100. Pension contributions (or salary sacrifice) bring your income down and win that back.`,
         taperPatch(profile, cfg.taperThreshold));
+    } else if (topRate >= 40 && pi) {
+      add('relief', 'tip', `Higher-rate pension relief for ${who(pi)}`,
+        `${FP.profile.capital(who(pi))} pays ${topRate}% tax on the top slice of pay, so each £1 into ${whose(pi)} pension costs only about ${Math.round(100 - topRate)}p (claim the extra relief through self assessment if the scheme doesn’t give it). Salary sacrifice also saves National Insurance.`,
+        pensionPatch(profile, 3, pi));
     } else if (topRate >= 40) {
       add('relief', 'tip', 'Higher-rate pension relief',
         `You pay ${topRate}% tax on your top slice of pay, so each £1 into your pension costs you only about ${Math.round(100 - topRate)}p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.`,
@@ -132,10 +155,29 @@
     }
 
     // 5. ISA allowance
-    const saving = FP.savings.monthlyTotals(profile.savings);
-    // One ISA allowance each.
-    const isaRoom = Math.max(0, (a.isaAllowance || 0) * FP.profile.people(profile).length - (saving.cashIsa + saving.ssIsa) * 12);
-    if (isaRoom > 0) {
+    // One ISA allowance each: a regular saving is yours unless it's your partner's.
+    const rooms = people.map((x) => {
+      const t = FP.savings.monthlyTotals(profile.savings.filter((sv) => (sv.owner === 'partner' && people.length > 1 ? 1 : 0) === x.index));
+      return Math.max(0, (a.isaAllowance || 0) - (t.cashIsa + t.ssIsa) * 12);
+    });
+    const isaRoom = rooms.reduce((t, r) => t + r, 0);
+    if (isaRoom > 0 && people.length > 1) {
+      // What's left over, in £10s: into your allowance first, then your partner's.
+      const total = Math.floor(Math.min(isaRoom / 12, left) / 10) * 10;
+      const mine = Math.min(total, Math.floor(rooms[0] / 12 / 10) * 10);
+      const theirs = Math.min(total - mine, Math.floor(rooms[1] / 12 / 10) * 10);
+      const rows = [mine >= 10 ? { id: 'idea-isa', type: 'ssIsa', monthly: mine, grows: 'fixed' } : null,
+        theirs >= 10 ? { id: 'idea-isa-2', type: 'ssIsa', monthly: theirs, grows: 'fixed', owner: 'partner' } : null].filter(Boolean);
+      const each = money(a.isaAllowance);
+      const lead = rooms[0] > 0 && rooms[1] > 0
+        ? `You have about ${money(rooms[0])} of your ISA allowance left this year, and ${who(1)} has ${money(rooms[1])} (${each} each).`
+        : rooms[0] > 0
+          ? `You have about ${money(rooms[0])} of your ${each} ISA allowance left this year (${whose(1)} is used up).`
+          : `${FP.profile.capital(who(1))} has about ${money(rooms[1])} of ${whose(1)} ${each} ISA allowance left this year (yours is used up).`;
+      add('isa', 'tip', rooms[0] > 0 && rooms[1] > 0 ? 'Use your ISA allowances' : rooms[0] > 0 ? 'Use your ISA allowance' : `Use ${whose(1)} ISA allowance`,
+        `${lead} Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.`,
+        rows.length ? [{ path: 'savings', op: 'set', value: profile.savings.concat(rows) }] : null);
+    } else if (isaRoom > 0) {
       // Into a stocks & shares ISA: what's left over, up to the allowance, in £10s.
       const isaMonthly = Math.floor(Math.min(isaRoom / 12, left) / 10) * 10;
       add('isa', 'tip', 'Use your ISA allowance',
@@ -145,8 +187,15 @@
 
     // 6. Student loan
     const proj = FP.projection.project(profile);
-    const sl = proj.ok ? proj.events.studentLoan : null;
-    if (sl && sl.tracked && sl.writtenOffRow) {
+    // The first of you whose loan is written off before it's repaid.
+    const loans = proj.ok ? (proj.events.studentLoans || [proj.events.studentLoan]) : [];
+    const li = loans.findIndex((x) => x && x.tracked && x.writtenOffRow);
+    const sl = li >= 0 ? loans[li] : null;
+    if (sl && li > 0) {
+      add('studentLoan', 'tip', `Don’t rush to overpay ${whose(li)} student loan`,
+        `On these assumptions it’s written off in April ${sl.writeOffYear} before ${who(li)} repays it, so extra payments would mostly be lost. Your leftover money is likely to do more elsewhere.`,
+        (profile.partner.income.studentLoanOverpayment || 0) > 0 ? [{ path: 'partner.income.studentLoanOverpayment', op: 'set', value: 0 }] : null);
+    } else if (sl && sl.tracked && sl.writtenOffRow) {
       add('studentLoan', 'tip', 'Don’t rush to overpay your student loan',
         `On these assumptions it’s written off in April ${sl.writeOffYear} before you repay it, so extra payments would mostly be lost. Your leftover money is likely to do more elsewhere.`,
         (profile.income.studentLoanOverpayment || 0) > 0 ? [{ path: 'income.studentLoanOverpayment', op: 'set', value: 0 }] : null);
@@ -267,20 +316,23 @@
   }
 
   // Pay `pct` more of your salary into your pension (up to 100%), or null.
-  function pensionPatch(profile, pct) {
-    const room = 100 - (profile.assumptions.employeePensionPct || 0);
+  // More into person `i`'s workplace pension (you, or 1 for your partner), or null.
+  function pensionPatch(profile, pct, i) {
+    const own = FP.profile.asPerson(profile, i || 0);
+    const room = 100 - (own.assumptions.employeePensionPct || 0);
     const value = Math.min(pct, room);
-    return value > 0 && (profile.income.grossSalary || 0) > 0 ? [{ path: 'assumptions.employeePensionPct', op: 'add', value }] : null;
+    return value > 0 && (own.income.grossSalary || 0) > 0 ? [{ path: FP.profile.personPath(i || 0, 'assumptions.employeePensionPct'), op: 'add', value }] : null;
   }
 
   // The smallest whole % more into your pension that brings your income down
   // to where the allowance starts to go (or as close as 100% gets), or null.
-  function taperPatch(profile, threshold) {
-    const room = 100 - (profile.assumptions.employeePensionPct || 0);
-    if (!((profile.income.grossSalary || 0) > 0) || room <= 0) return null;
+  function taperPatch(profile, threshold, i) {
+    const own = FP.profile.asPerson(profile, i || 0);
+    const room = 100 - (own.assumptions.employeePensionPct || 0);
+    if (!((own.income.grossSalary || 0) > 0) || room <= 0) return null;
     let n = 1;
-    while (n < room && FP.tax.forProfile(FP.patch.applyPatch(profile, pensionPatch(profile, n))).adjustedNetIncome > threshold) n += 1;
-    return pensionPatch(profile, n);
+    while (n < room && FP.tax.forProfile(FP.profile.asPerson(FP.patch.applyPatch(profile, pensionPatch(profile, n, i)), i || 0)).adjustedNetIncome > threshold) n += 1;
+    return pensionPatch(profile, n, i);
   }
 
   // A sensible starting split for the leftover money (adds up to 100%). It always

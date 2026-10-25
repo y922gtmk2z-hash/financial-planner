@@ -19,8 +19,11 @@
   function quickPaths(p) {
     return QUICK.filter((path) => path !== SPEND_FIELD.path || !itemisedOnly(p));
   }
-  const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
-  const questionCount = (p) => COUNT_WORDS[quickPaths(p).length];
+  // With a partner, four more: their name, age, salary and retirement age.
+  const PARTNER_QUICK = FP.profile.PARTNER_FIELDS.filter((f) => !f.more);
+  const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  const questionCount = (p) => COUNT_WORDS[quickPaths(p).length + (p.partner ? PARTNER_QUICK.length : 0)];
+  const introText = (p) => `${questionCount(p).replace(/^./, (c) => c.toUpperCase())} questions for a first look at your plan. You can add detail afterwards.`;
 
   function quickField(path) {
     if (path === SPEND_FIELD.path) return SPEND_FIELD;
@@ -61,8 +64,9 @@
     },
   };
   // The sense check for a field in this profile, as FP.field.render's `check`, or undefined.
+  // Your partner's salary has the same check as yours.
   function senseCheck(path, profile) {
-    const c = CHECKS[path];
+    const c = CHECKS[path] || (path === 'partner.income.grossSalary' ? CHECKS['income.grossSalary'] : null);
     return c ? (v) => c(v, profile()) : undefined;
   }
 
@@ -79,31 +83,77 @@
    * fields also appear further down the page (Setup), typing in one copy
    * updates the other.
    */
+  // A partner taken off in the quick start, kept for this visit in case you change your mind.
+  let keptPartner = null;
+
+  /*
+   * Who the plan is for, as FP.field.render's toggle: adding a partner (or
+   * bringing back the one you took off) and taking them off. onSwitch() after.
+   */
+  // opts.confirm: ask before taking off a partner whose figures you've entered.
+  function householdToggle(ctx, onSwitch, opts) {
+    const el = FP.field.render(FP.profile.HOUSEHOLD_FIELD, {
+      value: ctx.profile().partner ? 'couple' : 'me',
+      onChange: (v) => {
+        const p = ctx.profile();
+        const x = p.partner;
+        const entered = x && (x.name || x.age != null || x.income.grossSalary > 0 || x.pension > 0 || p.pensions.some((y) => y.owner === 'partner'));
+        if (v === 'me' && opts && opts.confirm && entered
+          && !confirm(`Take ${FP.profile.who(p, 1)} off your plan? Their pay and pensions go, and what they own becomes yours. Choose \u2018Me and a partner\u2019 again before you close the planner to bring them back.`)) {
+          el.querySelector('input[value="couple"]').checked = true;
+          return;
+        }
+        if (v === 'couple') { FP.profile.addPartner(p, keptPartner); keptPartner = null; } else keptPartner = FP.profile.removePartner(p);
+        ctx.changed();
+        onSwitch();
+      },
+    });
+    return el;
+  }
+
+  /*
+   * Quick start: who the plan is for, then up to five answers (four more with
+   * a partner), then a first look at your plan. Where the same fields also
+   * appear further down the page (Setup), typing in one copy updates the other.
+   */
   function quickStart(ctx, root) {
     const p = ctx.profile();
     // Older plans started with nine empty categories: clear them for your estimate.
     if (p.spending.length > 1 && !(spendTotal(p) > 0)) p.spending = [FP.profile.newRest()];
     const paths = quickPaths(p);
+    const ask = (f) => FP.field.render(f, {
+      value: FP.profile.get(ctx.profile(), f.path),
+      nullPlaceholder: f.nullPlaceholder,
+      noBlankNote: true,
+      check: senseCheck(f.path, ctx.profile),
+      onChange: (v) => {
+        FP.profile.set(ctx.profile(), f.path, v);
+        // Your estimate goes into your outgoings as the rest not itemised yet.
+        if (f.path === SPEND_FIELD.path) FP.summary.syncOutgoings(ctx.profile());
+        ctx.changed();
+        // The checks compare your answers with each other.
+        FP.field.recheckAll(card);
+      },
+    });
+    const intro = h('p', { class: 'muted' }, introText(p));
+    // Your partner's questions, only once you've said there's a partner.
+    const partnerBox = h('div', { class: 'partner-questions' });
+    const drawPartner = () => {
+      const pp = ctx.profile();
+      intro.textContent = introText(pp);
+      FP.dom.fill(partnerBox, pp.partner ? h('fieldset', { class: 'field-group person-group' },
+        h('legend', null, 'Your partner'),
+        PARTNER_QUICK.map(ask)) : null);
+      FP.field.recheckAll(card);
+    };
+    const fields = paths.map((path) => ask(quickField(path)));
+    // Their questions follow your pay.
+    const at = paths.indexOf('income.grossSalary') + 1;
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
       h('h1', { id: 'quick-h' }, 'Quick start'),
-      h('p', { class: 'muted' }, `${questionCount(p).replace(/^./, (c) => c.toUpperCase())} questions for a first look at your plan. You can add detail afterwards.`),
-      paths.map((path) => {
-        const f = quickField(path);
-        return FP.field.render(f, {
-          value: FP.profile.get(ctx.profile(), path),
-          nullPlaceholder: f.nullPlaceholder,
-          noBlankNote: true,
-          check: senseCheck(path, ctx.profile),
-          onChange: (v) => {
-            FP.profile.set(ctx.profile(), path, v);
-            // Your estimate goes into your outgoings as the rest not itemised yet.
-            if (path === SPEND_FIELD.path) FP.summary.syncOutgoings(ctx.profile());
-            ctx.changed();
-            // The checks compare your answers with each other.
-            FP.field.recheckAll(card);
-          },
-        });
-      }),
+      intro,
+      householdToggle(ctx, drawPartner),
+      fields.slice(0, at), partnerBox, fields.slice(at),
       h('button', { type: 'button', class: 'quick-go', onclick: () => {
         const bad = card.querySelector('[aria-invalid="true"]');
         if (bad) { bad.focus(); ctx.toast('Fix the highlighted box first.'); return; }
@@ -118,10 +168,11 @@
         }
         ctx.go('overview');
       } }, 'See my plan'));
+    drawPartner();
     (root || card).addEventListener('input', (e) => {
       const wrap = e.target.closest && e.target.closest('[data-path]');
-      if (!wrap || !paths.includes(wrap.dataset.path)) return;
-      (root || card).querySelectorAll(`[data-path="${CSS.escape(wrap.dataset.path)}"] input`).forEach((i) => { if (i !== e.target) i.value = e.target.value; });
+      if (!wrap || !(paths.includes(wrap.dataset.path) || wrap.dataset.path.startsWith('partner.'))) return;
+      (root || card).querySelectorAll(`[data-path="${CSS.escape(wrap.dataset.path)}"] input[type="text"]`).forEach((i) => { if (i !== e.target) i.value = e.target.value; });
     });
     return card;
   }
@@ -209,5 +260,5 @@
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, quickStart, isRough, senseCheck, answerCount };
+  FP.welcome = { render, quickStart, householdToggle, isRough, senseCheck, answerCount };
 })(globalThis.FP = globalThis.FP || {});

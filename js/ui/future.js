@@ -83,7 +83,8 @@
     const moneyNote = real ? 'in today’s money' : 'in future pounds';
 
     const markers = [
-      ev.retirement ? { index: ev.retirement.y, label: `Retire ${a.retirementAge}` } : null,
+      // With a partner, once you've both retired (on your age).
+      ev.retirement ? { index: ev.retirement.y, label: `Retire ${ev.retirement.age}` } : null,
       ev.mortgageFree ? { index: ev.mortgageFree.y, label: 'Mortgage-free' } : null,
       sl.clearedRow ? { index: sl.clearedRow.y, label: 'Loan repaid' } : null,
       sl.writtenOffRow ? { index: sl.writtenOffRow.y - 1, label: 'Loan written off' } : null,
@@ -97,7 +98,7 @@
       `Savings ${pct(a.savingsRate)}`,
       `Investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees`,
       `Pension ${pct(FP.growth.netRate(a.pensionGrowth, a.pensionFees))} after fees`,
-      `Retire at ${a.retirementAge}`,
+      p.partner ? `Retire: ${FP.dom.bothRetire(p)}` : `Retire at ${a.retirementAge}`,
       `State Pension ${money(a.statePension)} from ${a.statePensionAge}`,
       a.taxThresholds === 'inflation' ? 'Tax thresholds rise with inflation' : 'Tax thresholds frozen',
     ]);
@@ -171,7 +172,7 @@
         h('p', { class: 'muted small' }, 'Debts, your student loan and any unfunded shortfall are shown below zero.')),
 
       tableCard(rows, a, moneyNote),
-      notesCard(a, p.leftover)];
+      notesCard(a, p.leftover, p)];
   }
 
   // Which part of your net worth matters most at retirement (or the end).
@@ -229,13 +230,15 @@
           })))))));
   }
 
-  function notesCard(a, leftover) {
+  function notesCard(a, leftover, p) {
     return FP.dom.foldCard('proj-notes', 'How this is worked out', 'Taxes, growth, retirement and what\u2019s left out',
       h('ul', { class: 'notes' },
         h('li', null, 'Each year: your salary and bonuses rise with salary growth and are taxed with this year’s rules; spending rises with spending growth; balances grow at their own rates; the mortgage and other debts are paid down month by month.'),
         h('li', null, `Tax ${a.taxThresholds === 'inflation' ? 'thresholds rise with inflation each year' : 'thresholds stay frozen at today’s levels'}; tax rates stay as they are today. Change this in Assumptions.`),
         h('li', null, 'Any money left over first repays an earlier shortfall, then is shared out as you choose below. Extra pension contributions get 20% basic-rate relief; higher-rate relief isn’t added.'),
-        h('li', null, `Salary and workplace pension contributions stop at ${a.retirementAge}. State Pension starts at ${a.statePensionAge} and rises with inflation. Spending carries on at the same level in retirement.`),
+        h('li', null, p && p.partner
+          ? `Each salary and workplace pension contribution stops when its owner retires (${FP.dom.bothRetire(p)}), and each State Pension starts at its owner\u2019s State Pension age, rising with inflation. Tax, National Insurance and student loans are worked out for each of you. Spending carries on at the same level in retirement. Ages on the chart are yours.`
+          : `Salary and workplace pension contributions stop at ${a.retirementAge}. State Pension starts at ${a.statePensionAge} and rises with inflation. Spending carries on at the same level in retirement.`),
         h('li', null, `In retirement, a shortfall is met from your pension first (from age ${a.pensionAccessAge}; 25% of each withdrawal tax-free, the rest taxed as income), then cash, then investments. Before then, from cash and investments only.`),
         h('li', null, `Student loan: with a balance entered, interest is added and repayments come from pay each month until it\u2019s repaid; anything left is written off in April of the write-off year. ${a.studentLoanInterest === 'inflation' ? 'Interest uses the current published rates until August 2027, then your inflation assumption as RPI plus the plan\u2019s margin (Plan 2: 0\u20133% depending on income; postgraduate: 3%).' : 'Interest stays at the current published rates (Plan 2 depends on income); you can make it follow inflation in Assumptions.'} Without a balance, repayments carry on until you retire.`),
         h('li', null, 'Regular savings are added while you work: cash and cash ISAs to cash savings, stocks & shares ISAs to your ISA (anything over the ISA allowance to a general investment account). They use the ISA allowance before what\u2019s left over each month is shared out, and from April 2027 under-65s\u2019 cash ISA payments are limited (see Assumptions).'),

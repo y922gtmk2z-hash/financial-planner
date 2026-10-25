@@ -130,13 +130,21 @@
       out.push({ label: 'Mortgage-free', value: ev.mortgageFree ? `Age ${ev.mortgageFree.age}` : 'Not yet', sub: ev.mortgageFree ? String(ev.mortgageFree.year) : `still owing at ${end.age}`, open: panel('mortgage') });
       ends.push(ev.mortgageFree ? ev.mortgageFree.age : null);
     }
-    if (sl && sl.tracked) {
-      const age = sl.clearedRow ? sl.clearedRow.age : sl.writtenOffRow ? sl.writtenOffAge : null;
-      out.push({ label: sl.clearedRow ? 'Student loan repaid' : sl.writtenOffRow ? 'Student loan written off' : 'Student loan', value: age ? `Age ${age}` : 'Still owing', sub: sl.clearedRow ? String(sl.clearedRow.year) : sl.writtenOffRow ? `April ${sl.writeOffYear}` : `at ${end.age}`, open: panel('studentLoan') });
-      ends.push(age);
-    } else if (p.income.studentLoanPlan !== 'none') {
-      out.push({ label: 'Student loan', value: 'Add balance', sub: 'to see when it ends', open: panel('studentLoan') });
-    }
+    // Each of your student loans; with a partner, named ("Sam’s student loan") and at their own age.
+    const loans = p.partner && ev.studentLoans ? ev.studentLoans : [sl];
+    FP.profile.people(p).forEach((x, i) => {
+      const loan = loans[i];
+      const name = p.partner ? `${FP.profile.capital(FP.profile.whose(p, i))} student loan` : 'Student loan';
+      if (loan && loan.tracked) {
+        const row = loan.clearedRow || loan.writtenOffRow;
+        const age = loan.clearedRow ? loan.clearedRow.age : loan.writtenOffRow ? loan.writtenOffAge : null;
+        out.push({ label: loan.clearedRow ? `${name} repaid` : loan.writtenOffRow ? `${name} written off` : name, value: age ? `Age ${age}` : 'Still owing', sub: loan.clearedRow ? String(loan.clearedRow.year) : loan.writtenOffRow ? `April ${loan.writeOffYear}` : `at ${end.age}`, open: panel('studentLoan') });
+        // Debt-free is on your age.
+        ends.push(!row ? null : i ? rows[row.y].age - (loan.writtenOffRow ? 1 : 0) : age);
+      } else if (x.income.studentLoanPlan !== 'none') {
+        out.push({ label: name, value: 'Add balance', sub: 'to see when it ends', open: panel('studentLoan') });
+      }
+    });
     if (debts0 > 0) {
       out.push({ label: 'Other debts cleared', value: debtsFree ? `Age ${debtsFree.age}` : 'Not yet', sub: debtsFree ? String(debtsFree.year) : `still owing at ${end.age}`, open: panel('leftover') });
       ends.push(debtsFree ? debtsFree.age : null);
@@ -162,16 +170,19 @@
     let lead;
     let result = null;
     let how = null;
+    const ra = FP.dom.retireAt(p, need);
     if (!need) lead = `Retiring at ${a.retirementAge} is beyond the projection.`;
     else {
       const goalText = `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}`;
       const m = ahead(p, true);
-      lead = `On course for about ${m(need.have)} by ${a.retirementAge}. You\u2019d need about ${m(need.needed)}.`;
+      lead = `On course for about ${m(need.have)} by ${ra}. You\u2019d need about ${m(need.needed)}.`;
       const short = need.needed - need.have;
       result = short > 0
         ? h('p', { class: 'first-look-result' }, h('strong', { class: 'negative' }, `Short by about ${m(short)}`))
         : h('p', { class: 'first-look-result' }, h('strong', null, 'On course'));
-      how = `To spend ${goalText} from ${a.retirementAge} to ${need.endAge}, in ${measure('savingsPensions').toLowerCase()}. It assumes your ${a.employeePensionPct}% + ${a.employerPensionPct}% workplace pension and counts the full State Pension from ${a.statePensionAge}, in today\u2019s money.`;
+      how = p.partner
+        ? `To spend ${goalText} from ${ra} (once you\u2019ve both retired: ${FP.dom.bothRetire(p)}) to ${need.endAge}, in ${measure('savingsPensions').toLowerCase()}. It assumes each of your workplace pensions and counts each full State Pension from its age, in today\u2019s money.`
+        : `To spend ${goalText} from ${a.retirementAge} to ${need.endAge}, in ${measure('savingsPensions').toLowerCase()}. It assumes your ${a.employeePensionPct}% + ${a.employerPensionPct}% workplace pension and counts the full State Pension from ${a.statePensionAge}, in today\u2019s money.`;
     }
     return h('section', { class: 'card outcome', 'aria-labelledby': 'oc-retirement' },
       h('h2', { id: 'oc-retirement' }, 'Retirement'),
@@ -194,13 +205,15 @@
     const a = p.assumptions;
     const need = FP.projection.retirementNeed(p);
     const goalText = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ' (what you spend now)'}` : '';
+    // With a partner, the goal starts once you've both retired.
+    const ra = FP.dom.retireAt(p, need);
     let verdict;
     if (!need) verdict = { tone: 'info', text: `Retiring at ${a.retirementAge} is beyond the projection.` };
-    else if (need.needed <= 0) verdict = { tone: rough ? 'info' : 'ok', text: `Your State Pension and other income would cover spending ${goalText} from ${a.retirementAge}.` };
+    else if (need.needed <= 0) verdict = { tone: rough ? 'info' : 'ok', text: `${p.partner ? 'Your State Pensions' : 'Your State Pension'} and other income would cover spending ${goalText} from ${ra}.` };
     else {
       const text = need.lastsUntil
-        ? `Spending ${goalText} from ${a.retirementAge}, your money would last until about ${need.lastsUntil}.`
-        : `Spending ${goalText} from ${a.retirementAge}, your money would last beyond ${need.endAge}.`;
+        ? `Spending ${goalText} from ${ra}, your money would last until about ${need.lastsUntil}.`
+        : `Spending ${goalText} from ${ra}, your money would last beyond ${need.endAge}.`;
       verdict = { tone: rough ? 'info' : need.lastsUntil ? 'warn' : 'ok', text };
     }
     const rs = rough ? null : FP.projection.retirementSpend(p);
@@ -208,11 +221,12 @@
     const pot = ahead(p, true);
     return outcomeCard('retirement', 'Retirement', verdict, need ? [
       { label: measure('moneyLastsTo'), value: lastsTo(need), sub: `at ${money(need.goal)} a month${need.lastsUntil ? ', then runs short' : ', the end of your plan'}`, warn: !rough && !!need.lastsUntil, open: panel('retirement') },
-      rs ? { label: measure('couldSpend'), value: `${m(rs.monthly)} a month`, sub: `from ${a.retirementAge} to ${rs.endAge}, today\u2019s money`, open: panel('retirement') } : null,
-      { label: measure('savingsPensions', a.retirementAge), value: `about ${pot(need.have)}`, sub: 'on course to have, today\u2019s money', warn: !rough && need.have < need.needed, open: panel('retirement') },
-      { label: `Needed by ${a.retirementAge}`, value: `about ${pot(need.needed)}`, sub: `in ${measure('savingsPensions').toLowerCase()}, to last to ${need.endAge}`, open: panel('retirement') },
+      rs ? { label: measure('couldSpend'), value: `${m(rs.monthly)} a month`, sub: `from ${ra} to ${rs.endAge}, today\u2019s money`, open: panel('retirement') } : null,
+      { label: measure('savingsPensions', ra), value: `about ${pot(need.have)}`, sub: 'on course to have, today\u2019s money', warn: !rough && need.have < need.needed, open: panel('retirement') },
+      { label: `Needed by ${ra}`, value: `about ${pot(need.needed)}`, sub: `in ${measure('savingsPensions').toLowerCase()}, to last to ${need.endAge}`, open: panel('retirement') },
     ] : [], ideaFor('retirement', ideas), panel, h('p', { class: 'small how-link' },
-      `Includes the State Pension from ${a.statePensionAge}. `, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')), '#setup/about');
+      p.partner ? `Starts once you\u2019ve both retired (${FP.dom.bothRetire(p)}). Includes each State Pension from its age (${FP.profile.people(p).map((x, i) => `${FP.profile.whose(p, i)} ${x.statePensionAge}`).join(', ')}). `
+        : `Includes the State Pension from ${a.statePensionAge}. `, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')), '#setup/about');
   }
 
   // Estimates shown to the nearest £1,000 (or £100 under £10,000), not to the pound.

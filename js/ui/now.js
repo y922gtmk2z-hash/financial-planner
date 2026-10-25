@@ -45,7 +45,38 @@
       FP.dom.fill(body,
         view === 'month' ? T.cashFlowCard(s, a, p, pay) : null,
         view === 'own' ? [T.netWorthCard(s), T.chartCard(s), T.homeCard(s, a, p)] : null,
-        view === 'pay' ? [I.taxYearNotice(), I.resultsView(p), I.yourPayCard(p)] : null);
+        view === 'pay' ? payView() : null);
+    }
+
+    /*
+     * Pay and tax: yours, or with a partner, a switch between yours and
+     * theirs (each worked out on its own allowance) and what you take home together.
+     */
+    let person = 0;
+    function payView() {
+      if (!p.partner) return [I.taxYearNotice(), I.resultsView(p), I.yourPayCard(p)];
+      const P = FP.profile;
+      const hh = FP.tax.household(p);
+      const own = P.asPerson(p, person);
+      const whose = person ? P.capital(P.whose(p, 1)) : null;
+      const label = (i) => (i ? p.partner.name || 'Your partner' : p.about.name ? `${p.about.name} (you)` : 'You');
+      return [
+        I.taxYearNotice(),
+        h('p', { class: 'together' }, 'Together you take home ', h('strong', null, `${FP.dom.money(hh.takeHomeMonthly)} a month`),
+          ` (${hh.people.map((x, i) => `${i ? P.who(p, 1) : 'you'} ${FP.dom.money(x.takeHomeMonthly)}`).join(', ')}).`),
+        FP.field.render({ path: 'pay-person', label: 'Whose pay?', type: 'toggle', options: [{ value: '0', label: label(0) }, { value: '1', label: label(1) }] }, {
+          value: String(person), compact: true,
+          onChange: (v) => {
+            person = Number(v);
+            draw();
+            const on = body.querySelector('[data-path="pay-person"] input:checked');
+            if (on) on.focus();
+          },
+        }),
+        person ? h('p', { class: 'notice info small' }, `${whose} pay and tax, on ${P.whose(p, 1)} own personal allowance. Where it says \u2018you\u2019, it means ${P.who(p, 1)}.`) : null,
+        I.resultsView(own, whose),
+        I.yourPayCard(own, person),
+      ];
     }
 
     if (FP.checklist.isEmpty(p)) {
