@@ -253,6 +253,32 @@
     };
   }
 
+  /*
+   * The earliest age you could retire and still spend your target (your
+   * retirement spending goal, or what you spend now) to your end age, with
+   * nothing else changed, no later than 75. Whole years, by bisection.
+   * Returns { age, now } or null when it can't be worked out, with age null
+   * when not even 75 works.
+   */
+  function earliestRetirement(profile) {
+    if (profile.about.age == null) return null;
+    const now = profile.assumptions.retirementAge;
+    const at = (age) => meets(FP.patch.applyPatch(profile, [{ path: 'assumptions.retirementAge', op: 'set', value: age }]), { id: 'retireAt', value: age });
+    const lo = Math.max(40, profile.about.age + 1);
+    const hi = Math.max(lo, MAX_RETIRE_AGE);
+    const top = at(hi);
+    if (top === null) return null;
+    if (!top) return { age: null, now };
+    if (at(lo)) return { age: lo, now };
+    let bad = lo;
+    let good = hi;
+    while (good - bad > 1) {
+      const mid = Math.floor((good + bad) / 2);
+      if (at(mid)) good = mid; else bad = mid;
+    }
+    return { age: good, now };
+  }
+
   // The goal's own measure on plan q: £ a month you could spend, the age money lasts to, or the debt-free age.
   function reaches(q, goal) {
     if (goal.id === 'spend') {
@@ -266,5 +292,5 @@
     return debtFreeAge(q);
   }
 
-  FP.goalSeek = { GOALS, LEVERS, MAX_RETIRE_AGE, solve, meets, debtFreeAge, spendingPatch, overpayTargets, pensionLimit };
+  FP.goalSeek = { GOALS, LEVERS, MAX_RETIRE_AGE, solve, earliestRetirement, meets, debtFreeAge, spendingPatch, overpayTargets, pensionLimit };
 })(globalThis.FP = globalThis.FP || {});

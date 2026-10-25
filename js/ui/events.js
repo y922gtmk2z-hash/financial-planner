@@ -14,10 +14,14 @@
   function describe(e) {
     const t = P.eventType(e.type);
     const name = e.name || t.label;
+    const yearsText = e.endYear == null ? `from ${e.startYear}` : e.endYear === e.startYear ? `in ${e.startYear}` : `${e.startYear} to ${e.endYear}`;
+    if (t.payCut) return `${name}: ${e.payPct == null ? 100 : e.payPct}% of your pay ${yearsText}${e.endYear == null ? ' until you retire' : ''}${e.amount > 0 ? `, plus ${money(e.amount)} a month` : ''}`;
+    if (t.outMonths) return `${name}: no pay for ${e.months} month${e.months === 1 ? '' : 's'} from ${e.startYear}${e.amount > 0 ? `, ${money(e.amount)} a month still coming in` : ''}`;
+    if (t.move) return `${name}: a ${money(e.price || 0)} home in ${e.startYear}${e.mortgage > 0 ? ` with a ${money(e.mortgage)} mortgage over ${e.term} years` : ', bought outright'}${e.amount > 0 ? `, ${money(e.amount)} to move` : ''}`;
     if (!(e.amount > 0) && !t.pause) return `${name}: no amount yet`;
     const when = e.per === 'lump' || e.endYear == null || e.endYear === e.startYear ? `in ${e.startYear}` : `${e.startYear} to ${e.endYear}`;
     if (t.pause) return `${name}: pay stops ${when}${e.amount > 0 ? `, ${money(e.amount)} a month still coming in` : ''}`;
-    return `${name}: ${money(e.amount)}${e.per === 'lump' ? '' : ' a month'} ${when}${t.dir === 'in' ? ' coming in' : ''}`;
+    return `${name}: ${money(e.amount)}${e.per === 'lump' ? '' : e.per === 'year' ? ' a year' : ' a month'} ${when}${t.dir === 'in' ? ' coming in' : ''}`;
   }
 
   // The fold on Year by year. onChange: the projection needs drawing again.
@@ -81,8 +85,9 @@
         if (key === 'type') {
           const nt = P.eventType(v);
           e.per = nt.per;
-          if (nt.per === 'lump') e.endYear = null;
+          if (nt.per === 'lump' || nt.ongoing || nt.outMonths) e.endYear = null;
           else if (e.endYear == null) e.endYear = e.startYear + Math.max(0, nt.years - 1);
+          P.EVENT_FIELDS.filter((f) => f.only && nt[f.only] && e[f.key] == null).forEach((f) => { e[f.key] = P.EVENT_DEFAULTS[f.key]; });
           hooks.rebuild();
           return;
         }
@@ -97,18 +102,25 @@
         hooks.update();
       },
     });
-    const monthly = e.per === 'month';
+    const monthly = e.per !== 'lump';
+    // Boxes only some kinds of event have (pay share, months, a new home).
+    const extra = P.EVENT_FIELDS.filter((f) => f.only && t[f.only]).map((f) => box(f.key));
+    const amountLabel = t.payCut ? { label: 'Extra coming in (optional)', suffix: 'a month', help: 'Anything on top of your reduced pay, after tax. Leave blank if nothing.' }
+      : t.outMonths ? { label: 'Still coming in (optional)', suffix: 'a month', help: 'After tax, for example benefits. Leave blank if nothing.' }
+        : t.move ? { label: 'Cost of moving (today\u2019s money)', suffix: 'once', help: 'Stamp duty, legal fees, removals.' }
+          : null;
     return h('li', { class: 'pension-item event-item' }, h('fieldset', { class: 'row-card' },
       legend,
       box('type', { help: t.help }),
       box('name', { placeholder: `e.g. ${t.label}` }),
-      t.pause ? null : box('per'),
+      t.pause || t.payCut || t.outMonths || t.move ? null : box('per'),
+      extra,
       box('amount', t.pause
         ? { label: 'Still coming in (optional)', suffix: 'a month', help: 'After tax, for example statutory pay. Leave blank if nothing.' }
-        : { suffix: monthly ? 'a month' : 'once', label: t.dir === 'in' ? 'Amount you’d receive (today’s money)' : 'Amount (today’s money)' }),
+        : amountLabel || { suffix: e.per === 'year' ? 'a year' : monthly ? 'a month' : 'once', label: t.dir === 'in' ? 'Amount you’d receive (today’s money)' : 'Amount (today’s money)' }),
       h('div', { class: 'year-pair' },
-        box('startYear', { label: monthly ? 'From' : 'In', placeholder: 'Year' }),
-        monthly ? box('endYear', { placeholder: String(e.startYear || 'Same year') }) : null),
+        box('startYear', { label: monthly && !t.outMonths ? 'From' : 'In', placeholder: 'Year' }),
+        monthly && !t.outMonths ? box('endYear', { placeholder: t.ongoing ? 'Until you retire' : String(e.startYear || 'Same year') }) : null),
       p.partner ? FP.field.render({ label: 'Whose?', type: 'select', options: [
         { value: 'you', label: p.about.name ? `${p.about.name} (you)` : 'You' },
         { value: 'partner', label: p.partner.name || 'Your partner' },

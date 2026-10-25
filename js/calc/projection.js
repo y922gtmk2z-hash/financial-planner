@@ -261,8 +261,8 @@
    * FP.profile.EVENT_TYPES); anything without a start year is ignored.
    */
   function stepYear(state, y, ctx) {
-    const { profile, opts, cfg, a, age0, startYear, startMonthIndex, cashLimitFromIndex, byAmount, shares, debts, termMonths, overMonthly, spendMonthly0, relief, warnOnce, persons, pots } = state;
-    let { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, boosted } = state;
+    const { profile, opts, cfg, a, age0, startYear, startMonthIndex, cashLimitFromIndex, byAmount, shares, debts, overMonthly, spendMonthly0, relief, warnOnce, persons, pots } = state;
+    let { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, boosted, termMonths } = state;
     const g = y - 1; // years of growth applied to this year's income and spending
     const startAge = age0 + g;
     const priceFactor = FP.growth.inflationFactor(a.inflation, g);
@@ -272,7 +272,7 @@
     const life = eventsForYear(ctx.events, startYear + g, persons.length);
 
     // 1. Income, person by person, then added together for the household.
-    const each = persons.map((ps, i) => personYear(state, ps, i, g, priceFactor, cfgY, life.paused[i]));
+    const each = persons.map((ps, i) => personYear(state, ps, i, g, priceFactor, cfgY, life.pay[i] == null ? 1 : life.pay[i]));
     const one = each.length === 1;
     const total = (k) => (one ? each[0][k] : sum(each, (x) => x[k]));
     // You (person 1) are working; the household is working while either of you is.
@@ -310,6 +310,25 @@
         isa = from(isa);
         pension = from(pension);
       }
+    }
+
+    // A move to a new home this year: sell this one, buy that one with a new
+    // mortgage, at the start of the year (in today's money raised by prices),
+    // so the new home grows from its price through the year.
+    // What's left of the sale goes into cash (as money coming in); a shortfall
+    // is a cost this year, like the moving costs.
+    if (life.move) {
+      const mv = life.move;
+      const newHome = Math.max(0, mv.price || 0) * priceFactor;
+      const newLoan = Math.min(newHome, Math.max(0, mv.mortgage || 0) * priceFactor);
+      const left = (home - mBal) - (newHome - newLoan);
+      if (left >= 0) life.inLump += left / priceFactor; else life.out += -left / priceFactor;
+      home = newHome;
+      mBal = newLoan;
+      termMonths = Math.max(1, Math.round(mv.term || 25)) * 12;
+      monthsElapsed = 0;
+      mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths);
+      state.fixChange = null;
     }
 
     // 2. Growth on opening balances
@@ -504,7 +523,7 @@
       }
     }
 
-    Object.assign(state, { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, boosted });
+    Object.assign(state, { home, cash, isa, gia, pension, shortfall, mBal, mRate, mPayment, monthsElapsed, boosted, termMonths });
     const row = snapshot(state, y, {
       working: anyWorking, salary, bonus, salarySacrifice, takeHome, pensionFromPay, statePension, statePensionTax,
       otherIncomeRetired: otherTaxable + otherTaxFree,
@@ -533,29 +552,42 @@
   /*
    * The life events in calendar year `year`, a year's worth: out (costs),
    * inMonthly (money coming in through the year), inLump (lump sums in), all in
-   * today's money, and paused[i]: person i is on a career break.
+   * today's money; pay[i]: the share of person i's pay this year (0 on a career
+   * break, 0.8 working four days a week, less for months out of work; 1 when
+   * unset); and move: a move to a new home this year (the event), or null.
    */
   function eventsForYear(list, year, people) {
-    const out = { out: 0, inMonthly: 0, inLump: 0, paused: [] };
+    const out = { out: 0, inMonthly: 0, inLump: 0, pay: [], move: null };
+    const cut = (e, f) => {
+      const who = e.owner === 'joint' ? [...Array(people).keys()] : [e.owner === 'partner' && people > 1 ? 1 : 0];
+      who.forEach((i) => { out.pay[i] = (out.pay[i] == null ? 1 : out.pay[i]) * f; });
+    };
     (Array.isArray(list) ? list : []).forEach((e) => {
       if (!e || !Number.isFinite(e.startYear)) return;
-      const lump = e.per === 'lump';
-      const end = lump || e.endYear == null ? e.startYear : e.endYear;
-      if (year < e.startYear || year > end) return;
       const t = FP.profile.eventType(e.type);
-      const amount = Math.max(0, e.amount || 0) * (lump ? 1 : 12);
+      const lump = e.per === 'lump';
+      // Time out of work runs for its months; fewer days a week, until its end year or for good.
+      const months = t.outMonths ? Math.max(1, Math.round(e.months || 1)) : 0;
+      const end = t.outMonths ? e.startYear + Math.ceil(months / 12) - 1
+        : lump ? e.startYear : e.endYear == null ? (t.ongoing ? Infinity : e.startYear) : e.endYear;
+      if (year < e.startYear || year > end) return;
+      if (t.move) out.move = e;
+      // Months out of work this year (from the start of the year).
+      const away = t.outMonths ? Math.min(12, months - 12 * (year - e.startYear)) : 0;
+      const amount = Math.max(0, e.amount || 0) * (lump || e.per === 'year' ? 1 : t.outMonths ? away : 12);
       if (t.dir === 'in') out[lump ? 'inLump' : 'inMonthly'] += amount;
       else out.out += amount;
-      if (t.pause) {
-        if (e.owner === 'joint') for (let i = 0; i < people; i += 1) out.paused[i] = true;
-        else out.paused[e.owner === 'partner' && people > 1 ? 1 : 0] = true;
-      }
+      if (t.pause) cut(e, 0);
+      if (t.payCut) cut(e, Math.max(0, Math.min(100, e.payPct == null ? 100 : e.payPct)) / 100);
+      if (t.outMonths) cut(e, 1 - away / 12);
     });
     return out;
   }
 
-  // paused: on a career break this year, so no pay, bonuses or workplace pension.
-  function personYear(state, ps, index, g, priceFactor, cfgY, paused) {
+  // pay: the share of their pay this year (0 on a career break: no pay,
+  // bonuses, workplace pension, salary sacrifice or taxable benefits).
+  function personYear(state, ps, index, g, priceFactor, cfgY, pay) {
+    const paused = pay <= 0;
     const { a, startMonthIndex, dbs } = state;
     const p = ps.person;
     const inc = p.income;
@@ -570,7 +602,7 @@
     let slDue = 0;
     let slPay = 0;
     if (working) {
-      const sf = paused ? 0 : FP.growth.compound(1, a.salaryGrowth, g);
+      const sf = paused ? 0 : pay * FP.growth.compound(1, a.salaryGrowth, g);
       const input = FP.tax.inputFromPerson(p);
       input.salary = (input.salary || 0) * sf;
       input.bonuses = (input.bonuses || []).map((b) => ({ ...b, amount: (b.amount || 0) * sf }));

@@ -180,7 +180,7 @@ test('life events are checked when loaded, and saved as profile.events', () => {
   assert.deepEqual(FP.profile.blank().events, []);
   const e = FP.profile.newEvent('schoolFees', new Date(2026, 5, 1));
   assert.deepEqual([e.per, e.startYear, e.endYear], ['month', 2027, 2033]);
-  assert.equal(FP.profile.EVENT_TYPES.length, 9);
+  assert.equal(FP.profile.EVENT_TYPES.length, 12);
   ['houseMove', 'childcare', 'schoolFees', 'university', 'careerBreak', 'car', 'wedding', 'inheritance'].forEach((t) => assert.ok(FP.profile.EVENT_TYPES.some((x) => x.value === t), t));
 });
 

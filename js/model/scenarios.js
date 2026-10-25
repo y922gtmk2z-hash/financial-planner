@@ -312,7 +312,7 @@
   /*
    * One-tap what-ifs, each a change to a copy of the baseline.
    * applies(p): whether it makes sense for this profile; patch(p): what it
-   * changes, as an FP.patch patch.
+   * changes, as an FP.patch patch. Life what-ifs (life: true) follow below.
    */
   const PRESETS = [
     {
@@ -352,6 +352,54 @@
       patch: () => [{ path: 'assumptions.marketShift', op: 'add', value: -2 }],
     },
   ];
+
+  /*
+   * Life what-ifs: each adds a life event (see FP.profile.EVENT_TYPES) to a
+   * copy of the baseline, starting next year, which you can then edit under
+   * Life events. event(p, year): the event's own figures.
+   */
+  const nextYear = () => new Date().getFullYear() + 1;
+  const withEvent = (p, type, fields) => [{ path: 'events', op: 'set', value: (p.events || []).concat({ ...FP.profile.newEvent(type), ...fields }) }];
+  const LIFE = [
+    {
+      id: 'fourDays', life: true, label: 'Go four days a week',
+      applies: (p) => (p.income.grossSalary || 0) > 0 && (p.events || []).length < FP.profile.MAX_EVENTS,
+      name: () => `Four days a week from ${nextYear()}`,
+      patch: (p) => withEvent(p, 'partTime', { name: 'Four days a week', payPct: 80, startYear: nextYear(), endYear: null }),
+    },
+    {
+      id: 'outOfWork', life: true, label: 'Six months out of work',
+      applies: (p) => (p.income.grossSalary || 0) > 0 && (p.events || []).length < FP.profile.MAX_EVENTS,
+      name: () => `Six months out of work in ${nextYear()}`,
+      patch: (p) => withEvent(p, 'outOfWork', { name: 'Six months out of work', months: 6, startYear: nextYear() }),
+    },
+    {
+      id: 'moveHouse', life: true, label: 'Move house',
+      applies: (p) => (p.events || []).length < FP.profile.MAX_EVENTS,
+      name: () => `Move house in ${nextYear()}`,
+      // A home a quarter dearer (or £300,000 if you rent), keeping the same deposit, and about 3% plus £3,000 to move.
+      patch: (p) => {
+        const now = p.assets.homeValue || 0;
+        const price = Math.round((now > 0 ? now * 1.25 : 300000) / 1000) * 1000;
+        const loan = now > 0 ? Math.max(0, (p.mortgage.balance || 0) + price - now) : Math.round(price * 0.9);
+        return withEvent(p, 'moveHouse', { name: 'Move house', price, mortgage: Math.round(loan / 1000) * 1000, term: 25, amount: Math.round((price * 0.03 + 3000) / 100) * 100, startYear: nextYear() });
+      },
+    },
+    {
+      id: 'haveChild', life: true, label: 'Have a child',
+      applies: (p) => (p.events || []).length < FP.profile.MAX_EVENTS,
+      name: () => `A child born in ${nextYear()}`,
+      // Born next year: childcare from age 1 to age 4.
+      patch: (p) => withEvent(p, 'childcare', { name: 'Childcare, ages 1 to 4', amount: 1000, per: 'month', startYear: nextYear() + 1, endYear: nextYear() + 4 }),
+    },
+    {
+      id: 'university', life: true, label: 'Help a child through university',
+      applies: (p) => (p.events || []).length < FP.profile.MAX_EVENTS,
+      name: () => 'Help with university',
+      patch: (p) => withEvent(p, 'university', { name: 'University help', amount: 5000, per: 'year', startYear: nextYear() + 9, endYear: nextYear() + 11 }),
+    },
+  ];
+  PRESETS.push(...LIFE);
 
   // Adds `profile` as a new scenario without switching to it. Returns it, or null at the limit.
   function addProfile(ws, profile, name) {

@@ -10,7 +10,8 @@ const sampleWs = () => FP.scenarios.normalise(JSON.parse(JSON.stringify(FP.sampl
 test('a check-in prefills today’s balances and puts edits into every scenario', () => {
   const ws = sampleWs();
   const b = C.balancesOf(ws.scenarios[0].profile);
-  assert.deepEqual(Object.keys(b), ['cash', 'isa', 'gia', 'pension', 'mortgage', 'debts']);
+  assert.deepEqual(Object.keys(b), ['cash', 'isa', 'gia', 'pension', 'pots', 'mortgage', 'debts']);
+  assert.deepEqual(b.pots, [], 'just one pot');
   assert.equal(b.pension, 61000);
   assert.deepEqual(b.debts.map((d) => d.id), ['sample-car', 'sample-card']);
   b.pension = 64000;

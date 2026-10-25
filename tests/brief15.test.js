@@ -131,7 +131,7 @@ test('migration 11: older plans start with no commitments; scenarios keep their 
   const up = FP.migrate.upgrade(v10);
   assert.equal(up.from, 10);
   assert.deepEqual(up.workspace.scenarios[0].profile.commitments, []);
-  assert.equal(FP.migrate.CURRENT, 11);
+  assert.equal(FP.migrate.CURRENT, 12);
   // A commitment made in a scenario is part of its patch, not the Baseline's.
   const ws = FP.sampleWorkspace();
   const sc = ws.scenarios[1];

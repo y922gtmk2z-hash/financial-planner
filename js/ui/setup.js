@@ -370,11 +370,24 @@
       (() => { const el = make(P.fieldFor('outgoings.estimate')); return [el, FP.welcome.estimateHelper(() => el)]; })(),
       status,
       h('div', { class: 'parts' }, bills.el, debts.el, other.el),
+      lifeEventsLink(ctx.profile()),
       FP.savingsEditor.render(ctx, { embedded: true }));
     drawPays();
     card.refresh = refresh;
     card.redrawPays = () => drawPays();
     return card;
+  }
+
+  /*
+   * Life events live on Year by year; a way there from Outgoings, once Year
+   * by year is open (after the first look). Says how many you have.
+   */
+  function lifeEventsLink(p) {
+    if (!FP.summary.checklist(p).ready || FP.welcome.isRough(p)) return null;
+    const n = (p.events || []).length;
+    return h('p', { class: 'help life-events-link' },
+      n ? `${n} life event${n === 1 ? '' : 's'} planned. ` : 'Costs you can see coming, or money you expect (a house move, childcare, time out of work)? ',
+      h('a', { href: '#plan/year-by-year/events' }, n ? 'See your life events' : 'Add them as life events'), '.');
   }
 
   // The risk question, with the three model mixes under it (yours marked).

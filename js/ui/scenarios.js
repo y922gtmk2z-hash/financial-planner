@@ -136,29 +136,43 @@
       diffs.length > shown.length ? h('li', { class: 'muted' }, `and ${diffs.length - shown.length} more`) : null);
   }
 
-  // One tap adds a what-if next to your baseline.
+  // One tap adds a what-if next to your baseline: changes to your figures, then life what-ifs.
   function presetCard(ctx) {
     const ws = ctx.workspace();
     const base = ws.scenarios[0];
     const full = ws.scenarios.length >= S.MAX_SCENARIOS;
     const presets = S.PRESETS.filter((x) => x.applies(base.profile));
     if (!presets.length) return null;
+    const button = (x) => h('button', {
+      type: 'button', class: 'secondary small', disabled: full,
+      onclick: () => {
+        const c = S.fromPreset(ws, x.id);
+        if (!c) return;
+        ctx.changed();
+        ctx.rerender();
+        // A life what-if is a life event in that scenario: edit it there.
+        ctx.toast(`Added \u201c${c.name}\u201d \u2014 compare it below`, x.life ? { action: { label: 'Edit it', run: () => editEvents(ctx, c.id) } } : undefined);
+        const table = document.getElementById('cmp-h');
+        if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+    }, x.label);
+    const life = presets.filter((x) => x.life);
     return h('section', { class: 'card', 'aria-labelledby': 'sc-preset-h' },
       h('h2', { id: 'sc-preset-h' }, 'Try a what-if'),
       h('p', { class: 'muted' }, `Each adds a copy of \u201c${base.name}\u201d with one change, and shows it side by side below.`),
       full ? h('p', { class: 'muted' }, `You can have up to ${S.MAX_SCENARIOS} scenarios. Delete one to add another.`) : null,
-      h('div', { class: 'preset-row' }, presets.map((x) => h('button', {
-        type: 'button', class: 'secondary small', disabled: full,
-        onclick: () => {
-          const c = S.fromPreset(ws, x.id);
-          if (!c) return;
-          ctx.changed();
-          ctx.rerender();
-          ctx.toast(`Added \u201c${c.name}\u201d \u2014 compare it below`);
-          const table = document.getElementById('cmp-h');
-          if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        },
-      }, x.label))));
+      h('div', { class: 'preset-row' }, presets.filter((x) => !x.life).map(button)),
+      life.length ? [
+        h('h3', { id: 'sc-life-h' }, 'Life what-ifs'),
+        h('p', { class: 'muted small' }, 'Each adds a life event starting next year, with figures you can change: edit the scenario, then Life events.'),
+        h('div', { class: 'preset-row', role: 'group', 'aria-labelledby': 'sc-life-h' }, life.map(button)),
+      ] : null);
+  }
+
+  // Switches to a scenario and opens its life events (Year by year).
+  function editEvents(ctx, id) {
+    ctx.setActive(id);
+    location.hash = '#plan/year-by-year/events';
   }
 
   function createCard(ctx) {
