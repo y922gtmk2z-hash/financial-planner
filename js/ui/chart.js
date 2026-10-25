@@ -378,5 +378,5 @@
       h('span', { class: 'legend-label' }, it.label))));
   }
 
-  FP.chart = { stackedBars, legend, timeChart, keys, compactMoney };
+  FP.chart = { stackedBars, legend, timeChart, keys };
 })(globalThis.FP = globalThis.FP || {});

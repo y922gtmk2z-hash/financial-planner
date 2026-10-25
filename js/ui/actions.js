@@ -156,9 +156,9 @@
     const ws = ctx.workspace();
     const p = ctx.profile();
     const sc = FP.scenarios.addProfile(ws, FP.patch.applyPatch(p, x.patch), scenarioName(x, p));
-    if (!sc) { ctx.toast(`You have ${FP.scenarios.MAX_SCENARIOS} scenarios already. Delete one on Scenarios to add another.`); return; }
+    if (!sc) { ctx.toast(`You have ${FP.scenarios.MAX_SCENARIOS} scenarios already. Delete one on What if to add another.`); return; }
     ctx.changed();
-    ctx.go('scenarios');
+    ctx.go('what-if');
     ctx.toast(`Added “${sc.name}” — compare it with your plan`);
   }
 

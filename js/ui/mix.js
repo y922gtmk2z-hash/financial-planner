@@ -125,9 +125,9 @@
   function tryIt(ctx, pot, level) {
     const p = ctx.profile();
     const sc = FP.scenarios.addProfile(ctx.workspace(), FP.patch.applyPatch(p, FP.mix.usePatch(pot.path, level)), `${pot.label}: typical ${level} mix`);
-    if (!sc) { ctx.toast(`You have ${FP.scenarios.MAX_SCENARIOS} scenarios already. Delete one on Scenarios to add another.`); return; }
+    if (!sc) { ctx.toast(`You have ${FP.scenarios.MAX_SCENARIOS} scenarios already. Delete one on What if to add another.`); return; }
     ctx.changed();
-    ctx.go('scenarios');
+    ctx.go('what-if');
     ctx.toast(`Added “${sc.name}” — compare it with your plan`);
   }
 

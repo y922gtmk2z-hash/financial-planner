@@ -1,4 +1,4 @@
-/* Future: year-by-year projection with nominal / today's-money toggle. */
+/* Year by year (#plan/year-by-year, once Future): the full projection, with a today's / future money toggle. */
 (function (FP) {
   'use strict';
 
@@ -41,7 +41,8 @@
     };
 
     FP.dom.add(root,
-      FP.dom.pageHead('Future', 'Year by year'),
+      h('p', { class: 'back-link' }, h('a', { href: '#plan' }, '\u2039 Your plan')),
+      FP.dom.pageHead('Year by year', 'Where your plan could go'),
       h('p', { class: 'lead' }, 'A year-by-year illustration of where your plan could go. It is not a forecast: real returns, prices and pay will differ.'),
       h('div', { class: 'view-toggle' }, FP.field.render(viewField, {
         value: view,
@@ -197,7 +198,7 @@
         xLabels: rows.map((x) => String(x.age)), xTitle,
         ariaLabel: `Line chart of net worth and home equity by age, ${moneyNote}${band ? ', with the range of market paths' : ''}`,
       }),
-      FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)}${band ? ` In 8 of 10 market paths it would be between ${at(band.low[yr], yr)} and ${at(band.high[yr], yr)}.` : ''}`),
+      FP.dom.soWhat(`${FP.screens.plan.netWorthSoWhat(rows, ev)}${band ? ` In 8 of 10 market paths it would be between ${at(band.low[yr], yr)} and ${at(band.high[yr], yr)}.` : ''}`),
       h('details', { class: 'advanced', id: 'nw-based-on' },
         h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
         h('p', { class: 'muted small' }, 'Ages along the bottom. Home equity = home value minus mortgage. The solid line uses your assumptions\u2019 average returns every year.'),
@@ -364,5 +365,5 @@
 
 
   FP.screens = FP.screens || {};
-  FP.screens.future = { title: 'Future', render, drawSplitStatus, getView, setView };
+  FP.yearByYear = { render, drawSplitStatus, getView, setView };
 })(globalThis.FP = globalThis.FP || {});

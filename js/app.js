@@ -3,19 +3,31 @@
   'use strict';
 
   const { h } = FP.dom;
-  const ROUTES = ['overview', 'now', 'setup', 'future', 'scenarios', 'actions', 'checkin', 'progress', 'assumptions', 'data', 'settings'];
-  // Older links: Today and Income are now parts of Now.
-  const ALIASES = { today: 'now/own', income: 'now/pay' };
+  const ROUTES = ['plan', 'actions', 'what-if', 'progress', 'checkin', 'setup', 'assumptions', 'data', 'settings'];
+  /*
+   * Older links, to where those screens live now: Your plan, Today and its
+   * parts (now detail sheets on Plan), Income, Future (Plan's year by year)
+   * and Scenarios (What if).
+   */
+  const ALIASES = {
+    overview: () => 'plan',
+    now: (rest) => ({ month: 'plan/cash-flow', own: 'plan/own-and-owe', pay: 'plan/pay-and-tax' }[rest[0]] || 'plan'),
+    today: () => 'plan/own-and-owe',
+    income: () => 'plan/pay-and-tax',
+    future: () => 'plan/year-by-year',
+    scenarios: () => 'what-if',
+  };
 
   /*
    * The planner opens up as you go, so there's only ever a little to take in:
    *   0 - before the quick start: just the welcome (and Your data, Settings);
-   *   1 - after it: Your plan, Your figures and Today;
-   *   2 - once you've added more detail: everything.
+   *   1 - after it: Plan (with its detail sheets), Actions and Your figures;
+   *   2 - once you've added more detail: everything, with What if, Progress
+   *       and Plan's year by year.
    */
   const STAGE_ROUTES = [
-    ['overview', 'data', 'settings'],
-    ['overview', 'data', 'settings', 'setup', 'now'],
+    ['plan', 'data', 'settings'],
+    ['plan', 'data', 'settings', 'setup', 'actions'],
     ROUTES,
   ];
   function stage() {
@@ -169,7 +181,7 @@
       if (!confirm('Clear the sample data (and its example scenarios) and start with an empty form?')) return;
       workspace = FP.scenarios.fromProfile(FP.profile.blank());
       save();
-      location.hash = '#overview';
+      location.hash = '#plan';
       route();
     };
     banner.classList.toggle('slim', bannerSeen);
@@ -208,20 +220,21 @@
     FP.dom.fill(scenarioBar,
       h('label', { for: 'scenario-select', class: 'scenario-label' }, 'Scenario'),
       h('div', { class: 'input-wrap scenario-select' }, select),
-      h('a', { href: '#scenarios', class: 'header-link' }, 'Compare'));
+      h('a', { href: '#what-if', class: 'header-link' }, 'Compare'));
     scenarioBar.classList.toggle('not-baseline', !FP.scenarios.isBaseline(workspace, current.id));
   }
 
   // "#setup/about.age" or "#setup/leftover": a screen, then optionally a
   // field (by its profile path) or a section (by id) to scroll to.
   function parseHash() {
-    const raw = (location.hash || '#overview').slice(1);
-    const alias = ALIASES[raw.split('/')[0]];
+    const raw = (location.hash || '#plan').slice(1);
+    const [first, ...after] = raw.split('/');
+    const alias = ALIASES[first] ? ALIASES[first](after) : null;
     if (alias) history.replaceState(null, '', `#${alias}`);
     const [name, ...rest] = (alias || raw).split('/');
     let target = null;
     try { target = rest.length ? decodeURIComponent(rest.join('/')) : null; } catch (e) { /* malformed link: just open the screen */ }
-    return { id: ROUTES.includes(name) ? name : 'overview', target };
+    return { id: ROUTES.includes(name) ? name : 'plan', target };
   }
 
   // "partner:bonuses" is the part of your partner's pay with that id (Setup shows their pay first).
@@ -243,12 +256,15 @@
     let { id, target } = parseHash();
     const s = stage();
     drawStage(s);
-    if (!STAGE_ROUTES[s].includes(id)) {
+    // Plan's year by year opens with What if and Progress, once there's more detail.
+    if (!STAGE_ROUTES[s].includes(id) || (id === 'plan' && target === 'year-by-year' && s < 2)) {
       // Not open yet: back to Your plan (the welcome, until the quick start's done).
-      history.replaceState(null, '', '#overview');
-      id = 'overview';
+      history.replaceState(null, '', '#plan');
+      id = 'plan';
       target = null;
     }
+    // A sheet from the screen before doesn't stay open over the next one.
+    document.querySelectorAll('dialog.sheet[open]').forEach((d) => d.close());
     document.querySelectorAll('[data-route]').forEach((a) => {
       if (a.dataset.route === id) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -257,10 +273,12 @@
     drawBanner();
     drawScenarioBar();
     main.replaceChildren();
-    FP.screens[id].render(main, ctx);
+    const screen = FP.screens[id];
+    screen.render(main, ctx, target);
     restoreOpened();
-    document.title = `${FP.screens[id].title} · Finance planner`;
-    return target;
+    document.title = `${(screen.titleFor && screen.titleFor(target)) || screen.title} · Finance planner`;
+    // Plan handles its own sub-pages (year by year, the detail sheets).
+    return screen.handles && screen.handles(target) ? null : target;
   }
 
   /*

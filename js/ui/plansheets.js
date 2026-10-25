@@ -1,30 +1,25 @@
-/* Today: net worth, assets vs liabilities, home equity and monthly cash flow. */
+/*
+ * Plan's detail sheets: where you stand today, each in a panel over Your plan
+ * (FP.sheet): this month's cash flow (#plan/cash-flow), what you own and owe
+ * (#plan/own-and-owe) and your pay and tax (#plan/pay-and-tax). Closing one
+ * goes back to #plan.
+ */
 (function (FP) {
   'use strict';
 
   const { h, money, pct, months, chips } = FP.dom;
+
+  const SHEETS = [
+    { id: 'cash-flow', title: 'This month', label: 'Cash flow this month' },
+    { id: 'own-and-owe', title: 'What you own and owe', label: 'What you own and owe' },
+    { id: 'pay-and-tax', title: 'Pay and tax', label: 'Pay and tax' },
+  ];
 
   const ASSET_COLORS = {
     homeValue: '--series-1', cashSavings: '--series-2', isa: '--series-3',
     gia: '--series-4', pension: '--series-5', other: '--series-6',
   };
   const LIABILITY_COLORS = { mortgage: '--series-7', debts: '--series-8', studentLoan: '--series-neutral' };
-
-  function render(root, ctx) {
-    const p = ctx.profile();
-    const a = p.assumptions;
-    const pay = FP.tax.forProfile(p);
-    const s = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly);
-
-    FP.dom.add(root,
-      h('h1', null, 'Today'),
-      s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>
-        h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null,
-      netWorthCard(s),
-      chartCard(s),
-      homeCard(s, a, p),
-      cashFlowCard(s, a, p, pay));
-  }
 
   function netWorthCard(s) {
     return h('section', { class: 'card hero', 'aria-labelledby': 'nw-h' },
@@ -122,7 +117,7 @@
     return h('section', { class: 'card', 'aria-labelledby': 'cf-h' },
       h('h2', { id: 'cf-h' }, 'Monthly cash flow'),
       dl([
-        ['Take-home pay', h('a', { href: '#now/pay' }, money(cf.takeHomeMonthly))],
+        ['Take-home pay', h('a', { href: '#plan/pay-and-tax' }, money(cf.takeHomeMonthly))],
       ]),
       pay.bonusPayments.length ? h('p', { class: 'muted small' },
         'A regular month, without bonuses paid in a particular month. After deductions, bonuses add ',
@@ -171,6 +166,86 @@
     return h('dl', { class: 'rows' }, rows.filter(Boolean).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v))));
   }
 
-  FP.screens = FP.screens || {};
-  FP.screens.today = { title: 'Today', render, parts: { netWorthCard, chartCard, homeCard, cashFlowCard } };
+  /*
+   * Pay and tax: yours, or with a partner, a switch between yours and
+   * theirs (each worked out on its own allowance) and what you take home together.
+   */
+  function payBody(p) {
+    const I = FP.income;
+    const wrap = h('div');
+    let person = 0;
+    const draw = () => FP.dom.fill(wrap, payView());
+    function payView() {
+      if (!p.partner) return [I.taxYearNotice(), I.resultsView(p), I.yourPayCard(p)];
+      const P = FP.profile;
+      const hh = FP.tax.household(p);
+      const own = P.asPerson(p, person);
+      const whose = person ? P.capital(P.whose(p, 1)) : null;
+      const label = (i) => (i ? p.partner.name || 'Your partner' : p.about.name ? `${p.about.name} (you)` : 'You');
+      return [
+        I.taxYearNotice(),
+        h('p', { class: 'together' }, 'Together you take home ', h('strong', null, `${FP.dom.money(hh.takeHomeMonthly)} a month`),
+          ` (${hh.people.map((x, i) => `${i ? P.who(p, 1) : 'you'} ${FP.dom.money(x.takeHomeMonthly)}`).join(', ')}).`),
+        FP.field.render({ path: 'pay-person', label: 'Whose pay?', type: 'toggle', options: [{ value: '0', label: label(0) }, { value: '1', label: label(1) }] }, {
+          value: String(person), compact: true,
+          onChange: (v) => {
+            person = Number(v);
+            draw();
+            const on = wrap.querySelector('[data-path="pay-person"] input:checked');
+            if (on) on.focus();
+          },
+        }),
+        person ? h('p', { class: 'notice info small' }, `${whose} pay and tax, on ${P.whose(p, 1)} own personal allowance. Where it says \u2018you\u2019, it means ${P.who(p, 1)}.`) : null,
+        I.resultsView(own, whose),
+        I.yourPayCard(own, person),
+      ];
+    }
+
+    draw();
+    return wrap;
+  }
+
+  // What goes in each sheet, for the plan as it is now.
+  function bodyFor(id, p) {
+    const a = p.assumptions;
+    const pay = FP.tax.forProfile(p);
+    const s = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly);
+    const warnings = s.warnings.length ? h('ul', { class: 'notices' }, s.warnings.map((w) =>
+      h('li', { class: `notice ${w.level}` }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, w.level === 'warn' ? '!' : 'i'), w.text))) : null;
+    if (id === 'cash-flow') return h('div', null, warnings, cashFlowCard(s, a, p, pay));
+    if (id === 'own-and-owe') return h('div', null, netWorthCard(s), chartCard(s), homeCard(s, a, p));
+    return payBody(p);
+  }
+
+  /*
+   * Opens a sheet by id over Plan. Closing it puts the address back to #plan
+   * and focus back on what opened it.
+   */
+  function open(ctx, id) {
+    const sheet = SHEETS.find((x) => x.id === id);
+    if (!sheet) return null;
+    const opened = FP.sheet.open({
+      title: sheet.title,
+      body: h('div', { class: 'plan-sheet' }, bodyFor(id, ctx.profile()), FP.dom.cardFoot('#setup', 'Edit your figures')),
+      onClose: () => {
+        if (location.hash.startsWith(`#plan/${id}`)) history.replaceState(null, '', '#plan');
+        const back = document.querySelector(`[data-sheet="${id}"]`);
+        if (back) back.focus();
+      },
+    });
+    // A link to another screen (Change, Edit your figures) closes the sheet first.
+    opened.el.addEventListener('click', (e) => {
+      const a = e.target.closest && e.target.closest('a[href^="#"]');
+      if (a && !a.getAttribute('href').startsWith(`#plan/${id}`)) opened.close(true);
+    });
+    return opened;
+  }
+
+  // Links that open each sheet (for the Each month card).
+  function links() {
+    return h('p', { class: 'sheet-links' }, h('span', { class: 'muted small' }, 'In detail: '),
+      SHEETS.map((x, i) => [i ? ' \u00b7 ' : '', h('a', { href: `#plan/${x.id}`, 'data-sheet': x.id }, x.label)]));
+  }
+
+  FP.planSheets = { SHEETS, open, links };
 })(globalThis.FP = globalThis.FP || {});

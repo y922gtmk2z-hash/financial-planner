@@ -1,4 +1,4 @@
-/* Income: UK take-home pay calculator. Feeds Today's cash flow automatically. */
+/* Pay and tax: your take-home pay worked out, for Plan's Pay and tax sheet (FP.planSheets). */
 (function (FP) {
   'use strict';
 
@@ -7,16 +7,6 @@
   const monthName = (v) => (FP.profile.BONUS_MONTHS.find((m) => m.value === v) || { label: v }).label;
 
   const PLAN_LABELS = { plan1: 'Plan 1', plan2: 'Plan 2', plan4: 'Plan 4', plan5: 'Plan 5', postgrad: 'Postgraduate' };
-
-  function render(root, ctx) {
-    const p = ctx.profile();
-    FP.dom.add(root,
-      h('h1', null, 'Income'),
-      h('p', { class: 'lead' }, 'Your take-home pay after income tax, National Insurance, pension and student loan. It feeds your cash flow on Today automatically.'),
-      taxYearNotice(),
-      resultsView(p),
-      yourPayCard(p));
-  }
 
   // What the figures above are based on, each with a link to change it in Setup.
   // person 1: your partner's (p is then the plan as theirs, from FP.profile.asPerson).
@@ -231,7 +221,7 @@
         ['Written off', writeOff ? `April ${writeOff}` : 'Add the year you were first due to repay'],
       ].filter(Boolean).map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
       r.studentLoan < interest ? h('p', { class: 'notice info' }, 'Your repayments are currently less than the interest, so the balance is growing.') : null,
-      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#future' }, 'See it on Future')) : h('p', { class: 'muted' }, 'Enter your age in Your figures to project when it ends.'),
+      outcome ? h('p', { class: 'sl-outcome' }, outcome, ' ', h('a', { href: '#plan/year-by-year' }, 'See it year by year')) : h('p', { class: 'muted' }, 'Enter your age in Your figures to project when it ends.'),
       chips([
         followInflation
           ? `Current rates until August 2027, then your ${pct(p.assumptions.inflation, 1)} inflation as RPI + plan margin`
@@ -283,6 +273,5 @@
           h('td', null, PLAN_LABELS[k]), h('td', { class: 'num' }, `${v.rate}% over ${money(v.threshold)}`))))));
   }
 
-  FP.screens = FP.screens || {};
-  FP.screens.income = { title: 'Income', render, parts: { taxYearNotice, resultsView, yourPayCard } };
+  FP.income = { taxYearNotice, resultsView, yourPayCard };
 })(globalThis.FP = globalThis.FP || {});

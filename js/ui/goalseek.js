@@ -1,5 +1,5 @@
 /*
- * "What would it take to…" on Scenarios: pick a goal (retire at an age, spend
+ * "What would it take to…" on What if: pick a goal (retire at an age, spend
  * an amount a month in retirement, be debt-free by an age) and one thing to
  * change, and the planner works out how much (FP.goalSeek). The answer is a
  * patch: Apply it to the scenario you're editing, or try it as a scenario.
@@ -135,5 +135,5 @@
     ctx.toast(`Added “${sc.name}” — compare it with your plan`);
   }
 
-  FP.goalSeekUi = { card, answerText, scenarioName };
+  FP.goalSeekUi = { card };
 })(globalThis.FP = globalThis.FP || {});

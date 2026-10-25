@@ -96,5 +96,5 @@
     return `#setup/${gap.target}`;
   }
 
-  FP.checklist = { card, note, isEmpty, emptyCard, detail, meter, nextSection };
+  FP.checklist = { card, note, isEmpty, emptyCard, meter, nextSection };
 })(globalThis.FP = globalThis.FP || {});

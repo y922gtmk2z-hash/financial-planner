@@ -91,5 +91,5 @@
         }, 'Remove')));
   }
 
-  FP.sacrificeEditor = { render, realCost };
+  FP.sacrificeEditor = { render };
 })(globalThis.FP = globalThis.FP || {});

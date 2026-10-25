@@ -199,7 +199,7 @@
             ctx.changed();
             sheet.close(true);
             ctx.rerender();
-            ctx.toast(`Saved as “${sc.name}” — compare it in Scenarios`);
+            ctx.toast(`Saved as “${sc.name}” — compare it in What if`);
           },
         }, 'Save as a scenario'),
         h('button', { type: 'button', class: 'link', onclick: () => { work = O.copy(base); drawDrivers(); draw(); } }, 'Undo changes'),
@@ -245,5 +245,5 @@
     return sheet;
   }
 
-  FP.explore = { open, driverField };
+  FP.explore = { open };
 })(globalThis.FP = globalThis.FP || {});
