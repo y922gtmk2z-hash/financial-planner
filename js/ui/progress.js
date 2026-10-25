@@ -28,6 +28,19 @@
     });
     const debtBox = (d) => box(d.name || 'Debt', d.balance, (v) => { d.balance = v; },
       last ? was((x) => (x.debts.find((y) => y.id === d.id) || {}).balance) : null, 'What you owe today.');
+    // With other pensions, one box per pot, added up as you type; otherwise one total.
+    const total = h('p', { class: 'total-row pension-total', role: 'status' });
+    const showTotal = () => { total.textContent = `Pension pots together: ${money(C.pensionTotal(b))}`; };
+    const potWas = (id) => (last ? was((x) => (id === 'main' ? x.pension : ((x.pots || []).find((y) => y.id === id) || {}).value)) : null);
+    const pensionBoxes = b.pots.length
+      ? h('fieldset', { class: 'field-group checkin-pensions' },
+        h('legend', null, 'Pension pots'),
+        h('p', { class: 'help' }, 'One box each, from your statements or your providers’ apps.'),
+        box(plan.partner ? 'Your workplace pension' : 'Your main pension', b.pension, (v) => { b.pension = v; showTotal(); }, potWas('main'), null),
+        b.pots.map((x) => box(x.name, x.value, (v) => { x.value = v; showTotal(); }, potWas(x.id), null)),
+        total)
+      : box('Pension pots', b.pension, (v) => { b.pension = v; }, was((x) => x.pension), 'All your defined-contribution pots, from your statements or apps.');
+    showTotal();
     // Your commitments still to do (in the scenario you're in): did you do them?
     const open = (ctx.profile().commitments || []).filter((c) => c.status === 'open');
     const ticked = new Set();
@@ -41,7 +54,7 @@
       box('Cash savings', b.cash, (v) => { b.cash = v; }, was((x) => x.cash), 'Current and savings accounts, and cash ISAs.'),
       box('ISAs', b.isa, (v) => { b.isa = v; }, was((x) => x.isa), 'Stocks & shares ISAs and Lifetime ISAs, together.'),
       box('Other investments', b.gia, (v) => { b.gia = v; }, was((x) => x.gia), 'General investment accounts.'),
-      box('Pension pots', b.pension, (v) => { b.pension = v; }, was((x) => x.pension), 'All your defined-contribution pots, from your statements or apps.'),
+      pensionBoxes,
       b.mortgage > 0 || (last && last.balances.mortgage > 0) ? box('Mortgage balance', b.mortgage, (v) => { b.mortgage = v; }, was((x) => x.mortgage), 'What you still owe.') : null,
       b.debts.map(debtBox),
       doneBox,
@@ -65,6 +78,41 @@
       form);
   }
 
+  /*
+   * "Add quarterly check-ins to my calendar": a repeating all-day event (an
+   * .ics file, made in the browser) from a day you pick, every three months
+   * or every month.
+   */
+  function calendarCard() {
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const start = new Date();
+    start.setMonth(start.getMonth() + 3);
+    const date = h('input', { type: 'date', id: 'cal-date', value: iso(start), min: iso(new Date()) });
+    let every = 3;
+    const err = h('p', { class: 'field-error', role: 'alert', hidden: true });
+    const go = () => {
+      const text = FP.ics.reminder({
+        date: date.value,
+        title: 'Finance planner: check in',
+        description: 'Update your balances in the finance planner (about two minutes), and tick off what you’ve done. A good time is when your pension statements arrive.',
+        everyMonths: every,
+      });
+      err.hidden = !!text;
+      err.textContent = text ? '' : 'Choose a date for your first check-in.';
+      if (!text) return;
+      FP.dom.download(text, every === 3 ? 'quarterly-check-ins.ics' : 'monthly-check-ins.ics', 'text/calendar;charset=utf-8');
+    };
+    return h('section', { class: 'card', id: 'checkin-calendar', 'aria-labelledby': 'cal-h' },
+      h('h2', { id: 'cal-h' }, 'Add quarterly check-ins to my calendar'),
+      h('p', { class: 'muted' }, 'A reminder that repeats, so you come back every three months, or when your pension statements arrive.'),
+      h('div', { class: 'field' }, h('label', { for: 'cal-date' }, 'First check-in'), h('div', { class: 'input-wrap' }, date)),
+      FP.field.render({ label: 'How often', type: 'toggle', options: [{ value: '3', label: 'Every three months' }, { value: '1', label: 'Every month' }] },
+        { value: '3', onChange: (v) => { every = Number(v); } }),
+      err,
+      h('button', { type: 'button', class: 'secondary', onclick: go }, 'Add to my calendar'),
+      h('p', { class: 'help' }, 'Downloads an .ics file for your calendar app. It’s made in your browser; nothing is sent anywhere.'));
+  }
+
   // Commitments kept: "2 of 3 kept", with what's still to do, or null with none.
   function keptCard(ctx) {
     const p = ctx.profile();
@@ -86,8 +134,8 @@
     if (!snaps.length) {
       FP.dom.add(root, head, keptCard(ctx), h('section', { class: 'card' },
         h('h2', null, 'No check-ins yet'),
-        h('p', null, 'Every month or so, update your balances. Progress then shows your savings and pensions against what your plan expected, and what’s changed since last time.'),
-        checkLink));
+        h('p', null, 'Every three months, or when your pension statements arrive, update your balances. Progress then shows your savings and pensions against what your plan expected, and what’s changed since last time.'),
+        checkLink), calendarCard());
       return;
     }
     const since = C.sinceLast(ws);
@@ -107,9 +155,10 @@
         since ? h('dl', { class: 'facts' },
           h('div', null, h('dt', null, 'Net worth'), h('dd', { class: since.netWorth >= 0 ? 'positive' : 'negative' }, signed(since.netWorth))),
           h('div', null, h('dt', null, 'Debts paid down'), h('dd', null, money(since.debtsPaid))),
-          h('div', null, h('dt', null, 'Actions applied'), h('dd', null, applied.length ? applied.join(', ') : 'None'))) : h('p', null, `Your first check-in was on ${FP.dom.date(latest.date)}. Check in again in a month or so to see what’s changed.`),
+          h('div', null, h('dt', null, 'Actions applied'), h('dd', null, applied.length ? applied.join(', ') : 'None'))) : h('p', null, `Your first check-in was on ${FP.dom.date(latest.date)}. Check in again in three months, or when your pension statements arrive, to see what’s changed.`),
         gap != null ? FP.dom.soWhat(`your ${M.label.toLowerCase()} are ${money(Math.abs(gap))} ${gap >= 0 ? 'ahead of' : 'behind'} what your plan expected for ${FP.dom.date(latest.date)}.`) : null,
         h('div', { class: 'button-row' }, checkLink)),
+      calendarCard(),
       snaps.length >= 2 ? h('section', { class: 'card', 'aria-labelledby': 'prog-chart-h' },
         h('h2', { id: 'prog-chart-h' }, `${M.label} over time`),
         FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true, dashed: x.dashed }))),

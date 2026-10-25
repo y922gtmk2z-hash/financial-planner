@@ -8,7 +8,9 @@
  *                 planned: { savingsAndPensions, netWorth } | null, applied: [idea id] }],
  *   projection: { from: date, points: [{ date, savingsAndPensions, netWorth }] } | null,
  * }
- * balances = { cash, isa, gia, pension, mortgage, debts: [{ id, name, balance }] }.
+ * balances = { cash, isa, gia, pension (your main pot), pots: [{ id ('partner', or
+ *   the other pension's id), name, value }], mortgage, debts: [{ id, name, balance }] }.
+ * pots (since version 12): your partner's main pot and each other pension pot.
  * planned is what the plan projected for that date at the previous check-in;
  * projection is the plan's path from the latest check-in, for the next one.
  * Every snapshot is kept for 24 months, then one per quarter.
@@ -34,17 +36,29 @@
       isa: p.assets.isa || 0,
       gia: p.assets.gia || 0,
       pension: p.assets.pension || 0,
+      pots: potsOf(p),
       mortgage: p.mortgage.balance || 0,
       debts: (p.debts || []).map((d) => ({ id: d.id, name: d.name || '', balance: d.balance || 0 })),
     };
   }
 
-  // Puts balances into a profile (debts matched by id; others left as they are).
+  // Pension pots besides your main one: your partner's, then each other pot (not defined benefit pensions).
+  function potsOf(p) {
+    return (p.partner ? [{ id: 'partner', name: `${FP.profile.capital(FP.profile.whose(p, 1))} workplace pension`, value: p.partner.pension || 0 }] : [])
+      .concat((p.pensions || []).filter((x) => x.type === 'dc').map((x) => ({ id: x.id, name: x.name || 'Other pension', value: x.value || 0 })));
+  }
+
+  // Puts balances into a profile (debts and pots matched by id; others left as they are).
   function setBalances(p, b) {
     p.assets.cashSavings = b.cash;
     p.assets.isa = b.isa;
     p.assets.gia = b.gia;
     p.assets.pension = b.pension;
+    (b.pots || []).forEach((x) => {
+      if (x.id === 'partner') { if (p.partner) p.partner.pension = x.value; return; }
+      const pot = (p.pensions || []).find((y) => y.id === x.id);
+      if (pot) pot.value = x.value;
+    });
     p.mortgage.balance = b.mortgage;
     (b.debts || []).forEach((x) => {
       const d = (p.debts || []).find((y) => y.id === x.id);
@@ -53,7 +67,9 @@
     return p;
   }
 
-  const savingsAndPensions = (b) => b.cash + b.isa + b.gia + b.pension;
+  // Every pension pot together: your main one and the others.
+  const pensionTotal = (b) => b.pension + sum(b.pots || [], (x) => x.value);
+  const savingsAndPensions = (b) => b.cash + b.isa + b.gia + pensionTotal(b);
 
   /*
    * The plan's path from `date`: end-of-year balances from the projection (to
@@ -167,6 +183,8 @@
       const b = s.balances && typeof s.balances === 'object' ? s.balances : {};
       const balances = {
         cash: num(b.cash), isa: num(b.isa), gia: num(b.gia), pension: num(b.pension), mortgage: num(b.mortgage),
+        pots: (Array.isArray(b.pots) ? b.pots : []).filter((x) => x && typeof x === 'object').slice(0, 20)
+          .map((x) => ({ id: String(x.id || '').slice(0, 40), name: String(x.name || '').slice(0, 60), value: num(x.value) })),
         debts: (Array.isArray(b.debts) ? b.debts : []).filter((d) => d && typeof d === 'object').slice(0, 20)
           .map((d) => ({ id: String(d.id || '').slice(0, 40), name: String(d.name || '').slice(0, 60), balance: num(d.balance) })),
       };
@@ -193,5 +211,5 @@
     return { snapshots, projection };
   }
 
-  FP.checkins = { RECENT_MONTHS, balancesOf, setBalances, savingsAndPensions, pathFrom, plannedAt, thin, record, latest, daysSince, sinceLast, normalise };
+  FP.checkins = { RECENT_MONTHS, balancesOf, setBalances, potsOf, pensionTotal, savingsAndPensions, pathFrom, plannedAt, thin, record, latest, daysSince, sinceLast, normalise };
 })(globalThis.FP = globalThis.FP || {});

@@ -29,7 +29,7 @@
     const p = ctx.profile();
     // Until the quick start's done: say what this is and how to start.
     if (!FP.summary.checklist(p).ready) { FP.welcome.render(root, ctx); return; }
-    if (target === 'year-by-year') { FP.yearByYear.render(root, ctx); return; }
+    if (target === 'year-by-year' || target === 'year-by-year/events') { FP.yearByYear.render(root, ctx, target.split('/')[1]); return; }
     // A detail sheet opens over your plan once it's drawn.
     if (isSheet(target)) setTimeout(() => { if (root.isConnected && location.hash === `#plan/${target}`) FP.planSheets.open(ctx, target); }, 0);
     // The household's take-home (yours, with just you).
@@ -102,6 +102,10 @@
           ctx.changed();
           draw();
         }))),
+        h('div', { class: 'button-row' }, h('button', {
+          type: 'button', class: 'small secondary',
+          onclick: () => FP.dom.download(FP.csv.commitments(ctx.profile().commitments), `commitments-${isoToday()}.csv`, 'text/csv;charset=utf-8'),
+        }, 'Download as CSV')),
         FP.dom.cardFoot('#actions', 'See your actions'));
     };
     draw();
@@ -289,7 +293,14 @@
     const rs = rough ? null : FP.projection.retirementSpend(p);
     const m = ahead(p);
     const pot = ahead(p, true);
-    return outcomeCard('retirement', 'Retirement', verdict, need ? [
+    // The earliest you could retire spending your target, nothing else changed (goal-seek on retirement age, up to 75).
+    const early = need ? FP.goalSeek.earliestRetirement(p) : null;
+    const target = need ? `${money(need.goal)} a month${need.goalIsSet ? '' : ', what you spend now'}` : '';
+    // How long your money lasts across market paths: run after the page shows (see FP.yearByYear).
+    const pathsRow = need ? { label: 'Market paths', value: '\u2026', sub: 'working it out', open: () => { location.hash = '#plan/year-by-year'; } } : null;
+    const card = outcomeCard('retirement', 'Retirement', verdict, need ? [
+      early ? { label: 'Earliest you could retire at your target spending', value: early.age == null ? `Not by ${FP.goalSeek.MAX_RETIRE_AGE}` : String(early.age), sub: `${target}${p.partner ? ', your own retirement age' : ''}; you plan ${early.now}`, warn: early.age != null && early.age > early.now, open: panel('retirement') } : null,
+      pathsRow,
       { label: measure('moneyLastsTo'), value: lastsTo(need), sub: `at ${money(need.goal)} a month${need.lastsUntil ? ', then runs short' : ', the end of your plan'}`, warn: !rough && !!need.lastsUntil, open: panel('retirement') },
       rs ? { label: measure('couldSpend'), value: `${m(rs.monthly)} a month`, sub: `from ${ra} to ${rs.endAge}, today\u2019s money`, open: panel('retirement') } : null,
       { label: measure('savingsPensions', ra), value: `about ${pot(need.have)}`, sub: 'on course to have, today\u2019s money', warn: !rough && need.have < need.needed, open: panel('retirement') },
@@ -297,6 +308,32 @@
     ] : [], ideaFor('retirement', ideas), panel, h('p', { class: 'small how-link' },
       p.partner ? `Starts once you\u2019ve both retired (${FP.dom.bothRetire(p)}). Includes each State Pension from its age (${FP.profile.people(p).map((x, i) => `${FP.profile.whose(p, i)} ${x.statePensionAge}`).join(', ')}). `
         : `Includes the State Pension from ${a.statePensionAge}. `, h('a', { href: '#assumptions/grp-pension' }, 'How is this worked out?')), '#setup/about');
+    if (pathsRow) fillPaths(card, p);
+    return card;
+  }
+
+  /*
+   * "Lasts to 95 in 9 of 10 market paths" on the retirement card, once the
+   * paths have run (remembered, so straight away when they have).
+   */
+  function fillPaths(card, p) {
+    const MP = FP.yearByYear.marketPaths;
+    const rowOf = () => [...card.querySelectorAll('.outcome-row')].find((r) => r.querySelector('.row-label').textContent.startsWith('Market paths'));
+    const put = (paths) => {
+      const row = rowOf();
+      if (!row || !paths || paths.lasting == null) return;
+      const share = FP.paths.outOfTen(paths.lasting, paths.paths);
+      row.querySelector('strong').textContent = `Lasts to ${paths.endAge} in ${share}`;
+      row.querySelector('small').textContent = paths.lasting < paths.paths && paths.midLastsTo < paths.endAge
+        ? `middle path runs short at ${Math.floor(paths.midLastsTo)}` : 'spending your target';
+      row.dataset.done = '1';
+    };
+    const now = MP.cached(p);
+    if (now) { setTimeout(() => put(now), 0); return; }
+    MP.schedule(p, (paths) => { if (card.isConnected) put(paths); }, (status) => {
+      const row = rowOf();
+      if (row && card.isConnected) row.querySelector('small').textContent = status.replace('Working out market paths\u2026 ', 'working it out, ');
+    });
   }
 
   // Estimates shown to the nearest £1,000 (or £100 under £10,000), not to the pound.
@@ -330,10 +367,12 @@
 
   /*
    * Prompts, each put off for 30 days by "Not now": update your balances once
-   * your last check-in is 30 or more days old, and a new tax year once it has
+   * your last check-in is three months (90 days) old, and a new tax year once it has
    * started (on or after 6 April) and the tax rules are from an earlier year.
    */
   const DAY = 24 * 60 * 60 * 1000;
+  // Check in every three months (or when your pension statements arrive).
+  const CHECKIN_DAYS = 90;
   function taxYearStale(cfg, now) {
     const y = now.getFullYear();
     const current = now >= new Date(y, 3, 6) ? y : y - 1;
@@ -345,7 +384,7 @@
     const snoozed = (id) => Date.now() < Number(FP.store.pref(`snooze.${id}`) || 0);
     const days = FP.checkins.daysSince(ctx.workspace(), todayIso);
     const list = [
-      full && days != null && days >= 30 ? { id: 'checkin', text: `It\u2019s ${days} days since your last check-in.`, link: ['#checkin', 'Update your balances'] } : null,
+      full && days != null && days >= CHECKIN_DAYS ? { id: 'checkin', text: `It\u2019s ${days} days since your last check-in.`, link: ['#checkin', 'Update your balances'] } : null,
       taxYearStale(FP.taxConfig, now) ? { id: 'taxYear', text: `New tax year: figures use ${FP.taxConfig.taxYear} rules until updated.`, link: null } : null,
     ].filter((x) => x && !snoozed(x.id));
     if (!list.length) return null;
@@ -419,7 +458,7 @@
   FP.screens.plan = {
     title: 'Your plan', render, netWorthSoWhat,
     // Its sub-pages: the year by year view and the detail sheets.
-    handles: (target) => target === 'year-by-year' || isSheet(target),
-    titleFor: (target) => (target === 'year-by-year' ? 'Year by year' : null),
+    handles: (target) => target === 'year-by-year' || target === 'year-by-year/events' || isSheet(target),
+    titleFor: (target) => (target === 'year-by-year' || target === 'year-by-year/events' ? 'Year by year' : null),
   };
 })(globalThis.FP = globalThis.FP || {});

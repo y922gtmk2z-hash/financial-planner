@@ -260,7 +260,7 @@
     const s = stage();
     drawStage(s);
     // Plan's year by year opens with What if and Progress, once there's more detail.
-    if (!STAGE_ROUTES[s].includes(id) || (id === 'plan' && target === 'year-by-year' && s < 2)) {
+    if (!STAGE_ROUTES[s].includes(id) || (id === 'plan' && /^year-by-year/.test(target || '') && s < 2)) {
       // Not open yet: back to Your plan (the welcome, until the quick start's done).
       history.replaceState(null, '', '#plan');
       id = 'plan';

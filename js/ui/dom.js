@@ -158,5 +158,17 @@
     return FP.profile.people(p).map((x, i) => `${FP.profile.who(p, i)} at ${x.retirementAge}`).join(' and ');
   }
 
-  FP.dom = { h, append, add, fill, money, far, APPROX_YEARS, pct, months, date, inputText, chips, pageHead, cardFoot, soWhat, foldCard, MEASURES, measure, lastsTo, retireAt, bothRetire };
+  // Saves `text` as a file called `name`, made in the browser (nothing is sent anywhere).
+  function download(text, name, type) {
+    // A byte-order mark so spreadsheets read £ and accents as UTF-8.
+    const body = /csv/.test(type || '') ? `\ufeff${text}` : text;
+    const url = URL.createObjectURL(new Blob([body], { type: type || 'application/json' }));
+    const a = h('a', { href: url, download: name });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  FP.dom = { download, h, append, add, fill, money, far, APPROX_YEARS, pct, months, date, inputText, chips, pageHead, cardFoot, soWhat, foldCard, MEASURES, measure, lastsTo, retireAt, bothRetire };
 })(globalThis.FP = globalThis.FP || {});

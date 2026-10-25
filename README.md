@@ -189,9 +189,12 @@ wide the tabs become a side menu next to a wider page.
      Assumptions rate; mortgage: 4.5%), and the note says so.
 2. **Plan** answers four questions, each with a verdict and its top
    recommendation: **Each month** (take-home, what's left over, emergency fund),
-   **Debt-free** (mortgage, student loan, other debts), **Retirement** (money lasts
-   to, could spend in retirement, savings and pensions when you retire, and how much
-   you'd need) and **Next steps**. Each card ends with a link to the figures behind
+   **Debt-free** (mortgage, student loan, other debts), **Retirement** (the
+   **earliest you could retire at your target spending**, worked out by goal-seek on
+   your retirement age up to 75 with nothing else changed; how long your money lasts
+   across **market paths**, "Lasts to 95 in 9 of 10"; money lasts to, could spend in
+   retirement, savings and pensions when you retire, and how much you'd need) and
+   **Next steps**. Each card ends with a link to the figures behind
    it.
    - **Where you stand today** opens as a detail sheet over your plan, from the
      links under Each month ("In detail: Cash flow this month · What you own and owe
@@ -210,8 +213,8 @@ wide the tabs become a side menu next to a wider page.
    reminder for each (see [Actions](#actions)).
 5. **What if** tries changes side by side before you make them, and works out what
    it would take to reach a goal.
-6. **Progress**: check in every month or so with your balances, and see what you
-   have against what your plan expected.
+6. **Progress**: check in every three months, or when your pension statements
+   arrive, with your balances, and see what you have against what your plan expected.
 
 Every figure has one home in Your figures; other screens link straight to the field (for
 example `#setup/income.grossSalary`). Until your age and monthly spending are entered,
@@ -246,9 +249,9 @@ The same measure has the same name on every screen (the names live in one place,
 | **This month** | sheet on Plan, `#plan/cash-flow` | Cash flow: take-home − spending − mortgage − other debts − regular savings = left over, with bonus months. |
 | **What you own and owe** | sheet on Plan, `#plan/own-and-owe` | Net worth, what you own against what you owe (with a table), home equity, and mortgage payoff with and without overpayments. |
 | **Pay and tax** | sheet on Plan, `#plan/pay-and-tax` | Income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links. With a partner, a **Whose pay?** switch and what you take home together. |
-| **Year by year** | from Plan, `#plan/year-by-year` | The projection to your end age (95 unless you change it), in today's or future money: **Life events** and money left over each month (folded above the results), headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), net worth and home equity with the **market paths** (a dashed middle path, a shaded range holding 8 in 10 paths and "Your money lasts to 95 in 8 of 10 market paths"), a stacked chart by component, life events marked on both charts, and a full year-by-year table. |
+| **Year by year** | from Plan, `#plan/year-by-year` | The projection to your end age (95 unless you change it), in today's or future money: **Life events** and money left over each month (folded above the results), headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), net worth and home equity with the **market paths** (a dashed middle path, a shaded range holding 8 in 10 paths; how long your money lasts across them is on Plan's retirement card), a stacked chart by component, life events marked on both charts, and a full year-by-year table with **Download CSV** in today's money or future money. |
 | **Actions** | second tab, `#actions` | One card per idea, ranked, with Apply, Try as a scenario, Done, Not for me, how to do it and a reminder. |
-| **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. Each scenario is your Baseline plus its own changes, so a change to the Baseline (in Your figures, or an action you apply) carries into every scenario, and each scenario's list of differences stays just its own; editing a scenario changes only that scenario. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm, and the other scenarios keep their own changes on top of it; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), a **life what-if** (go four days a week, six months out of work, move house, have a child, help a child through university: each a life event starting next year that you can edit, from **Edit it**), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. Each scenario is your Baseline plus its own changes, so a change to the Baseline (in Your figures, or an action you apply) carries into every scenario, and each scenario's list of differences stays just its own; editing a scenario changes only that scenario. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm, and the other scenarios keep their own changes on top of it; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Progress** | fourth tab, `#progress` | Since last time, a chart of what you had against what your plan expected, and every check-in. **Check in** is `#checkin`. |
 | **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal, your State Pension amount and age under a fold, with the link to check your forecast, and risk), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
 | **Assumptions** | More menu, `#assumptions` | Economic assumptions only (growth, inflation, returns, fees, tax policy), editable, with the date each default was set, per-item reset and **Reset all to defaults**. Personal facts entered in Your figures (retirement age, State Pension amount and age, mortgage rate, pension %) are listed in one line with a link there, and resetting leaves them alone. |
@@ -509,8 +512,9 @@ spends your retirement goal from retirement, as "money lasts to" does.
   shaded range holding **8 in 10 paths** (10th to 90th percentile). The middle path is
   usually a little below the solid line: ups and downs cost growth even when they
   average out.
-- **The headline** above it: "Your money lasts to 95 in 8 of 10 market paths", and if
-  not every path lasts, the age the middle path runs short.
+- **The headline**, on Plan's retirement card: "Lasts to 95 in 8 of 10" market paths,
+  and if not every path lasts, the age the middle path runs short. (Year by year keeps
+  the chart.)
 - **Same plan, same answer:** the random numbers are seeded from your plan, so the
   same figures always give the same paths.
 - **Never while you type:** the paths start 0.6 seconds after you stop, a slice at a
@@ -521,11 +525,13 @@ spends your retirement goal from retirement, as "money lasts to" does.
 
 ## Life events
 
-Under **Life events** on Year by year, add costs you can see coming, or money you expect,
-in today's money: a **house move**, **childcare**, **school fees**, **university
-help**, a **career break**, a **car**, a **wedding**, an **inheritance** or something
-else. Each has a name (optional), an amount (a month for some years, or a lump sum
-once), the years and, with a partner, whose it is. Presets fill in a sensible shape
+Under **Life events** on Year by year (also linked from Outgoings in Your figures, as
+`#plan/year-by-year/events`), add costs you can see coming, or money you expect,
+in today's money: a **house move**, **moving to a new home**, **childcare**, **school
+fees**, **university help**, a **career break**, **fewer days a week**, **time out of
+work**, a **car**, a **wedding**, an **inheritance** or something else. Each has a name
+(optional), an amount (a month or a year for some years, or a lump sum once), the
+years and, with a partner, whose it is. Presets fill in a sensible shape
 (childcare: a month for 4 years; a wedding: a lump sum).
 
 - A cost is added to that year's spending, rising with prices. Money coming in each
@@ -533,6 +539,17 @@ once), the years and, with a partner, whose it is. Presets fill in a sensible sh
 - A **career break** stops its owner's salary, bonuses, salary sacrifice, benefits
   and workplace pension contributions for those years (other income carries on), with
   anything still coming in each month added after tax.
+- **Fewer days a week** pays the share you set (four days: 80%) of salary, bonuses and
+  workplace pension, from its start year until its end year, or until you retire.
+- **Time out of work** stops pay for the months you set (six by default) from the start
+  of that year; spending carries on.
+- **Moving to a new home** sells your home at the start of that year and buys the new
+  one at its price, with a new mortgage over its term at your current rate; what's left
+  of the sale goes into cash, or a bigger deposit comes out of it, with the moving costs.
+- What if's **life what-ifs** add one of these to a copy of your plan: four days a week
+  from next year, six months out of work next year, a move to a home a quarter dearer,
+  childcare for ages 1 to 4 for a child born next year (£1,000 a month), or £5,000 a year
+  for three years of university help.
 - Each event is marked on both Year by year charts in the year it starts, and its amounts
   are in the year-by-year table (in Income and Spending).
 
@@ -568,9 +585,10 @@ offers only **Try as a scenario**. When the goal is already met, it says so.
 
 ## Check-ins and Progress
 
-Every month or so, **Check in** (`#checkin`, from Progress or Next steps on Plan): today's
-balances are filled in from your plan (cash savings, ISAs, other investments,
-pension pots, the mortgage and each debt), with what you entered last time under
+Every three months, or when your pension statements arrive, **Check in** (`#checkin`,
+from Progress or Next steps on Plan): today's balances are filled in from your plan
+(cash savings, ISAs, other investments, pension pots, the mortgage and each debt; with
+more than one pension, a box for each pot, added up as you type), with what you entered last time under
 each. Confirm or change each one and save; it takes about two minutes. If you have
 commitments still to do, it asks **Did you do these?** and ticks off the ones you have. The new
 balances go into every scenario (they're facts, not what-ifs), and a snapshot is
@@ -585,18 +603,28 @@ in net worth, debts paid down, actions applied, and how far ahead of or behind y
 plan your savings and pensions are), a chart of what you had against what your plan
 expected, and a table of every check-in.
 
-Plan prompts you to **update your balances** once your last check-in is 30
-days old, and says when a **new tax year** has started (on or after 6 April) but the
+**Add quarterly check-ins to my calendar** (on Progress, including straight after a
+check-in) downloads a repeating calendar reminder (`RRULE:FREQ=MONTHLY;INTERVAL=3`,
+or every month if you choose) from a day you pick, made in your browser.
+
+Plan prompts you to **update your balances** once your last check-in is three months
+(90 days) old, and says when a **new tax year** has started (on or after 6 April) but the
 tax rules are still last year's. "Not now" puts either off for 30 days.
 
 ## Printing
 
-**Print or save as PDF** (under Next steps on Plan) prints a one- or two-page
-summary: the verdicts, the monthly picture, debt-free ages, retirement figures, the
-top three actions, the key assumptions with the dates they were set, and the
-not-advice notice. The browser's own Print gives the same summary. No header, tabs or
-buttons, and always black on white, even in dark mode. The sample household fits on
-two A4 pages.
+**Print or save as PDF** (under Next steps on Plan) prints **your plan on a page**, one
+A4 page: who it's for, income, each pension (and State Pension), debts, the verdicts,
+retirement figures, your commitments (or, with none yet, the top three actions), only
+the assumptions you've changed, then "All other assumptions are defaults set on
+<date>", and the not-advice notice. **Include every assumption** adds a second page with
+every economic assumption in one line each. The browser's own Print gives the same.
+No header, tabs or buttons, and always black on white, even in dark mode. A journey test
+saves it as a PDF and checks it's one page, and at most two with every assumption.
+
+**CSV for spreadsheets:** the year-by-year table (Year by year, in today's money or
+future money) and your commitments (Plan) download as CSV files, made in your browser
+like the JSON backup.
 
 ## Households
 
@@ -816,6 +844,7 @@ css/styles.css             mobile-first styles; light and dark themes
 js/config/assumptions.js   every assumption: label, unit, default, range, help, date set
 js/config/tax-2026-27.js   UK tax, NI and student loan rules for one tax year
 js/model/profile.js        the shared data model: fields, parsing, validation, normalising
+js/calc/csv.js             CSV files: the year-by-year table and your commitments
 js/model/commitments.js    your commitments from Actions: record, tick off, count kept
 js/model/scenarios.js      workspace of scenarios: the Baseline plus a patch each; copy, rename,
                            delete, differences
@@ -903,6 +932,13 @@ Chromium at 390px and 1280px wide, and fail on any console error:
   never 52.5%; the annual allowance; retiring by 75; spending no lower than bills).
   The golden snapshots also hold each idea's value a year, affordability and figures,
   the Actions order, and what it would take to spend 20% more by each lever.
+- **Plan answers, life what-ifs, CSV and check-ins** (`tests/brief16.test.js`): the
+  earliest retirement age (that age works, a year earlier doesn't), fewer days a week,
+  months out of work, moving home (price, mortgage, what's left of the sale), yearly
+  amounts, the five life what-ifs, CSV quoting and both kinds of money, repeating
+  calendar reminders, a check-in balance for each pension pot, and migration 12.
+  Journey tests: the retirement card, a life what-if edited under Life events, CSV and
+  calendar downloads, and the plan on a page's page count.
 - **Steps, deadlines and commitments** (`tests/brief15.test.js`): pension steps with
   what goes in and the cost after relief for each band and method, ISA days to 5 April,
   the mortgage limit in £, the month a debt is cleared, steps for the part you can

@@ -29,7 +29,8 @@
     { key: 'owed', label: 'Debts & shortfall', color: '--series-8' },
   ];
 
-  function render(root, ctx) {
+  // target 'events': open Life events and go to it (from a life what-if, or Your figures).
+  function render(root, ctx, target) {
     const results = h('div');
     let view = getView();
     const draw = () => FP.dom.fill(results, resultsView(ctx.profile(), view));
@@ -52,6 +53,16 @@
       FP.checklist.isEmpty(ctx.profile()) ? null : FP.eventsUi.card(ctx, draw),
       results);
     draw();
+    const events = root.querySelector('#future-events');
+    if (target === 'events' && events) {
+      // After the screen's remembered folds are put back, so it stays open.
+      setTimeout(() => {
+        if (!events.isConnected) return;
+        events.open = true;
+        events.scrollIntoView({ block: 'start' });
+        events.querySelector('summary').focus({ preventScroll: true });
+      }, 0);
+    }
   }
 
   // The leftover money card, folded away above the results: open it to change
@@ -166,7 +177,7 @@
         FP.dom.soWhat(mixSoWhat(compSeries, ev.retirement ? ev.retirement.y : rows.length - 1, rows)),
         h('p', { class: 'muted small' }, 'Debts, your student loan and any unfunded shortfall are shown below zero.')),
 
-      tableCard(rows, a, moneyNote),
+      tableCard(rows, a, moneyNote, r),
       notesCard(a, p.leftover, p)];
   }
 
@@ -186,11 +197,10 @@
     } : null;
     const series = ok ? netSeries.concat({ label: 'Middle market path', color: '--series-7', dashed: true, values: paths.rows.map((x) => conv(x, x.mid)) }) : netSeries;
     const yr = ev.retirement ? ev.retirement.y : rows.length - 1;
-    const headline = ok ? lastsHeadline(paths) : null;
+    // How long your money lasts across the paths is on Plan's retirement card; here, the chart.
     const card = h('section', { class: 'card', 'aria-labelledby': 'nw-chart-h' },
       h('h2', { id: 'nw-chart-h' }, 'Net worth and home equity'),
-      ok ? (headline ? h('p', { class: 'paths-headline' }, h('strong', null, headline.main), headline.sub ? ` ${headline.sub}` : null) : null)
-        : h('p', { class: 'muted small paths-status', role: 'status' }, 'Working out market paths\u2026'),
+      ok ? null : h('p', { class: 'muted small paths-status', role: 'status' }, 'Working out market paths\u2026'),
       FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color, line: true, dashed: !!x.dashed }))
         .concat(band ? { label: '8 in 10 market paths', color: '--series-7', band: true } : [])),
       FP.chart.timeChart({
@@ -290,24 +300,20 @@
       h('span', null, label), h('strong', { class: warn ? 'negative' : null }, value), sub ? h('small', null, sub) : null);
   }
 
-  function tableCard(rows, a, moneyNote) {
-    // Flows (first four) have no value for today's row.
-    const cols = [
-      ['Income after tax', (x) => x.netIncome + (x.eventsIn || 0), true],
-      ['Spending', (x) => x.spending + (x.eventsOut || 0), true],
-      ['Mortgage & debts', (x) => x.mortgagePaid + x.debtPaid + (x.studentLoanExtra || 0), true],
-      ['Regular savings', (x) => x.regularSaving, true],
-      ['Left over', (x) => x.surplus, true],
-      ['Cash', (x) => x.cash],
-      ['Investments', (x) => x.isa + x.gia],
-      ['Pension pots', (x) => x.pension],
-      ['Home equity', (x) => x.equity],
-      ['Student loan', (x) => x.studentLoan],
-      ['Other owed', (x) => x.debts + x.shortfall],
-      ['Net worth', (x) => x.netWorth],
-    ];
+  function tableCard(rows, a, moneyNote, proj) {
+    // Flows (first five) have no value for today's row. Shared with the CSV download.
+    const cols = FP.csv.YEAR_COLUMNS;
+    const today = new Date().toISOString().slice(0, 10);
+    const csvButton = (view, label) => h('button', {
+      type: 'button', class: 'small secondary',
+      onclick: () => FP.dom.download(FP.csv.yearByYear(proj, view), `year-by-year-${view === 'real' ? 'todays-money' : 'future-money'}-${today}.csv`, 'text/csv;charset=utf-8'),
+    }, label);
     return FP.dom.foldCard('year-table', 'Year-by-year table', 'Income, spending and balances for every year',
       h('p', { class: 'muted small' }, `Amounts ${moneyNote}, rounded from five years ahead. Flows (income, spending, left over) are for the year, with any life events; balances are at the end of it.`),
+      proj ? h('div', { class: 'button-row csv-row' },
+        csvButton('real', 'Download CSV (today’s money)'),
+        csvButton('nominal', 'Download CSV (future money)'),
+        h('span', { class: 'muted small' }, 'For a spreadsheet, to the pound. Made in your browser.')) : null,
       h('div', { class: 'table-scroll tall', tabindex: '0', role: 'region', 'aria-label': 'Year-by-year table' }, h('table', { class: 'data-table year-table' },
         h('thead', null, h('tr', null,
           h('th', { scope: 'col' }, 'Age'), h('th', { scope: 'col' }, 'Year'),
@@ -365,5 +371,5 @@
 
 
   FP.screens = FP.screens || {};
-  FP.yearByYear = { render, drawSplitStatus, getView, setView };
+  FP.yearByYear = { render, drawSplitStatus, getView, setView, marketPaths, lastsHeadline };
 })(globalThis.FP = globalThis.FP || {});

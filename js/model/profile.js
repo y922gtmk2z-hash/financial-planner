@@ -10,7 +10,7 @@
   const ROUGH_PATHS = ['assets.pension'];
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 11;
+  const SCHEMA_VERSION = 12;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -279,13 +279,16 @@
     { value: 'schoolFees', label: 'School fees', per: 'month', dir: 'out', years: 7, help: 'Fees and extras, as a monthly average.' },
     { value: 'university', label: 'University help', per: 'month', dir: 'out', years: 3, help: 'What you\u2019d give towards rent and living costs while they study.' },
     { value: 'careerBreak', label: 'Career break', per: 'month', dir: 'in', years: 1, pause: true, help: 'Pay, bonuses and workplace pension contributions stop for these years. Enter anything still coming in each month, after tax (for example statutory pay), or leave it blank.' },
+    { value: 'partTime', label: 'Fewer days a week', per: 'month', dir: 'in', years: 0, payCut: true, ongoing: true, help: 'Pay, bonuses and workplace pension are the share you set (four days a week is 80%), from the start year until the end year, or until you retire if you leave it blank. Spending carries on as before. Any amount is extra money coming in each month.' },
+    { value: 'outOfWork', label: 'Time out of work', per: 'month', dir: 'in', years: 0, outMonths: true, help: 'No pay, bonuses or workplace pension for the months you set, from the start of that year; spending carries on as before. Enter anything still coming in each month, after tax (for example benefits), or leave it blank.' },
+    { value: 'moveHouse', label: 'Move to a new home', per: 'lump', dir: 'out', years: 0, move: true, help: 'Sell your home and buy another, in today\u2019s money: the new home\u2019s price, the new mortgage and how long it runs. The amount is the cost of moving (stamp duty, fees, removals). What\u2019s left of the sale after the new deposit goes into cash savings, or the shortfall comes out of them.' },
     { value: 'car', label: 'Car', per: 'lump', dir: 'out', years: 0, help: 'The cash you\u2019d pay, after any trade-in.' },
     { value: 'wedding', label: 'Wedding', per: 'lump', dir: 'out', years: 0, help: 'What you\u2019d pay towards it.' },
     { value: 'inheritance', label: 'Inheritance', per: 'lump', dir: 'in', years: 0, help: 'What you expect to receive, after any inheritance tax. It goes into your cash savings. Nobody can be sure of an inheritance, so try your plan without it too.' },
     { value: 'other', label: 'Something else', per: 'lump', dir: 'out', years: 0, help: 'Any other cost you can see coming.' },
   ];
   const MAX_EVENTS = 20;
-  const EVENT_PERS = [{ value: 'month', label: 'A month, for some years' }, { value: 'lump', label: 'A lump sum, once' }];
+  const EVENT_PERS = [{ value: 'month', label: 'A month, for some years' }, { value: 'year', label: 'A year, for some years' }, { value: 'lump', label: 'A lump sum, once' }];
   const EVENT_FIELDS = [
     { key: 'type', label: 'What', type: 'select', options: EVENT_TYPES },
     { key: 'name', label: 'Name (optional)', type: 'text', placeholder: 'e.g. Nursery for Ava' },
@@ -293,7 +296,17 @@
     { key: 'amount', label: 'Amount (today\u2019s money)', type: 'money' },
     { key: 'startYear', label: 'From', type: 'int', min: 2000, max: 2120, nullable: true, placeholder: 'Year' },
     { key: 'endYear', label: 'To (inclusive)', type: 'int', min: 2000, max: 2120, nullable: true, placeholder: 'Same year' },
+    // Only for some types: fewer days a week (payPct), time out of work (months), moving home (price, mortgage, term).
+    { key: 'payPct', label: 'Pay, as a share of now', type: 'pct', min: 0, max: 100, suffix: '% of your pay', only: 'payCut',
+      help: 'Four days a week is 80%, three days 60%.' },
+    { key: 'months', label: 'How many months', type: 'int', min: 1, max: 60, suffix: 'months', only: 'outMonths' },
+    { key: 'price', label: 'New home\u2019s price (today\u2019s money)', type: 'money', only: 'move' },
+    { key: 'mortgage', label: 'New mortgage (today\u2019s money)', type: 'money', only: 'move',
+      help: 'What you\u2019d borrow, at your current mortgage rate. Leave blank to buy outright.' },
+    { key: 'term', label: 'New mortgage term', type: 'int', min: 1, max: 40, suffix: 'years', only: 'move' },
   ];
+  // What a new event of each kind starts with, besides its type's shape.
+  const EVENT_DEFAULTS = { payPct: 80, months: 6, price: 0, mortgage: 0, term: 25 };
   const eventType = (v) => EVENT_TYPES.find((t) => t.value === v) || EVENT_TYPES[EVENT_TYPES.length - 1];
 
   const MAX_BONUSES = 12;
@@ -684,7 +697,7 @@
     }
     if (Array.isArray(src.events)) {
       p.events = src.events.filter((x) => x && typeof x === 'object').slice(0, MAX_EVENTS).map((x) => {
-        const row = normaliseRow(x, EVENT_FIELDS, 'ev');
+        const row = normaliseRow({ ...EVENT_DEFAULTS, ...x }, EVENT_FIELDS, 'ev');
         if (!EVENT_TYPES.some((t) => t.value === x.type)) row.type = 'other';
         // A lump sum happens once; a monthly amount can't end before it starts.
         if (row.per === 'lump' || (row.endYear != null && row.startYear != null && row.endYear < row.startYear)) row.endYear = null;
@@ -756,7 +769,7 @@
   function newEvent(type, now) {
     const t = eventType(type);
     const start = (now || new Date()).getFullYear() + 1;
-    return { id: newId('ev'), type: t.value, name: '', per: t.per, amount: 0, startYear: start, endYear: t.per === 'month' ? start + Math.max(0, t.years - 1) : null, owner: 'you' };
+    return { id: newId('ev'), type: t.value, name: '', per: t.per, amount: 0, startYear: start, endYear: t.per !== 'lump' && !t.ongoing && !t.outMonths ? start + Math.max(0, t.years - 1) : null, owner: 'you', ...EVENT_DEFAULTS };
   }
 
   function newBonus() {
@@ -770,6 +783,6 @@
   FP.profile = {
     SCHEMA_VERSION, IDEA_MARKS, ROUGH_PATHS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
     who, whose, capital, personPath, asPerson, PARTNER_FIELDS, NAME_FIELD, HOUSEHOLD_FIELD, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
-    EVENT_TYPES, EVENT_PERS, EVENT_FIELDS, MAX_EVENTS, eventType, newEvent, newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
+    EVENT_TYPES, EVENT_PERS, EVENT_FIELDS, EVENT_DEFAULTS, MAX_EVENTS, eventType, newEvent, newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});

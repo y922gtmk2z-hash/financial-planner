@@ -31,8 +31,10 @@
   const ymd = (d) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
 
   /*
-   * { date: 'YYYY-MM-DD', title, description, uid?, now? } → the file's text,
-   * or null when the date isn't a real date.
+   * { date: 'YYYY-MM-DD', title, description, uid?, now?, everyMonths? } →
+   * the file's text, or null when the date isn't a real date. everyMonths
+   * (1 to 12) makes it repeat: every month, or every three (a quarterly
+   * check-in), as RRULE:FREQ=MONTHLY;INTERVAL=n.
    */
   function reminder(opts) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(opts.date || '');
@@ -54,6 +56,7 @@
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${ymd(day)}`,
       `DTEND;VALUE=DATE:${ymd(next)}`,
+      repeatRule(opts.everyMonths),
       `SUMMARY:${escape(opts.title)}`,
       opts.description ? `DESCRIPTION:${escape(opts.description)}` : null,
       'TRANSP:TRANSPARENT',
@@ -63,5 +66,11 @@
     return `${lines.map(fold).join('\r\n')}\r\n`;
   }
 
-  FP.ics = { reminder, escape, fold };
+  // RRULE for repeating every n months, or null (n = 1: just FREQ=MONTHLY).
+  function repeatRule(n) {
+    if (!Number.isInteger(n) || n < 1 || n > 12) return null;
+    return n === 1 ? 'RRULE:FREQ=MONTHLY' : `RRULE:FREQ=MONTHLY;INTERVAL=${n}`;
+  }
+
+  FP.ics = { reminder, escape, fold, repeatRule };
 })(globalThis.FP = globalThis.FP || {});

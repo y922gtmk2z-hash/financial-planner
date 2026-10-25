@@ -103,14 +103,7 @@
       text === raw ? '. It may be damaged, so the planner may not be able to import it.' : '. Import it once you have the latest version of the planner.');
   }
 
-  function download(text, name) {
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const a = h('a', { href: url, download: name });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
+  const download = (text, name) => FP.dom.download(text, name, 'application/json');
 
   function backupStatus() {
     const b = FP.backup.status();

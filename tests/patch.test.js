@@ -158,10 +158,12 @@ const OLD = {
 };
 
 test('one-tap what-ifs create the same scenarios as before', () => {
-  assert.deepEqual(FP.scenarios.PRESETS.map((x) => x.id).sort(), Object.keys(OLD).sort());
+  // The life what-ifs (brief 16) are new, so aren't compared here.
+  const presets = FP.scenarios.PRESETS.filter((x) => !x.life);
+  assert.deepEqual(presets.map((x) => x.id).sort(), Object.keys(OLD).sort());
   let checked = 0;
   G.names().forEach((name) => {
-    FP.scenarios.PRESETS.forEach((preset) => {
+    presets.forEach((preset) => {
       const ws = FP.scenarios.fromProfile(fixture(name));
       if (!preset.applies(ws.scenarios[0].profile)) return;
       const keep = ws.activeId;

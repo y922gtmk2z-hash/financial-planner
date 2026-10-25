@@ -27,6 +27,11 @@
  *      Plans can also mark figures as rough answers (profile.rough).
  *  11  Your commitments (profile.commitments): what you said you'd do when
  *      you applied an action or marked it done. Older plans have none.
+ *  12  Life events can cut pay (fewer days a week: payPct), stop it for some
+ *      months (months), move you to a new home (price, mortgage, term) or be
+ *      paid a year at a time (per 'year'). Older events don't use them.
+ *      Check-ins keep each pension pot's balance (balances.pots); older
+ *      snapshots have only your main pot.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -211,6 +216,11 @@
         profilesOf(data).forEach((p) => { if (!Array.isArray(p.commitments)) p.commitments = []; });
         return data;
       },
+    },
+    {
+      from: 11, to: 12,
+      // New kinds of life event, with their own fields. Nothing saved before needs changing.
+      up: (data) => data,
     },
   ];
 

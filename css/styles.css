@@ -973,8 +973,28 @@ a.button { text-decoration: none; }
   .print-table td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; padding-left: 8pt; white-space: nowrap; }
   .print-table th small { display: block; color: #444; font-size: 8.5pt; }
   .print-note { margin: 10pt 0 0; font-size: 9pt; color: #222; break-inside: avoid; }
+  .print-note.tight { margin-top: 4pt; }
   a { color: #000; text-decoration: none; }
+  /* Plan on a page: tight enough for one A4 page; every assumption starts a second. */
+  .print-page > section, .print-page .print-table { margin-top: 6pt; }
+  .print-summary h2 { margin-top: 7pt; }
+  .print-commitments { list-style: none; margin: 0; padding: 0; }
+  .print-commitments li { margin: 0 0 2pt; }
+  .print-page-2 { break-before: page; }
+  /* Labels get the room they need (not one word a line); long values wrap. */
+  .print-table th { width: 58%; }
+  .print-cols { align-items: start; }
+  .print-wide { font-size: 9pt; }
+  .print-wide th, .print-wide td { padding: 1.5pt 6pt 1.5pt 0; }
+  .print-page-2 .print-wide th[scope="row"] { width: 42%; }
+  .print-page-2 .print-wide th[scope="col"] { width: auto; font-weight: 700; }
+  .print-page-2 .print-wide td { white-space: normal; text-align: left; font-weight: 600; padding-left: 0; }
+  .print-page-2 .print-wide td.src { font-weight: 400; color: #444; white-space: nowrap; }
+  .print-assumptions .print-table td { white-space: normal; }
+  .print-controls { display: none !important; }
 }
+.print-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.print-every { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; }
 
 /* ---------- Household: a partner, owners and other pensions ---------- */
 .person-group { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px 4px; margin: 12px 0; min-width: 0; }
