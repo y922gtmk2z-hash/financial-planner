@@ -2692,12 +2692,20 @@
           }
         },
         "howTo": [
-          "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
+          "Ask payroll or HR to raise your contribution from 5% to 20.6%: about £1,534 a month going in, costing you about £330 after tax relief.",
           "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
-          "Check your next payslip to see the new amount going in."
+          "Check your next payslip: about £1,534 more a month should be going in."
         ],
+        "due": null,
         "safety": false,
         "kind": "tax",
+        "commitment": {
+          "action": "taper",
+          "what": "Raise your pension contribution from 5% to 20.6%",
+          "amount": 1534,
+          "per": "month",
+          "due": null
+        },
         "valuePerYear": 12787.26,
         "highlights": [
           {
@@ -2719,8 +2727,16 @@
         "patch": null,
         "impact": null,
         "howTo": [],
+        "due": null,
         "safety": false,
         "kind": null,
+        "commitment": {
+          "action": "match",
+          "what": "Check for employer matching",
+          "amount": null,
+          "per": null,
+          "due": null
+        },
         "valuePerYear": null,
         "highlights": [],
         "afford": null
@@ -2772,12 +2788,20 @@
           }
         },
         "howTo": [
-          "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
-          "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
-          "Set up a monthly payment on payday so it happens without thinking about it."
+          "Set up £660 a month into a stocks & shares ISA (or a cash ISA for money you’ll need within five years). Open one, or top up one you already have.",
+          "You have about £20,000 of this year’s allowance left, and 163 days until it resets on 5 April 2027.",
+          "Set the payment for payday so it happens without thinking about it."
         ],
+        "due": "2027-04-05",
         "safety": false,
         "kind": "retirement",
+        "commitment": {
+          "action": "isa",
+          "what": "Pay £660 a month into an ISA",
+          "amount": 660,
+          "per": "month",
+          "due": "2027-04-05"
+        },
         "valuePerYear": 944.12,
         "highlights": [
           {

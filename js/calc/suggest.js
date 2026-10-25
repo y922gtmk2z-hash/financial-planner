@@ -56,6 +56,7 @@
    */
   function analyse(profile, opts) {
     opts = opts || {};
+    const now = opts.now || new Date();
     const a = profile.assumptions;
     // Your pay (for your tax band and the taper); the household's take-home for what's left.
     const pay = FP.tax.forProfile(profile);
@@ -140,7 +141,8 @@
       add('debt', urgent ? 'warn' : 'tip', `Clear ${d.name} first`,
         `It costs ${pctText(d.rate)}% a year, more than savings earn (${a.savingsRate}%), so paying extra off it is a guaranteed return.${expensive.length > 1 ? ` ${expensive.slice(1).map((x) => `${x.name} (${pctText(x.rate)}%)`).join(' and ')} ${expensive.length > 2 ? 'are' : 'is'} next.` : ''} Put a share of your leftover money into “Paying off debts faster” (most expensive first), or raise the monthly payment in Your figures.`,
         at >= 0 ? [{ path: `debts.${at}.monthlyPayment`, op: 'add', value: extraPay }] : null,
-        { safety: urgent, kind: 'interest', scale: at >= 0 ? (gbp) => [{ path: `debts.${at}.monthlyPayment`, op: 'add', value: Math.min(extraPay, gbp) }] : null });
+        { safety: urgent, kind: 'interest', scale: at >= 0 ? (gbp) => [{ path: `debts.${at}.monthlyPayment`, op: 'add', value: Math.min(extraPay, gbp) }] : null,
+          detail: at >= 0 ? (patch) => debtDetail(profile, at, patch, now) : null });
     }
 
     // 2. Emergency fund: scored in months of cover, never in retirement income.
@@ -172,14 +174,14 @@
       const lead = pi ? `${FP.profile.capital(whose(pi))} adjusted net income` : 'Your adjusted net income';
       add('taper', 'tip', pi ? `Use ${whose(pi)} pension to avoid the 60% band` : 'Use your pension to avoid the 60% band',
         `${lead} is about ${money(trap.ani)}. Between £100,000 and £125,140 ${who(pi)} ${pi ? 'loses' : 'lose'} some personal allowance, so ${pi ? 'keeps' : 'keep'} only about £${Math.round(FP.tax.keepOfNext(FP.tax.inputFromProfile(FP.profile.asPerson(profile, pi))))} of each extra £100. ${trap.pct != null ? `Paying ${money(trap.contribution)} more a year into ${whose(pi)} pension (${pctText(trap.pct)}% more of salary) brings it to £100,000 and saves about ${money(trap.taxSaved)} tax a year.` : `Pension contributions (or salary sacrifice) of ${money(trap.contribution)} a year would bring it to £100,000.`}`,
-        trap.patch, { kind: 'tax', person: pi, scale: trap.patch ? pensionScale(trap.patch) : null });
+        trap.patch, { kind: 'tax', person: pi, scale: trap.patch ? pensionScale(trap.patch) : null, detail: trap.patch ? (patch) => pensionDetail(profile, patch, pi) : null });
     } else if (topRate >= 40) {
       const patch = pensionPatch(profile, 3, pi);
       add('relief', 'tip', pi ? `Higher-rate pension relief for ${who(pi)}` : 'Higher-rate pension relief',
         pi
           ? `${FP.profile.capital(who(pi))} pays ${topRate}% tax on the top slice of pay, so each £1 into ${whose(pi)} pension costs only about ${Math.round(100 - topRate)}p. Salary sacrifice also saves National Insurance.`
           : `You pay ${topRate}% tax on your top slice of pay, so each £1 into your pension costs you only about ${Math.round(100 - topRate)}p. Salary sacrifice also saves National Insurance.`,
-        patch, { kind: 'retirement', scale: patch ? pensionScale(patch) : null });
+        patch, { kind: 'retirement', scale: patch ? pensionScale(patch) : null, detail: patch ? (q) => pensionDetail(profile, q, pi) : null });
     }
     // Relief at source only gives basic-rate relief: the rest is claimed.
     people.forEach((x, i) => {
@@ -187,7 +189,7 @@
       if (!c) return;
       add(i ? 'claimReliefPartner' : 'claimRelief', 'tip', `Claim ${money(c.claim)} a year of higher-rate pension relief${i ? ` for ${who(i)}` : ''}`,
         `${FP.profile.capital(whose(i))} pension is paid from pay after tax (relief at source), so the provider adds only basic-rate relief. As a ${c.topRate}% taxpayer, ${who(i)} can claim about ${money(c.claim)} a year more through Self Assessment, or by asking HMRC to adjust ${whose(i)} tax code. Your plan assumes it’s claimed.`,
-        null, { kind: 'tax', value: c.claim });
+        null, { kind: 'tax', value: c.claim, due: nextDate(1, 31, now), detail: () => claimDetail(profile, i, c, nextDate(1, 31, now)) });
     });
     if ((a.employerPensionPct || 0) > 0) {
       add('match', 'tip', 'Check for employer matching',
@@ -203,7 +205,7 @@
           : fix.rise <= -1 ? ` Payments could fall by ${money(-fix.rise)} a month.` : '';
       add('fixEnds', 'warn', `Your fixed rate ends in ${fix.when}`,
         `Your fix ends in ${fix.when}.${change} ${fix.monthsLeft >= 6 ? 'Start comparing deals six months before.' : 'Start comparing deals now: lenders usually let you secure a new deal up to six months before.'}`,
-        null, { kind: 'payment', value: fix.rise > 0 ? fix.rise * 12 : null });
+        null, { kind: 'payment', value: fix.rise > 0 ? fix.rise * 12 : null, due: fix.compareBy, detail: () => fixDetail(fix) });
     }
     const netInvest = FP.mix.netRate(profile.mixes.isa, a, 'invest');
     if (m && m.balance > 0) {
@@ -211,7 +213,7 @@
         add('mortgage', 'tip', 'Overpaying the mortgage beats cash savings',
           `Your mortgage costs ${pctText(m.rate)}% and cash earns ${a.savingsRate}%, so overpaying is a guaranteed saving once your emergency fund is in place. Investments are assumed to return ${netInvest.toFixed(1)}% after fees but can fall. Most lenders allow ${a.overpaymentLimitPct}% of the balance a year without a charge.`,
           [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: 200 }],
-          { kind: 'interest', scale: (gbp) => [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: Math.min(200, gbp) }] });
+          { kind: 'interest', scale: (gbp) => [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: Math.min(200, gbp) }], detail: (patch) => mortgageDetail(profile, patch) });
       } else {
         add('mortgageLow', 'tip', 'Your mortgage is cheap',
           `At ${pctText(m.rate)}% it costs less than cash earns (${a.savingsRate}%), so there’s little gain in overpaying.`);
@@ -247,11 +249,11 @@
           : `${FP.profile.capital(who(1))} has about ${money(rooms[1])} of ${whose(1)} ${each} ISA allowance left this year (yours is used up).`;
       add('isa', 'tip', rooms[0] > 0 && rooms[1] > 0 ? 'Use your ISA allowances' : rooms[0] > 0 ? 'Use your ISA allowance' : `Use ${whose(1)} ISA allowance`,
         `${lead} Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.`,
-        isaPatch(isaMonthly), { kind: 'retirement', scale: (gbp) => isaPatch(Math.min(isaMonthly, gbp)) });
+        isaPatch(isaMonthly), { kind: 'retirement', scale: (gbp) => isaPatch(Math.min(isaMonthly, gbp)), due: nextDate(4, 5, now), detail: (patch) => isaDetail(profile, patch, isaRoom, now) });
     } else if (isaRoom > 0) {
       add('isa', 'tip', 'Use your ISA allowance',
         `You have about ${money(isaRoom)} of this year’s ${money(a.isaAllowance)} ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.`,
-        isaPatch(isaMonthly), { kind: 'retirement', scale: (gbp) => isaPatch(Math.min(isaMonthly, gbp)) });
+        isaPatch(isaMonthly), { kind: 'retirement', scale: (gbp) => isaPatch(Math.min(isaMonthly, gbp)), due: nextDate(4, 5, now), detail: (patch) => isaDetail(profile, patch, isaRoom, now) });
     }
 
     // 6. Student loan
@@ -276,7 +278,7 @@
       if (!g) return;
       add(i ? 'statePensionPartner' : 'statePension', 'tip', i ? `Check ${whose(i)} State Pension record` : 'Check your State Pension record',
         `${i ? `${FP.profile.capital(whose(i))} plan has` : 'Your plan has'} a State Pension of ${money(g.have)} a year, below the full ${money(g.full)}. Check ${i ? 'their' : 'your'} record for gaps; voluntary contributions can add to it.`,
-        null, { link: { href: STATE_PENSION_LINK, text: 'Check your State Pension (GOV.UK)' } });
+        null, { link: { href: STATE_PENSION_LINK, text: 'Check your State Pension (GOV.UK)' }, detail: () => statePensionDetail(profile, i, g) });
     });
 
     return { left, essentials, emergency, suggestions: out, split, splitReason: reason, splitIdea, unallocated, base, pay, today };
@@ -350,7 +352,8 @@
 
   /*
    * A mortgage fixed rate ending within 12 months of `now`: null, or { fixEnds,
-   * when ("March 2027"), monthsLeft (to the fix's last month), paymentNow,
+   * when ("March 2027"), monthsLeft (to the fix's last month), compareBy
+   * (six months before it ends, 'YYYY-MM-DD', or today if that's passed), paymentNow,
    * paymentAfter and rise (£ a month; null without a rate you expect after) }.
    */
   function fixEnding(profile, now) {
@@ -363,7 +366,10 @@
     if (monthsLeft < 0 || monthsLeft > 12) return null;
     const loan = FP.loan.forMortgage(profile);
     const term = FP.summary.mortgageMonths(loan);
-    const out = { fixEnds: m.fixEnds, when: FP.mortgage.monthName(m.fixEnds), monthsLeft, paymentNow: null, paymentAfter: null, rise: null };
+    // Start comparing deals six months before it ends: by the end of that month (or now, if that's passed).
+    const by = end - 6;
+    const compareBy = by < d.getFullYear() * 12 + d.getMonth() ? isoDate(d) : isoDate(new Date(Math.floor(by / 12), (by % 12) + 1, 0));
+    const out = { fixEnds: m.fixEnds, when: FP.mortgage.monthName(m.fixEnds), monthsLeft, compareBy, paymentNow: null, paymentAfter: null, rise: null };
     if (loan.error || !(term > 0)) return out;
     const paymentNow = FP.mortgage.monthlyPayment(m.balance, loan.rate, term);
     out.paymentNow = paymentNow;
@@ -376,6 +382,165 @@
     out.paymentAfter = FP.mortgage.monthlyPayment(bal, m.rateAfterFix, term - months);
     out.rise = out.paymentAfter - paymentNow;
     return out;
+  }
+
+  // ---------- Steps with figures, due dates and commitments ----------
+
+  const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  // The next `day` of `month` (1-12) on or after `now`, as 'YYYY-MM-DD'.
+  function nextDate(month, day, now) {
+    const today = dayStart(now || new Date());
+    let d = new Date(today.getFullYear(), month - 1, day);
+    if (d < today) d = new Date(today.getFullYear() + 1, month - 1, day);
+    return isoDate(d);
+  }
+  // Whole days from `now` until a 'YYYY-MM-DD' date.
+  function daysUntil(iso, now) {
+    const [y, mo, d] = iso.split('-').map(Number);
+    return Math.round((new Date(y, mo - 1, d) - dayStart(now || new Date())) / 86400000);
+  }
+  // "5 April 2027".
+  function longDate(iso) {
+    const [y, mo, d] = iso.split('-').map(Number);
+    return `${d} ${FP.mortgage.monthName(`${y}-${String(mo).padStart(2, '0')}`)}`;
+  }
+
+  /*
+   * A pension contribution change for person `i`: from and to (% of
+   * salary), what goes in a month (gross) and what it costs in take-home a
+   * month, after tax relief (and NI, with salary sacrifice), for their tax
+   * band and how their pension is paid.
+   */
+  function pensionChange(profile, patch, i) {
+    const own = FP.profile.asPerson(profile, i || 0);
+    const from = own.assumptions.employeePensionPct || 0;
+    const add = patch[0].op === 'add' ? patch[0].value : patch[0].value - from;
+    const after = FP.profile.asPerson(FP.patch.applyPatch(profile, patch), i || 0);
+    const goingIn = (FP.tax.forProfile(after).employeePension - FP.tax.forProfile(own).employeePension) / 12;
+    const cost = (FP.tax.forProfile(own).takeHome - FP.tax.forProfile(after).takeHome) / 12;
+    return { from, to: Math.round((from + add) * 10) / 10, goingIn, cost };
+  }
+  function pensionDetail(profile, patch, i) {
+    if (!patch) return null;
+    const c = pensionChange(profile, patch, i);
+    const your = i ? `${FP.profile.whose(profile, i)}` : 'your';
+    const you = i ? FP.profile.who(profile, i) : 'you';
+    return {
+      steps: [
+        `Ask payroll or HR to raise ${your} contribution from ${pctText(c.from)}% to ${pctText(c.to)}%: about ${money(c.goingIn)} a month going in, costing ${you} about ${money(c.cost)} after tax relief.`,
+        PENSION_STEPS[1],
+        `Check ${i ? 'the' : 'your'} next payslip: about ${money(c.goingIn)} more a month should be going in.`,
+      ],
+      what: `Raise ${your} pension contribution from ${pctText(c.from)}% to ${pctText(c.to)}%`,
+      amount: c.goingIn,
+      per: 'month',
+    };
+  }
+
+  // The new ISA payments a patch adds, a month.
+  const isaAdded = (profile, patch) => (patch[0].value || []).slice(profile.savings.length).reduce((t, r) => t + (r.monthly || 0), 0);
+  function isaDetail(profile, patch, room, now) {
+    if (!patch) return null;
+    const monthly = isaAdded(profile, patch);
+    const due = nextDate(4, 5, now);
+    const days = daysUntil(due, now);
+    return {
+      steps: [
+        `Set up ${money(monthly)} a month into a stocks & shares ISA (or a cash ISA for money you\u2019ll need within five years). Open one, or top up one you already have.`,
+        `You have about ${money(room)} of this year\u2019s allowance left, and ${days} ${days === 1 ? 'day' : 'days'} until it resets on ${longDate(due)}.`,
+        'Set the payment for payday so it happens without thinking about it.',
+      ],
+      what: `Pay ${money(monthly)} a month into an ISA`,
+      amount: monthly,
+      per: 'month',
+    };
+  }
+
+  function mortgageDetail(profile, patch) {
+    if (!patch) return null;
+    const extra = patch[0].value;
+    const a = profile.assumptions;
+    const limit = (profile.mortgage.balance || 0) * (a.overpaymentLimitPct || 0) / 100;
+    return {
+      steps: [
+        `Ask your lender to set up a regular overpayment of ${money(extra)} a month (${money(extra * 12)} a year).`,
+        `Stay within your deal\u2019s yearly limit, often ${a.overpaymentLimitPct}% of the balance: about ${money(limit)} this year. Above it you may pay an early repayment charge.`,
+        'Ask whether overpaying shortens your term or lowers your monthly payment.',
+      ],
+      what: `Overpay your mortgage by ${money(extra)} a month`,
+      amount: extra,
+      per: 'month',
+    };
+  }
+
+  /*
+   * A debt's new monthly payment, and the month it's cleared at that rate
+   * ("March 2028", or null if it never is).
+   */
+  function debtClears(profile, at, patch, now) {
+    const d = profile.debts[at];
+    const loan = FP.loan.forDebt(d, profile.assumptions);
+    const pay = (d.monthlyPayment || loan.payment || 0) + patch[0].value;
+    const months = FP.loan.monthsFor(d.balance, FP.loan.monthlyRate(loan.rate, 'apr'), pay);
+    if (!Number.isFinite(months)) return { from: d.monthlyPayment || loan.payment || 0, pay, cleared: null };
+    const t = now || new Date();
+    const i = t.getFullYear() * 12 + t.getMonth() + Math.max(0, Math.ceil(months - 1e-9) - 1);
+    return { from: d.monthlyPayment || loan.payment || 0, pay, cleared: FP.mortgage.monthName(`${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`) };
+  }
+  function debtDetail(profile, at, patch, now) {
+    if (!patch) return null;
+    const d = profile.debts[at];
+    const c = debtClears(profile, at, patch, now);
+    return {
+      steps: [
+        `Raise your monthly payment on ${d.name || 'this debt'} from ${money(c.from)} to ${money(c.pay)}${c.cleared ? `: at that rate it\u2019s cleared by ${c.cleared}` : ''}.`,
+        HOW_TO.debt[1],
+        HOW_TO.debt[2],
+      ],
+      what: `Pay ${money(c.pay)} a month off ${d.name || 'your debt'}${c.cleared ? `, cleared by ${c.cleared}` : ''}`,
+      amount: c.pay,
+      per: 'month',
+    };
+  }
+
+  function claimDetail(profile, i, c, due) {
+    const your = FP.profile.whose(profile, i);
+    return {
+      steps: [
+        `If ${i ? `${FP.profile.who(profile, i)} doesn\u2019t` : 'you don\u2019t'} already send a Self Assessment return, register for one on GOV.UK.`,
+        `On the return, enter ${your} pension contributions (about ${money(c.contribution)} a year, including the basic-rate relief) to get the extra ${money(c.claim)}. Returns are due by ${longDate(due)}.`,
+        `Or ask HMRC to adjust ${your} tax code so the relief comes through ${your} pay each month.`,
+      ],
+      what: `Claim ${money(c.claim)} of higher-rate pension relief through Self Assessment`,
+      amount: c.claim,
+      per: 'year',
+    };
+  }
+
+  function fixDetail(fix) {
+    return {
+      steps: [
+        `By ${longDate(fix.compareBy)}, start comparing deals: your lender\u2019s offers for existing customers, and what a broker can find.`,
+        `Most offers can be secured up to six months ahead, so you can move straight onto a new rate when your fix ends in ${fix.when}.`,
+        fix.rise == null ? 'Add the rate you expect after in Your figures to see how your payments could change.'
+          : `Budget for the change: about ${money(Math.abs(fix.rise))} a month ${fix.rise >= 0 ? 'more' : 'less'} at the rate you expect.`,
+      ],
+      what: `Compare mortgage deals before your fix ends in ${fix.when}`,
+      amount: null,
+    };
+  }
+
+  function statePensionDetail(profile, i, g) {
+    return {
+      steps: [
+        `Check ${i ? `${FP.profile.whose(profile, i)}` : 'your'} State Pension forecast and National Insurance record on GOV.UK.`,
+        'Look for gaps: you can usually pay voluntary contributions for the last six years.',
+        `Before paying, check how much it would add (the full amount is ${money(g.full)} a year).`,
+      ],
+      what: `Check ${i ? `${FP.profile.whose(profile, i)}` : 'your'} State Pension record for gaps`,
+      amount: null,
+    };
   }
 
   /*
@@ -488,7 +653,9 @@
    * was), so it's only worked out when read; so is afford (see
    * affordability). extra: { safety, kind ('interest' | 'retirement' |
    * 'tax' | 'payment'), value (a fixed value a year), person, scale(£ a
-   * month, fraction) → a smaller patch, link: { href, text }, noImpact }.
+   * month, fraction) → a smaller patch, link: { href, text }, noImpact,
+   * due ('YYYY-MM-DD'), detail(patch) → { steps (with figures worked out
+   * from the change made), what, amount, per ('month' | 'year') } }.
    */
   function makeIdea(from, id, tone, title, text, patch, extra) {
     const x = extra || {};
@@ -501,7 +668,30 @@
         return impact;
       },
     });
-    idea.howTo = (HOW_TO[id] || []).slice();
+    // The change you'd actually make: the part you can afford, if that's smaller.
+    const made = () => (idea.afford && idea.afford.scaled ? idea.afford.scaled.patch : idea.patch);
+    let detail;
+    const detailOf = () => {
+      if (detail === undefined) detail = x.detail ? x.detail(made()) : null;
+      return detail;
+    };
+    let howTo;
+    Object.defineProperty(idea, 'howTo', {
+      enumerable: true,
+      get: () => {
+        if (!howTo) howTo = (detailOf() && detailOf().steps) || (HOW_TO[id] || []).slice();
+        return howTo;
+      },
+    });
+    // A date to do it by ('YYYY-MM-DD'), or null.
+    idea.due = x.due || null;
+    // What you'd commit to by applying it or marking it done: { action, what, amount, per, due }.
+    Object.defineProperty(idea, 'commitment', {
+      value: () => {
+        const d = detailOf() || {};
+        return { action: id, what: d.what || title, amount: d.amount == null ? null : d.amount, per: d.amount == null ? null : d.per || 'month', due: idea.due };
+      },
+    });
     idea.safety = !!x.safety;
     idea.kind = x.kind || null;
     if (x.value !== undefined) idea.value = x.value;
@@ -696,6 +886,6 @@
 
   FP.suggest = {
     analyse, actions, suggestSplit, splitAction, mixAction, rankActions, groupActions, highlights, valuePerYear, duration,
-    taxTrap, reliefToClaim, statePensionGap, fixEnding, HOW_TO, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS, SMALL_VALUE, SAFETY_DEBT_APR, STATE_PENSION_LINK,
+    taxTrap, reliefToClaim, statePensionGap, fixEnding, pensionChange, debtClears, nextDate, daysUntil, HOW_TO, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS, SMALL_VALUE, SAFETY_DEBT_APR, STATE_PENSION_LINK,
   };
 })(globalThis.FP = globalThis.FP || {});

@@ -44,7 +44,10 @@ browsers keep files for about 10 minutes). `npm test` checks they all match.
 The first time you open it, it starts **empty**, on a **front page**: the app's name,
 three steps (answer six quick questions, see your first plan, add detail when you're
 ready), a **Get started** button, links to a fictional example or to import a backup,
-and the not-advice notice. It has no header, tabs or footer. Get started opens the
+an **example result** from the fictional sample household (when it's debt-free, its
+retirement verdict and its top action, worked out live), and the not-advice notice. Adding
+detail is honest about effort: "About 20 to 30 minutes with your payslip and pension
+statements. Rough figures are fine, and it saves as you go." It has no header, tabs or footer. Get started opens the
 **Quick start**: first, who the plan is for (**Just me** or **Me and a partner**);
 then your age, salary, everything going out each month (including
 mortgage, bills and debt payments; an estimate is fine), retirement
@@ -75,8 +78,20 @@ what goes out, your salary, pension pots, cash savings and your debts (done once
 you've added any or been through Debts, so having none counts), and names the next
 one missing. Your figures also starts with **Have these to hand**: your latest
 payslip and P60 (for Income), pension statements or your provider's app (Assets),
-your mortgage statement and credit card and loan statements (Debts) and your student
-loan balance (Income). It's open the first time, then folded to one line. Next steps, ideas and the net-worth chart wait
+your State Pension forecast (About you), your mortgage statement and credit card and
+loan statements (Debts) and your student loan balance (Income). Where it helps, each
+links to GOV.UK, opening in a new tab: [State Pension forecast](https://www.gov.uk/check-state-pension),
+[find old pensions](https://www.gov.uk/find-pension-contact-details),
+[student loan balance](https://www.gov.uk/sign-in-to-manage-your-student-loan-balance) and
+your tax code in your [personal tax account](https://www.gov.uk/personal-tax-account) (or the
+HMRC app). The same links are under "Where do I find this?" on those boxes.
+`npm run check:links` checks every GOV.UK link in the code resolves; CI runs it on every
+pull request.
+
+**Help me estimate**, under "Everything going out each month" (in the quick start and
+Outgoings), works the figure out either from one number (the total money out of your
+current account last month) or from four boxes that add up (housing, bills, debt
+payments, everything else). **Use £X a month** puts the total in the box. It's open the first time, then folded to one line. Next steps, ideas and the net-worth chart wait
 until you've added more (savings, pensions, debts or pay details, or been through
 Assets and Debts). The quick-start answers then live under About you in Your figures.
 
@@ -235,8 +250,8 @@ The same measure has the same name on every screen (the names live in one place,
 | **Actions** | second tab, `#actions` | One card per idea, ranked, with Apply, Try as a scenario, Done, Not for me, how to do it and a reminder. |
 | **What if** | third tab, `#what-if` | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), work out **what it would take** to reach a goal, save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. Each scenario is your Baseline plus its own changes, so a change to the Baseline (in Your figures, or an action you apply) carries into every scenario, and each scenario's list of differences stays just its own; editing a scenario changes only that scenario. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm, and the other scenarios keep their own changes on top of it; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Progress** | fourth tab, `#progress` | Since last time, a chart of what you had against what your plan expected, and every check-in. **Check in** is `#checkin`. |
-| **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal and risk), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
-| **Assumptions** | More menu, `#assumptions` | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
+| **Your figures** | header, `#setup` | Five sections: **About you** (age, retirement age, spending goal, your State Pension amount and age under a fold, with the link to check your forecast, and risk), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** (with what each pot is invested in) and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
+| **Assumptions** | More menu, `#assumptions` | Economic assumptions only (growth, inflation, returns, fees, tax policy), editable, with the date each default was set, per-item reset and **Reset all to defaults**. Personal facts entered in Your figures (retirement age, State Pension amount and age, mortgage rate, pension %) are listed in one line with a link there, and resetting leaves them alone. |
 | **Settings** | More menu, `#settings` | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** | More menu, `#data` | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
 
@@ -412,10 +427,24 @@ Then:
   made, and opens What if to compare.
 - **✓ Done** or **Not for me** moves it to the same folded list, which you can bring
   ideas back from.
-- **How to do it** gives two to four general steps (for example, for a pension: ask
-  payroll or HR, and ask about salary sacrifice), naming no providers or products.
+- **How to do it** gives two to four steps with the figures worked out from the change
+  (or the part you can afford), naming no providers or products:
+  - pension: "Ask payroll or HR to raise your contribution from 5% to 8%: about £146 a
+    month going in, costing you about £88 after tax relief" (the cost follows your tax
+    band and how your pension is paid: salary sacrifice also saves NI and student loan);
+  - ISA: the monthly amount, the allowance left and the days until 5 April;
+  - mortgage overpayment: the monthly amount and the yearly 10% limit in £;
+  - debt: the new monthly payment and the month it's cleared;
+  - claiming relief at source, a fixed rate ending, and the State Pension check have steps too.
+- **By** a date, where there is one: ISA, 5 April; claiming higher-rate relief through
+  Self Assessment, 31 January; a fixed rate ending, six months before it ends.
 - **Remind me** downloads a calendar reminder (an `.ics` file, made in your browser,
-  nothing sent) for a date you pick, with the steps in it.
+  nothing sent) for a date you pick (its due date to start with), with the steps in it.
+
+**Your commitments.** Applying an action, or marking it done, records a commitment in the
+scenario: `{ action, what, amount, due, status }` ("Overpay your mortgage by £44 a month",
+to do or done). Plan shows a **Your commitments** card (what, how much, by when, done or
+not, ticked off there); bringing an action back takes its commitment off.
 
 **Use the suggested split** (or, with nothing chosen yet, **Decide what to do with your
 £X left over**) is an action too, making exactly the change **Use this split** makes, so
@@ -542,14 +571,16 @@ offers only **Try as a scenario**. When the goal is already met, it says so.
 Every month or so, **Check in** (`#checkin`, from Progress or Next steps on Plan): today's
 balances are filled in from your plan (cash savings, ISAs, other investments,
 pension pots, the mortgage and each debt), with what you entered last time under
-each. Confirm or change each one and save; it takes about two minutes. The new
+each. Confirm or change each one and save; it takes about two minutes. If you have
+commitments still to do, it asks **Did you do these?** and ticks off the ones you have. The new
 balances go into every scenario (they're facts, not what-ifs), and a snapshot is
 kept: the date, your balances, net worth, savings and pensions, the actions you'd
 applied, and what your plan expected for that date at the previous check-in. Every
 snapshot is kept for 24 months, then one per quarter. They're in your exports and
 come back when you import one.
 
-**Progress** (`#progress`, also from Next steps) shows **Since last time** (change
+**Progress** (`#progress`, also from Next steps) shows **Commitments kept** ("2 of 3",
+with what's still to do and anything past its date), **Since last time** (change
 in net worth, debts paid down, actions applied, and how far ahead of or behind your
 plan your savings and pensions are), a chart of what you had against what your plan
 expected, and a table of every check-in.
@@ -785,6 +816,7 @@ css/styles.css             mobile-first styles; light and dark themes
 js/config/assumptions.js   every assumption: label, unit, default, range, help, date set
 js/config/tax-2026-27.js   UK tax, NI and student loan rules for one tax year
 js/model/profile.js        the shared data model: fields, parsing, validation, normalising
+js/model/commitments.js    your commitments from Actions: record, tick off, count kept
 js/model/scenarios.js      workspace of scenarios: the Baseline plus a patch each; copy, rename,
                            delete, differences
 js/model/sample.js         fictional sample household and example scenarios
@@ -871,6 +903,13 @@ Chromium at 390px and 1280px wide, and fail on any console error:
   never 52.5%; the annual allowance; retiring by 75; spending no lower than bills).
   The golden snapshots also hold each idea's value a year, affordability and figures,
   the Actions order, and what it would take to spend 20% more by each lever.
+- **Steps, deadlines and commitments** (`tests/brief15.test.js`): pension steps with
+  what goes in and the cost after relief for each band and method, ISA days to 5 April,
+  the mortgage limit in £, the month a debt is cleared, steps for the part you can
+  afford, due dates (5 April, 31 January, six months before a fix ends), commitments
+  (one per action, ticked off, counted, saved and loaded), migration 11, and your State
+  Pension in About you. The golden snapshots also hold each idea's steps, due date and
+  commitment.
 
 - **What each pot is invested in:** the asset-class assumptions, the default mix
   giving exactly 5% before fees, each pot (yours, your partner's, other pots)

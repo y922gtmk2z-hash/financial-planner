@@ -128,7 +128,8 @@
         figs.map((f) => h('li', { class: COSTS.includes(f.key) ? 'cost' : 'gain' }, figureText(f, p)))) : null,
       later && af ? h('p', { class: 'help' }, `It would cost about ${money(af.cost)} a month; you have ${money(left)} left over now.`) : null,
       scaled ? h('p', { class: 'help afford-note' }, `The full change would cost ${money(af.cost)} a month, more than the ${money(left)} you have left over, so this is the part you can afford.`) : null,
-      x.link ? h('p', null, h('a', { href: x.link.href, rel: 'noopener noreferrer', target: '_blank' }, x.link.text)) : null,
+      x.due ? h('p', { class: 'action-due' }, h('strong', null, 'By '), FP.dom.date(x.due)) : null,
+      x.link ? h('p', null, h('a', { href: x.link.href, rel: 'noopener noreferrer', target: '_blank' }, x.link.text, h('span', { class: 'visually-hidden' }, ' (opens in a new tab)'))) : null,
       patch && !later ? h('div', { class: 'button-row' },
         h('button', { type: 'button', class: 'small', onclick: () => apply(x, ctx, patch) }, scaled ? `Apply ${money(scaled.monthly)} a month (what you can afford)` : 'Apply'),
         h('button', { type: 'button', class: 'small secondary', onclick: () => tryIt(x, ctx, patch) }, 'Try as a scenario')) : null,
@@ -141,11 +142,16 @@
       remindMe(x, id));
   }
 
+  const local = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = () => local(new Date());
+
   // Applies the change to the scenario you're editing, with Undo.
   function apply(x, ctx, patch) {
     const before = JSON.parse(JSON.stringify(ctx.profile()));
     const after = FP.patch.applyPatch(before, patch || x.patch);
     after.ideas = { ...after.ideas, [x.id]: 'applied' };
+    // Applying it to your plan is a commitment to do it for real.
+    if (x.commitment) FP.commitments.record(after, x.commitment(), 'open', today());
     ctx.replaceProfile(after);
     undoable[x.id] = { before, after: JSON.stringify(ctx.profile()) };
     ctx.toast(`Applied: ${x.title}`, { action: { label: 'Undo', run: () => undo(x, ctx) } });
@@ -178,6 +184,9 @@
     const p = ctx.profile();
     p.ideas = p.ideas || {};
     if (v) p.ideas[x.id] = v; else delete p.ideas[x.id];
+    // Done is a commitment kept; bringing an idea back takes its commitment off.
+    if (v === 'done' && x.commitment) FP.commitments.record(p, x.commitment(), 'done', today());
+    if (!v) FP.commitments.remove(p, x.id);
     ctx.changed();
     ctx.rerender();
   }
@@ -193,10 +202,10 @@
   }
 
   // A calendar reminder on a date you pick, downloaded as an .ics file.
+  // On its due date if it has one (and that's not past), else a week from today.
   function remindMe(x, id) {
     const inWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const local = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const date = h('input', { type: 'date', id: `${id}-date`, value: local(inWeek), min: local(new Date()) });
+    const date = h('input', { type: 'date', id: `${id}-date`, value: x.due && x.due >= today() ? x.due : local(inWeek), min: today() });
     const err = h('p', { class: 'field-error', role: 'alert', hidden: true });
     const go = () => {
       const text = FP.ics.reminder({

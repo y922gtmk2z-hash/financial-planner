@@ -6,6 +6,8 @@
   'use strict';
 
   const { h, money } = FP.dom;
+  // How long adding the detail really takes.
+  const EFFORT = 'About 20 to 30 minutes with your payslip and pension statements. Rough figures are fine, and it saves as you go.';
 
   // The answers behind a first, rough plan. Same profile fields as Your figures.
   const QUICK = ['about.age', 'income.grossSalary', 'outgoings.estimate', 'assumptions.retirementAge', 'goals.retirementIncome', 'assets.pension'];
@@ -186,7 +188,10 @@
         PARTNER_QUICK.map(ask)) : null);
       FP.field.recheckAll(card);
     };
-    const fields = paths.map((path) => ask(quickField(path)));
+    const fields = paths.map((path) => {
+      const el = ask(quickField(path));
+      return path === SPEND_FIELD.path ? h('div', { class: 'with-estimate' }, el, estimateHelper(() => el)) : el;
+    });
     // Their questions follow your pay.
     const at = paths.indexOf('income.grossSalary') + 1;
     const card = h('section', { class: 'card quick-start', 'aria-labelledby': 'quick-h' },
@@ -217,6 +222,59 @@
     return card;
   }
 
+  /*
+   * "Help me estimate", under a box for everything going out each month:
+   * either one figure (what left your current account last month) or four
+   * that add up (housing, bills, debt payments, everything else). Use puts
+   * the total in the box, as if you'd typed it. target(): that box's field.
+   */
+  const ESTIMATE_PARTS = [
+    { key: 'housing', label: 'Housing', help: 'Rent or mortgage payments.' },
+    { key: 'bills', label: 'Bills', help: 'Council tax, energy, water, phone, broadband, insurance and subscriptions.' },
+    { key: 'debts', label: 'Debt payments', help: 'Loans, car finance and credit cards.' },
+    { key: 'rest', label: 'Everything else', help: 'Food, travel, childcare, eating out, holidays and the rest.' },
+  ];
+  function estimateHelper(target) {
+    const vals = { one: null, housing: null, bills: null, debts: null, rest: null };
+    let mode = 'one';
+    const body = h('div', { class: 'estimate-body' });
+    const totalOf = () => (mode === 'one' ? vals.one || 0 : ESTIMATE_PARTS.reduce((t, x) => t + (vals[x.key] || 0), 0));
+    const total = h('p', { class: 'estimate-total', role: 'status' });
+    const use = h('button', { type: 'button', class: 'small secondary', onclick: () => {
+      const v = Math.round(totalOf() * 100) / 100;
+      const input = target() && target().querySelector('input[type="text"]');
+      if (!input || !(v > 0)) return;
+      input.value = FP.dom.inputText({ type: 'money' }, v);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('blur'));
+      wrap.open = false;
+      input.focus();
+    } });
+    const refresh = () => {
+      const v = totalOf();
+      total.textContent = mode === 'four' ? `Adds up to ${money(v)} a month.` : '';
+      total.hidden = mode !== 'four';
+      use.textContent = v > 0 ? `Use ${money(v)} a month` : 'Use this';
+      use.disabled = !(v > 0);
+    };
+    const box = (label, key, help) => FP.field.render({ label, type: 'money', suffix: 'a month', help }, {
+      value: vals[key], noBlankNote: true, onChange: (v) => { vals[key] = v; refresh(); },
+    });
+    const draw = () => {
+      FP.dom.fill(body, mode === 'one'
+        ? box('Total money out of your current account last month', 'one', 'From your bank app or statement: everything that went out, not counting money you moved to your own savings.')
+        : ESTIMATE_PARTS.map((x) => box(x.label, x.key, x.help)));
+      refresh();
+    };
+    const wrap = h('details', { class: 'advanced estimate-help' },
+      h('summary', null, 'Help me estimate'),
+      FP.field.render({ label: 'How would you like to work it out?', type: 'toggle', options: [{ value: 'one', label: 'One figure' }, { value: 'four', label: 'Add it up' }] },
+        { value: mode, onChange: (v) => { mode = v; draw(); } }),
+      body, total, use);
+    draw();
+    return wrap;
+  }
+
   // Set when Get started couldn't be saved (storage blocked), so the button still works this visit.
   let startedUnsaved = false;
 
@@ -233,7 +291,7 @@
   const steps = (p) => [
     [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, what goes out each month, when you’d like to retire and roughly what you’ve put by. About a minute; rough figures are fine.'],
     ['See your first plan', 'What’s left each month, and how much you’d need for retirement.'],
-    ['Add detail when you’re ready', 'Savings, pensions and debts sharpen the picture and unlock your next steps.'],
+    ['Add detail when you’re ready', `Savings, pensions and debts sharpen the picture and unlock your next steps. ${EFFORT}`],
   ];
 
   // Ways in other than the quick start: the sample household, or a backup.
@@ -251,6 +309,40 @@
       ' · Used it before? ', h('a', { href: '#data' }, 'Import a backup'));
   }
 
+  /*
+   * What you'd see, from the fictional sample household: when it's debt-free,
+   * its retirement verdict and its top action. Worked out after the page
+   * shows (it runs the plan), so it fills in a moment later.
+   */
+  function exampleFacts(p) {
+    const free = FP.patch.measure(p).debtFreeAge;
+    const need = FP.projection.retirementNeed(p);
+    const top = FP.suggest.rankActions(FP.suggest.actions(p, { cashKnown: true }))[0];
+    return {
+      debtFree: free == null ? 'Not within the plan' : `At ${free}`,
+      retirement: !need ? 'Not worked out' : need.lastsUntil == null ? `On course: money lasts to ${need.endAge}` : `Runs short at ${need.lastsUntil}`,
+      action: top ? top.title : 'Nothing to act on',
+    };
+  }
+  function exampleResult() {
+    const p = FP.sampleWorkspace().scenarios[0].profile;
+    const list = h('dl', { class: 'facts gate-example-facts' }, h('div', null, h('dt', null, 'Working it out\u2026'), h('dd', null, '')));
+    const box = h('section', { class: 'gate-example', 'aria-labelledby': 'gate-ex-h', 'aria-busy': 'true' },
+      h('h2', { id: 'gate-ex-h' }, 'An example result'),
+      h('p', { class: 'muted small' }, `From the fictional sample household: aged ${p.about.age}, earning ${money(p.income.grossSalary)} a year${p.mortgage.balance > 0 ? ', with a mortgage' : ''}.`),
+      list);
+    setTimeout(() => {
+      if (!box.isConnected) return;
+      const f = exampleFacts(p);
+      box.removeAttribute('aria-busy');
+      FP.dom.fill(list,
+        h('div', null, h('dt', null, 'Debt-free'), h('dd', null, f.debtFree)),
+        h('div', null, h('dt', null, 'Retirement'), h('dd', null, f.retirement)),
+        h('div', null, h('dt', null, 'Top action'), h('dd', null, f.action)));
+    }, 0);
+    return box;
+  }
+
   function frontPage(root, ctx) {
     FP.dom.add(root,
       h('section', { class: 'gate', 'aria-labelledby': 'gate-h' },
@@ -258,6 +350,7 @@
         h('h1', { id: 'gate-h' }, 'Finance planner'),
         h('p', { class: 'gate-tag' }, 'Plan your money, privately. A UK planner for your pay, spending, debts and retirement.'),
         h('ol', { class: 'gate-steps' }, steps(ctx.profile()).map(([title, text]) => h('li', null, h('strong', null, title), h('span', null, text)))),
+        exampleResult(),
         h('button', {
           type: 'button', class: 'gate-go',
           onclick: () => {
@@ -301,5 +394,5 @@
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, householdToggle, isRough, isRoughPots, senseCheck, failedChecks, answerCount, LIMITS };
+  FP.welcome = { EFFORT, exampleFacts, estimateHelper, render, householdToggle, isRough, isRoughPots, senseCheck, failedChecks, answerCount, LIMITS };
 })(globalThis.FP = globalThis.FP || {});

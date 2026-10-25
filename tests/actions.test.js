@@ -21,9 +21,10 @@ test('each kind of idea says how to do it in 2 to 4 plain steps, naming no provi
   assert.match(FP.suggest.HOW_TO.debt.join(' '), /0% balance transfer/);
   assert.match(FP.suggest.HOW_TO.relief.join(' '), /payroll or HR/);
   assert.match(FP.suggest.HOW_TO.relief.join(' '), /salary sacrifice/);
-  // Ideas get their own copy of the steps.
+  // Each idea's steps carry its own figures, worked out from its change.
   const idea = FP.suggest.analyse(fixture('sample')).suggestions.find((s) => s.id === 'relief');
-  assert.deepEqual(idea.howTo, FP.suggest.HOW_TO.relief);
+  assert.equal(idea.howTo.length, 3);
+  assert.match(idea.howTo[0], /^Ask payroll or HR to raise your contribution from 5% to 6\.5%: about £\d+ a month going in, costing you about £\d+ after tax relief\.$/);
   assert.notEqual(idea.howTo, FP.suggest.HOW_TO.relief);
 });
 

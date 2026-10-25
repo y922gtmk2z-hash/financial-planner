@@ -25,6 +25,8 @@
  *      replacing two assumptions: the rate changing after a number of years
  *      (mortgageRateChangeYear) and the new rate (mortgageRateAfterChange).
  *      Plans can also mark figures as rough answers (profile.rough).
+ *  11  Your commitments (profile.commitments): what you said you'd do when
+ *      you applied an action or marked it done. Older plans have none.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -199,6 +201,14 @@
             }).filter((c) => !(isObj(c) && /^assumptions\.mortgageRate(ChangeYear|AfterChange)$/.test(c.path)));
           });
         }
+        return data;
+      },
+    },
+    {
+      from: 10, to: 11,
+      // Commitments started: older plans have none yet.
+      up(data) {
+        profilesOf(data).forEach((p) => { if (!Array.isArray(p.commitments)) p.commitments = []; });
         return data;
       },
     },

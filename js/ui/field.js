@@ -8,12 +8,25 @@
   const { h } = FP.dom;
   let uid = 0;
 
+  // Where to look things up on GOV.UK. Each opens in a new tab.
+  const LINKS = {
+    statePension: 'https://www.gov.uk/check-state-pension',
+    findPension: 'https://www.gov.uk/find-pension-contact-details',
+    studentLoan: 'https://www.gov.uk/sign-in-to-manage-your-student-loan-balance',
+    taxCode: 'https://www.gov.uk/personal-tax-account',
+  };
+  const link = (href, text) => h('a', { href, rel: 'noopener noreferrer', target: '_blank' }, text, h('span', { class: 'visually-hidden' }, ' (opens in a new tab)'));
+
   // "Where do I find this?" for figures people often have to look up.
   const P11D = 'Your P11D form from your employer (usually given after April), or your payslip if benefits are taxed through pay. Ask payroll if you don\u2019t have one.';
   const WHERE = {
-    'income.taxCode': 'On your payslip, your P60, or in the HMRC app or your personal tax account.',
-    'income.studentLoanPlan': 'On your payslip (next to the student loan deduction), or sign in to your Student Loans Company account.',
-    'assumptions.statePension': () => ['Get your forecast on ', h('a', { href: 'https://www.gov.uk/check-state-pension', rel: 'noopener noreferrer', target: '_blank' }, 'Check your State Pension forecast'), ' (GOV.UK).'],
+    'income.taxCode': () => ['On your payslip, your P60, or in the HMRC app or your ', link(LINKS.taxCode, 'personal tax account'), ' (GOV.UK).'],
+    'income.studentLoanPlan': () => ['On your payslip (next to the student loan deduction), or ', link(LINKS.studentLoan, 'sign in to your student loan account'), ' (GOV.UK).'],
+    'income.studentLoanBalance': () => [link(LINKS.studentLoan, 'Sign in to manage your student loan balance'), ' (GOV.UK).'],
+    'assets.pension': () => ['Your statements or your provider\u2019s app. Lost track of an old pot? ', link(LINKS.findPension, 'Find pension contact details'), ' (GOV.UK).'],
+    'assumptions.statePension': () => ['Get your forecast on ', link(LINKS.statePension, 'Check your State Pension forecast'), ' (GOV.UK).'],
+    'partner.statePension': () => ['Get their forecast on ', link(LINKS.statePension, 'Check your State Pension forecast'), ' (GOV.UK).'],
+    'assumptions.statePensionAge': () => ['It\u2019s on your forecast: ', link(LINKS.statePension, 'Check your State Pension forecast'), ' (GOV.UK).'],
     carValue: P11D,
     yearly: P11D,
   };
@@ -305,5 +318,5 @@
       opts.extra || null);
   }
 
-  FP.field = { render, recheckAll };
+  FP.field = { render, recheckAll, LINKS, link };
 })(globalThis.FP = globalThis.FP || {});

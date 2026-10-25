@@ -76,10 +76,11 @@ function snapshot(profile) {
     potNeeded: FP.projection.potNeeded(profile),
     suggest: {
       suggestions: ideas.suggestions.map((x) => {
-        const { id, tone, title, text, patch, impact, howTo, safety, kind, link } = x;
+        const { id, tone, title, text, patch, impact, howTo, due, safety, kind, link } = x;
         const af = x.afford;
         return {
-          id, tone, title, text, patch, impact, howTo, safety, kind, link,
+          id, tone, title, text, patch, impact, howTo, due, safety, kind, link,
+          commitment: x.commitment ? x.commitment() : null,
           valuePerYear: FP.suggest.valuePerYear(x),
           highlights: FP.suggest.highlights(x),
           afford: af ? { cost: af.cost, left: af.left, none: af.none, scaled: af.scaled ? { patch: af.scaled.patch, monthly: af.scaled.monthly } : null } : null,

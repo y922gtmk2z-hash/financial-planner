@@ -28,6 +28,13 @@
     });
     const debtBox = (d) => box(d.name || 'Debt', d.balance, (v) => { d.balance = v; },
       last ? was((x) => (x.debts.find((y) => y.id === d.id) || {}).balance) : null, 'What you owe today.');
+    // Your commitments still to do (in the scenario you're in): did you do them?
+    const open = (ctx.profile().commitments || []).filter((c) => c.status === 'open');
+    const ticked = new Set();
+    const doneBox = open.length ? h('fieldset', { class: 'field-group checkin-commitments' },
+      h('legend', null, 'Did you do these?'),
+      h('p', { class: 'help' }, 'Tick what you’ve done since you committed to it on Actions.'),
+      h('ul', { class: 'commit-list' }, open.map((c) => FP.commitmentsUi.row(c, (done) => { if (done) ticked.add(c.id); else ticked.delete(c.id); })))) : null;
     const form = h('form', { class: 'card checkin-form', novalidate: true },
       h('h2', null, 'Today’s balances'),
       h('p', { class: 'help' }, 'Each is filled in from your plan. Check it against your latest statement or app, and change it if it’s moved.'),
@@ -37,12 +44,14 @@
       box('Pension pots', b.pension, (v) => { b.pension = v; }, was((x) => x.pension), 'All your defined-contribution pots, from your statements or apps.'),
       b.mortgage > 0 || (last && last.balances.mortgage > 0) ? box('Mortgage balance', b.mortgage, (v) => { b.mortgage = v; }, was((x) => x.mortgage), 'What you still owe.') : null,
       b.debts.map(debtBox),
+      doneBox,
       h('div', { class: 'button-row' }, h('button', { type: 'submit' }, 'Save check-in')),
       h('p', { class: 'help' }, 'This updates these balances in every scenario, and keeps a snapshot for Progress.'));
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const bad = form.querySelector('[aria-invalid="true"]');
       if (bad) { bad.focus(); ctx.toast('Fix the highlighted box first.'); return; }
+      ticked.forEach((id) => FP.commitments.setStatus(ctx.profile(), id, 'done'));
       C.record(ws, today(), b);
       ctx.changed();
       ctx.go('progress');
@@ -56,13 +65,26 @@
       form);
   }
 
+  // Commitments kept: "2 of 3 kept", with what's still to do, or null with none.
+  function keptCard(ctx) {
+    const p = ctx.profile();
+    const k = FP.commitments.kept(p, today());
+    if (!k.total) return null;
+    const open = p.commitments.filter((c) => c.status === 'open');
+    return h('section', { class: 'card', 'aria-labelledby': 'kept-h' },
+      h('h2', { id: 'kept-h' }, 'Commitments kept'),
+      h('p', { class: 'big-figure' }, h('strong', null, `${k.done} of ${k.total}`), k.overdue ? h('span', { class: 'muted small' }, ` · ${k.overdue} past ${k.overdue === 1 ? 'its' : 'their'} date`) : null),
+      open.length ? h('p', { class: 'muted small' }, `Still to do: ${open.map((c) => `${c.what}${c.due ? ` (by ${FP.dom.date(c.due)})` : ''}`).join('; ')}.`) : h('p', { class: 'small positive' }, '✓ All done.'),
+      h('p', { class: 'small' }, h('a', { href: '#plan' }, 'Tick them off on your plan'), ', or when you check in.'));
+  }
+
   function progress(root, ctx) {
     const ws = ctx.workspace();
     const snaps = (ws.checkins || { snapshots: [] }).snapshots;
     const head = FP.dom.pageHead('Progress', 'What you have against your plan');
     const checkLink = h('a', { class: 'button', href: '#checkin' }, snaps.length ? 'Check in again' : 'Check in now');
     if (!snaps.length) {
-      FP.dom.add(root, head, h('section', { class: 'card' },
+      FP.dom.add(root, head, keptCard(ctx), h('section', { class: 'card' },
         h('h2', null, 'No check-ins yet'),
         h('p', null, 'Every month or so, update your balances. Progress then shows your savings and pensions against what your plan expected, and what’s changed since last time.'),
         checkLink));
@@ -79,7 +101,7 @@
     const gap = latest.planned ? latest.savingsAndPensions - latest.planned.savingsAndPensions : null;
     const applied = since ? since.applied.map((id) => FP.screens.actions.nameOf(id, ws.scenarios[0].profile)) : [];
     const signed = (n) => `${n >= 0 ? '+' : '−'}${money(Math.abs(n))}`;
-    FP.dom.add(root, head,
+    FP.dom.add(root, head, keptCard(ctx),
       h('section', { class: 'card', 'aria-labelledby': 'since-h' },
         h('h2', { id: 'since-h' }, since ? `Since ${FP.dom.date(since.from)}` : 'Since last time'),
         since ? h('dl', { class: 'facts' },

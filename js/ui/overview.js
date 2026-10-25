@@ -62,6 +62,7 @@
       ready && proj.ok ? retirementCard(p, proj, ideas, panel, rough) : null,
       ready && rough ? moreCard(p) : null,
       ready && !rough ? FP.checklist.note(p) : null,
+      rough ? null : commitmentsCard(ctx),
       proj.ok && !rough ? chartCard(proj, today, a, p) : null,
       rough ? null : nextCard(p, a, ctx, root),
       rough ? null : FP.print.attach(ctx, root));
@@ -82,6 +83,45 @@
         h('a', { href: `#setup/${failed[0].path}` }, failed.length > 1 ? 'Check them' : 'Check it')));
   }
 
+  /*
+   * Your commitments: what you said you'd do from Actions, how much, by when,
+   * and whether it's done (tick it off here). Null when there are none.
+   */
+  function commitmentsCard(ctx) {
+    const list = ctx.profile().commitments || [];
+    if (!list.length) return null;
+    const card = h('section', { class: 'card commitments', id: 'commitments', 'aria-labelledby': 'commit-h' });
+    const draw = () => {
+      const p = ctx.profile();
+      const k = FP.commitments.kept(p, isoToday());
+      FP.dom.fill(card,
+        h('h2', { id: 'commit-h' }, 'Your commitments'),
+        h('p', { class: 'muted' }, `${k.done} of ${k.total} done${k.overdue ? ` \u00b7 ${k.overdue} past ${k.overdue === 1 ? 'its' : 'their'} date` : ''}. From what you applied or marked done on Actions.`),
+        h('ul', { class: 'commit-list' }, p.commitments.map((c) => commitmentRow(c, (done) => {
+          FP.commitments.setStatus(ctx.profile(), c.id, done ? 'done' : 'open');
+          ctx.changed();
+          draw();
+        }))),
+        FP.dom.cardFoot('#actions', 'See your actions'));
+    };
+    draw();
+    return card;
+  }
+  const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  // One commitment: done or not (a tick box), what, how much and by when.
+  function commitmentRow(c, onToggle) {
+    const id = `commit-${c.id}`;
+    const late = c.status === 'open' && c.due && c.due < isoToday();
+    return h('li', { class: `commit${c.status === 'done' ? ' done' : ''}` },
+      h('input', { type: 'checkbox', id, checked: c.status === 'done', onchange: (e) => onToggle(e.target.checked) }),
+      h('label', { for: id }, h('span', { class: 'commit-what' }, c.what),
+        h('span', { class: 'commit-meta muted small' }, [
+          c.amount != null ? `${money(c.amount)} a ${c.per || 'month'}` : null,
+          c.due ? `by ${FP.dom.date(c.due)}` : 'no date',
+          c.status === 'done' ? 'done' : late ? 'past its date' : 'to do',
+        ].filter(Boolean).join(' \u00b7 '))));
+  }
+
   // After the quick start: one clear next move.
   function moreCard(p) {
     return h('section', { class: 'card more-detail', 'aria-labelledby': 'more-h' },
@@ -89,7 +129,7 @@
       FP.checklist.meter(p),
       h('p', null, 'This uses just your quick answers. Add your savings, pensions and any debts and the planner can tell you when you\u2019ll be debt-free, what you could spend in retirement and what to do next.'),
       h('a', { class: 'button', href: FP.checklist.nextSection(p) }, 'Add your pensions and savings'),
-      h('p', { class: 'muted small' }, 'About five minutes. A rough figure is fine.'));
+      h('p', { class: 'muted small' }, FP.welcome.EFFORT));
   }
 
   // Ideas you haven't ticked off or hidden, most pressing first.
@@ -375,6 +415,7 @@
 
 
   FP.screens = FP.screens || {};
+  FP.commitmentsUi = { row: commitmentRow };
   FP.screens.plan = {
     title: 'Your plan', render, netWorthSoWhat,
     // Its sub-pages: the year by year view and the detail sheets.

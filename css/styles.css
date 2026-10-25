@@ -1009,3 +1009,15 @@ details.mix-fold > summary .fold-sum { font-weight: 400; font-variant-numeric: t
 .mix-level-list { list-style: none; padding: 0; margin: 0; }
 .mix-level.mine { border: 2px solid var(--accent); }
 .mix-levels > .help { margin-top: 8px; }
+
+/* Your commitments (Plan, Check in, Progress). */
+.commit-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.commit { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.commit input[type="checkbox"] { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--accent); }
+.commit label { display: grid; gap: 2px; cursor: pointer; }
+.commit.done .commit-what { text-decoration: line-through; color: var(--text-2); }
+.big-figure { font-size: 1.4rem; margin: 4px 0; }
+.action-due { margin: 4px 0; }
+.gate-example { text-align: left; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin: 16px 0; }
+.gate-example h2 { font-size: 1rem; margin: 0 0 4px; }
+.to-hand-link { display: block; }

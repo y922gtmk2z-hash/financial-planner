@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test \"tests/*.test.js\"",
     "golden:update": "node tests/golden-update.js",
-    "test:journey": "playwright test"
+    "test:journey": "playwright test",
+    "check:links": "node tests/check-links.js"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
