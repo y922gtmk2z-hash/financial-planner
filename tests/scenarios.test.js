@@ -68,20 +68,22 @@ test('differences lists what changed in plain terms', () => {
   const b = JSON.parse(JSON.stringify(a));
   assert.deepEqual(FP.scenarios.differences(a, b), []);
   b.assumptions.retirementAge = 60;
-  b.assumptions.investmentReturn = 7;
+  b.assumptions.marketShift = 2;
   b.assumptions.taxThresholds = 'inflation';
   b.income.grossSalary = 60000;
   b.spending[0].monthly += 100;
   b.mortgage.monthlyOverpayment = 300;
+  b.mixes.isa = { shares: 60, bonds: 35, cash: 5 };
   const d = FP.scenarios.differences(a, b);
   const by = (label) => d.find((x) => x.label === label);
   assert.deepEqual(by('Retirement age'), { label: 'Retirement age', from: 67, to: 60, kind: 'number' });
-  assert.equal(by('Investment return (before fees)').to, 7);
+  assert.equal(by('Shares and bonds: change to returns').to, 2);
+  assert.deepEqual(by('Investments in ISAs: invested in'), { label: 'Investments in ISAs: invested in', from: '40% shares, 60% bonds', to: '60% shares, 35% bonds, 5% cash', kind: 'text' });
   assert.equal(by('Tax thresholds in future years').to, 'Rise with inflation');
   assert.equal(by('Gross salary').kind, 'money');
   assert.equal(by('Monthly spending').to - by('Monthly spending').from, 100);
   assert.equal(by('Monthly overpayment').to, 300);
-  assert.equal(d.length, 6);
+  assert.equal(d.length, 7);
 });
 
 test('compare: retiring earlier gives a smaller pension pot at the same age', () => {
@@ -118,7 +120,7 @@ test('what-if presets copy the baseline with one change, keeping the scenario yo
   const o = FP.scenarios.fromPreset(ws, 'overpay');
   assert.equal(o.profile.mortgage.monthlyOverpayment, base.profile.mortgage.monthlyOverpayment + 200);
   const w = FP.scenarios.fromPreset(ws, 'weakerMarkets');
-  assert.equal(w.profile.assumptions.investmentReturn, base.profile.assumptions.investmentReturn - 2);
+  assert.equal(w.profile.assumptions.marketShift, base.profile.assumptions.marketShift - 2);
   // Not offered when it doesn't apply.
   base.profile.mortgage.balance = 0;
   assert.equal(FP.scenarios.fromPreset(ws, 'overpay'), null);
@@ -128,7 +130,7 @@ test('what-if presets stay within assumption limits', () => {
   const ws = FP.scenarios.fromProfile(FP.sampleWorkspace().scenarios[0].profile);
   const p = ws.scenarios[0].profile;
   const preset = (id) => FP.scenarios.PRESETS.find((x) => x.id === id);
-  p.assumptions.investmentReturn = -19;
+  p.assumptions.marketShift = -29;
   assert.ok(!preset('weakerMarkets').applies(p));
   p.assumptions.retirementAge = 79;
   assert.ok(!preset('workLonger').applies(p));

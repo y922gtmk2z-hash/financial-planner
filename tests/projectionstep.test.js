@@ -14,7 +14,7 @@ test('a returnsPath equal to the assumptions gives identical output', () => {
   G.names().forEach((name) => {
     const p = fixture(name);
     const a = p.assumptions;
-    const path = Array.from({ length: 100 }, () => ({ cash: a.savingsRate, invest: a.investmentReturn, pension: a.pensionGrowth, house: a.housePriceGrowth }));
+    const path = Array.from({ length: 100 }, () => ({ cash: a.savingsRate, house: a.housePriceGrowth, shares: a.sharesReturn + a.marketShift, bonds: a.bondsReturn + a.marketShift, cashFund: a.cashReturn }));
     assert.deepEqual(FP.projection.project(p, { returnsPath: path }), FP.projection.project(p), name);
     assert.deepEqual(FP.projection.project(p, { returnsPath: path, maxYears: 100 }), FP.projection.project(p, { maxYears: 100 }), `${name} to end age`);
   });
@@ -23,26 +23,27 @@ test('a returnsPath equal to the assumptions gives identical output', () => {
 test('a returnsPath changes growth only in the years and rates it gives', () => {
   const p = fixture('sample');
   const base = FP.projection.project(p);
-  const strong = FP.projection.project(p, { returnsPath: [{ invest: 20 }] });
-  // The first year's ISA grows faster; cash, pension and home are unchanged that year.
+  const strong = FP.projection.project(p, { returnsPath: [{ shares: 20 }] });
+  // The first year's ISA and pension (both part shares) grow faster; cash and home are unchanged that year.
   assert.ok(strong.rows[1].isa > base.rows[1].isa);
-  ['cash', 'pension', 'home'].forEach((k) => assert.equal(strong.rows[1][k], base.rows[1][k], k));
+  assert.ok(strong.rows[1].pension > base.rows[1].pension);
+  ['cash', 'home'].forEach((k) => assert.equal(strong.rows[1][k], base.rows[1][k], k));
   // Later years use the assumptions again, from a higher starting point.
   const growth = (r, y) => r.rows[y].isa;
   assert.ok(growth(strong, 2) > growth(base, 2));
-  // A crash in pensions in year 3 only.
-  const crash = FP.projection.project(p, { returnsPath: [{}, {}, { pension: -30 }] });
+  // A crash in shares and bonds in year 3 only.
+  const crash = FP.projection.project(p, { returnsPath: [{}, {}, { shares: -40, bonds: -20 }] });
   assert.equal(crash.rows[2].pension, base.rows[2].pension);
   assert.ok(crash.rows[3].pension < base.rows[3].pension * 0.8);
   // Rates that aren't numbers are ignored.
-  assert.deepEqual(FP.projection.project(p, { returnsPath: [{ invest: 'lots', cash: NaN }, null] }), base);
+  assert.deepEqual(FP.projection.project(p, { returnsPath: [{ shares: 'lots', cash: NaN }, null] }), base);
 });
 
 test('fees still come off investment and pension returns from a returnsPath', () => {
   const p = fixture('near-retirement');
   p.assumptions.pensionFees = 1;
-  const r = FP.projection.project(p, { returnsPath: [{ pension: 10 }] });
-  const zero = FP.projection.project({ ...p, assumptions: { ...p.assumptions, pensionFees: 0 } }, { returnsPath: [{ pension: 10 }] });
+  const r = FP.projection.project(p, { returnsPath: [{ shares: 10, bonds: 10 }] });
+  const zero = FP.projection.project({ ...p, assumptions: { ...p.assumptions, pensionFees: 0 } }, { returnsPath: [{ shares: 10, bonds: 10 }] });
   assert.ok(r.rows[1].pension < zero.rows[1].pension);
 });
 
@@ -57,7 +58,7 @@ test('each year gets its returns and the events passed in', () => {
   assert.equal(row.age, 39);
   assert.deepEqual(FP.projection.project(p, { events }), FP.projection.project(p), 'events change nothing yet');
   assert.deepEqual(FP.projection.returnsFor(p.assumptions, [{ house: 1 }], 1),
-    { cash: p.assumptions.savingsRate, invest: p.assumptions.investmentReturn, pension: p.assumptions.pensionGrowth, house: 1 });
+    { cash: p.assumptions.savingsRate, house: 1, shares: p.assumptions.sharesReturn, bonds: p.assumptions.bondsReturn, cashFund: p.assumptions.cashReturn });
 });
 
 test('stepping the years by hand gives the same rows as project', () => {

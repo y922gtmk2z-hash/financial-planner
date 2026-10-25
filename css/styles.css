@@ -1006,3 +1006,24 @@ fieldset.person-group > legend { font-weight: 700; padding: 0 4px; }
 .pension-item fieldset.row-card > .field.compact { margin-bottom: 12px; }
 .pension-item, .pension-item fieldset.row-card { min-width: 0; }
 .pension-item fieldset.row-card { margin: 0; }
+
+/* ---------- What each pot is invested in ---------- */
+details.mix-fold { margin-top: 4px; border-top: 0; padding-top: 0; }
+details.mix-fold > summary { display: flex; flex-wrap: wrap; column-gap: 8px; align-items: baseline; min-height: 44px; }
+details.mix-fold > summary .fold-title { font-size: 0.95rem; font-weight: 600; }
+details.mix-fold > summary .fold-sum { font-weight: 400; font-variant-numeric: tabular-nums; }
+.mix-body { padding: 4px 0 8px; }
+.mix-boxes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.mix-cash, .mix-growth { margin: 6px 0 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.mix-cash { color: var(--text-2); }
+.model-mix, .mix-level {
+  margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+}
+.model-mix p, .mix-level p { margin: 0 0 6px; }
+.model-mix .notice, .mix-level .notice { margin: 8px 0; }
+.model-mix .button-row { margin-top: 8px; }
+.model-mix-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.model-mix-parts { font-weight: 600; font-variant-numeric: tabular-nums; }
+.mix-level-list { list-style: none; padding: 0; margin: 0; }
+.mix-level.mine { border: 2px solid var(--accent); }
+.mix-levels > .help { margin-top: 8px; }

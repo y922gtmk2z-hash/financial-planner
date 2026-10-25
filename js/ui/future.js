@@ -96,8 +96,8 @@
       `Spending +${pct(a.spendingGrowth)}`,
       `House prices +${pct(a.housePriceGrowth)}`,
       `Savings ${pct(a.savingsRate)}`,
-      `Investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees`,
-      `Pension ${pct(FP.growth.netRate(a.pensionGrowth, a.pensionFees))} after fees`,
+      `ISAs ${pct(FP.mix.netRate(p.mixes.isa, a, 'invest'))} after fees`,
+      `Pension ${pct(FP.mix.netRate(p.mixes.pension, a, 'pension'))} after fees`,
       p.partner ? `Retire: ${FP.dom.bothRetire(p)}` : `Retire at ${a.retirementAge}`,
       `State Pension ${money(a.statePension)} from ${a.statePensionAge}`,
       a.taxThresholds === 'inflation' ? 'Tax thresholds rise with inflation' : 'Tax thresholds frozen',
@@ -119,11 +119,10 @@
       studentLoanTile(sl, rows, end),
     ].filter(Boolean);
 
-    // Net worth if investment and pension returns are 2 points a year lower or higher.
+    // Net worth if shares and bonds return 2 points a year less or more.
     const range = (shift) => {
       const q = JSON.parse(JSON.stringify(p));
-      q.assumptions.investmentReturn += shift;
-      q.assumptions.pensionGrowth += shift;
+      q.assumptions.marketShift += shift;
       const rr = FP.projection.project(q, toEnd(q));
       return (real ? rr.rows.map(FP.projection.toReal) : rr.rows).map((x) => x.netWorth);
     };
@@ -157,7 +156,7 @@
         FP.dom.soWhat(`${FP.screens.overview.netWorthSoWhat(rows, ev)} With returns 2 points lower it would be ${at(band.low[ev.retirement ? ev.retirement.y : rows.length - 1], ev.retirement ? ev.retirement.y : rows.length - 1)}.`),
         h('details', { class: 'advanced', id: 'nw-based-on' },
           h('summary', null, `Based on ${keyAssumptions.children.length} assumptions`),
-          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if investments and pensions grow 2 points a year slower or faster than your assumptions (by ${end.age}: ${at(band.low[band.low.length - 1], end.y)} to ${at(band.high[band.high.length - 1], end.y)}). Real returns vary from year to year, so the actual path could fall outside it.`),
+          h('p', { class: 'muted small' }, `Ages along the bottom. Home equity = home value minus mortgage. The shaded range shows net worth if shares and bonds return 2 points a year less or more than your assumptions (by ${end.age}: ${at(band.low[band.low.length - 1], end.y)} to ${at(band.high[band.high.length - 1], end.y)}). Real returns vary from year to year, so the actual path could fall outside it.`),
           keyAssumptions)),
 
       h('section', { class: 'card', 'aria-labelledby': 'comp-chart-h' },

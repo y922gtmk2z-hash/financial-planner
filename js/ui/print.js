@@ -35,13 +35,16 @@
       row('spendingGrowth', pct(a.spendingGrowth)),
       row('housePriceGrowth', pct(a.housePriceGrowth)),
       row('savingsRate', pct(a.savingsRate)),
-      row('investmentReturn', `${pct(a.investmentReturn)} (${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees)`),
-      row('pensionGrowth', `${pct(a.pensionGrowth)} (${pct(FP.growth.netRate(a.pensionGrowth, a.pensionFees))} after fees)`),
+      row('sharesReturn', pct(a.sharesReturn)),
+      row('bondsReturn', pct(a.bondsReturn)),
+      row('cashReturn', pct(a.cashReturn)),
+      a.marketShift ? row('marketShift', `${a.marketShift > 0 ? '+' : ''}${a.marketShift} points`) : null,
+      ['What your ISAs and pension are invested in', `ISAs ${FP.mix.describe(p.mixes.isa)} (${pct(FP.mix.netRate(p.mixes.isa, a, 'invest'))} after fees); pension ${FP.mix.describe(p.mixes.pension)} (${pct(FP.mix.netRate(p.mixes.pension, a, 'pension'))} after fees)`, 'your figures'],
       row('retirementAge', String(a.retirementAge)),
       row('statePension', `${money(a.statePension)} a year from ${a.statePensionAge}`),
       row('taxThresholds', (FP.assumptions.def('taxThresholds').options.find((o) => o.value === a.taxThresholds) || {}).label || a.taxThresholds),
       ['Tax rules', `${cfg.taxYear} (UK and Scotland)`, `checked ${FP.dom.date(cfg.checkedOn)}`],
-    ];
+    ].filter(Boolean);
   }
 
   function build(ctx, root) {

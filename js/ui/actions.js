@@ -18,8 +18,10 @@
     // "Build your emergency fund" already means using the suggested split: one
     // card, making exactly the change the split action makes.
     const fund = list.find((s) => s.id === 'emergency');
-    if (fund && split) { fund.patch = split.patch; return list; }
-    return list.concat(split || []);
+    // The typical mix for your risk level, for every pot, once you've answered the risk question.
+    const mix = FP.suggest.mixAction(p);
+    if (fund && split) { fund.patch = split.patch; return list.concat(mix || []); }
+    return list.concat(split || [], mix || []);
   }
   // Ones you haven't marked done, not for you or applied.
   const openActions = (p) => actionsFor(p).filter((x) => !(p.ideas || {})[x.id]);
@@ -32,6 +34,7 @@
     if (x.id === 'isa') return `ISA ${money(c.value[c.value.length - 1].monthly)} a month`;
     if (x.id === 'debt') return `Pay ${money(c.value)} more off debts`;
     if (x.id === 'split') return 'Suggested split';
+    if (x.id === 'mix') return `Typical ${p.about.riskAppetite} mix`;
     return x.title;
   }
 
@@ -60,7 +63,7 @@
     relief: 'Higher-rate pension relief', taper: 'Use your pension to avoid the 60% band', match: 'Check for employer matching',
     isa: 'Use your ISA allowance', mortgage: 'Overpay the mortgage', mortgageLow: 'Your mortgage is cheap',
     debt: 'Clear your most expensive debt first', emergency: 'Build your emergency fund', studentLoan: 'Don\u2019t rush to overpay your student loan',
-    noSurplus: 'Nothing left over each month', split: 'Use the suggested split',
+    noSurplus: 'Nothing left over each month', split: 'Use the suggested split', mix: 'Use a typical mix for your risk level',
   };
 
   const firstSentence = (text) => { const m = text.match(/^.*?[.!?](?=\s|$)/); return m ? m[0] : text; };
@@ -108,6 +111,8 @@
         h('span', { class: 'idea-icon', 'aria-hidden': 'true' }, TONE_ICON[x.tone] || 'i'),
         h('h2', { id: `${id}-h` }, x.title)),
       h('p', null, firstSentence(x.text)),
+      x.tradeOff ? h('p', { class: 'help' }, x.tradeOff) : null,
+      x.notice ? h('p', { class: 'notice info mix-notice' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'), h('span', null, x.notice)) : null,
       figs.length ? h('ul', { class: 'action-figures', 'aria-label': 'What it would do' },
         figs.map((f) => h('li', { class: COSTS.includes(f.key) ? 'cost' : 'gain' }, figureText(f, p)))) : null,
       tooMuch ? h('p', { class: 'notice warn' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, '!'),

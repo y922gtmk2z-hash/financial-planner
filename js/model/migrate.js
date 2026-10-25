@@ -13,6 +13,10 @@
  *   5  The workspace keeps your check-ins (snapshots of your balances).
  *   6  Household mode: a profile can have a partner, more pensions, and owners
  *      on assets and debts. Nothing moves: you stay in the profile's own fields.
+ *   7  Each ISA, other investment and pension pot has a mix of shares, bonds
+ *      and cash, which sets how it grows. The two old return assumptions
+ *      (investmentReturn, pensionGrowth) become mixes and a market shift that
+ *      give exactly the same rates.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -100,6 +104,30 @@
         profilesOf(data).forEach((p) => {
           if (p.partner === undefined) p.partner = null;
           if (!Array.isArray(p.pensions)) p.pensions = [];
+        });
+        return data;
+      },
+    },
+    {
+      from: 6, to: 7,
+      // Growth used to be one rate for ISAs and other investments and one for
+      // pensions. Each pot gets a mix, with a market shift (and, only if the
+      // two were far apart, shares and bonds returns) that reproduce them.
+      up(data) {
+        const defs = FP.assumptions.defaults();
+        const rate = (v, d) => (typeof v === 'number' && Number.isFinite(v) && v >= -20 && v <= 20 ? v : d);
+        profilesOf(data).forEach((p) => {
+          if (!isObj(p.assumptions)) p.assumptions = {};
+          const a = p.assumptions;
+          const got = FP.mix.fromRates(rate(a.investmentReturn, 5), rate(a.pensionGrowth, 5), defs);
+          delete a.investmentReturn;
+          delete a.pensionGrowth;
+          if (got.marketShift) a.marketShift = got.marketShift;
+          if (got.sharesReturn !== defs.sharesReturn) a.sharesReturn = got.sharesReturn;
+          if (got.bondsReturn !== defs.bondsReturn) a.bondsReturn = got.bondsReturn;
+          p.mixes = { isa: { ...got.invest }, gia: { ...got.invest }, pension: { ...got.pension } };
+          if (isObj(p.partner)) p.partner.pensionMix = { ...got.pension };
+          if (Array.isArray(p.pensions)) p.pensions.filter(isObj).forEach((x) => { x.mix = { ...got.pension }; });
         });
         return data;
       },

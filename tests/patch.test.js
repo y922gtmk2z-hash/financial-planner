@@ -153,7 +153,7 @@ const OLD = {
   overpay: (p) => { p.mortgage.monthlyOverpayment = (p.mortgage.monthlyOverpayment || 0) + 200; },
   spendLess: (p) => { p.spending.forEach((r) => { r.monthly = Math.round((r.monthly || 0) * 0.9); }); },
   payRise: (p) => { p.income.grossSalary = Math.round(p.income.grossSalary * 1.1); },
-  weakerMarkets: (p) => { p.assumptions.investmentReturn -= 2; p.assumptions.pensionGrowth -= 2; },
+  weakerMarkets: (p) => { p.assumptions.marketShift -= 2; },
 };
 
 test('one-tap what-ifs create the same scenarios as before', () => {
