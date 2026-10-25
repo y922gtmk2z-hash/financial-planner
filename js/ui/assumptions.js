@@ -60,6 +60,7 @@
     if (d.unit === 'money') return FP.dom.money(v);
     if (d.unit === 'age') return String(v);
     if (d.unit === 'year') return `${v} yr`;
+    if (d.unit === 'pts') return `${v > 0 ? '+' : ''}${v} pts`;
     return `${v}%`;
   }
 
@@ -109,6 +110,7 @@
     if (d.default == null) return 'not set';
     if (d.unit === 'choice') return (d.options.find((o) => o.value === d.default) || {}).label || d.default;
     if (d.unit === 'money') return FP.dom.money(d.default);
+    if (d.unit === 'pts') return `${d.default} points`;
     return `${d.default}${d.unit.startsWith('pct') ? '%' : ''}`;
   }
 

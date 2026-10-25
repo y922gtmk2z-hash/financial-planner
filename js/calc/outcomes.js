@@ -45,7 +45,7 @@
       drivers: (p) => [
         'assumptions.retirementAge', 'goals.retirementIncome',
         'assumptions.employeePensionPct', 'assumptions.employerPensionPct', 'assets.pension',
-        'leftover.pension', 'assumptions.pensionGrowth', 'assumptions.investmentReturn',
+        'leftover.pension', 'assumptions.marketShift', 'assumptions.sharesReturn', 'assumptions.bondsReturn',
         'assumptions.statePension', 'assumptions.statePensionAge', 'assumptions.endAge',
       ].concat(listPaths(p, 'spending', 'monthly')),
       ideas: ['taper', 'relief', 'match', 'isa'],

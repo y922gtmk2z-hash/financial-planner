@@ -246,7 +246,7 @@
         checkinLink(ctx),
         link('#progress', 'Your progress', 'What you have against what your plan expected'),
         link('#scenarios', 'Compare scenarios', 'What if you retired earlier, or overpaid the mortgage?'),
-        link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, investments ${pct(FP.growth.netRate(a.investmentReturn, a.investmentFees))} after fees, retire at ${a.retirementAge}`)),
+        link('#assumptions', 'Check the assumptions', `Inflation ${pct(a.inflation)}, ISAs ${pct(FP.mix.netRate(p.mixes.isa, a, 'invest'))} after fees, retire at ${a.retirementAge}`)),
       h('div', { class: 'button-row backup-row' },
         h('button', { type: 'button', class: 'secondary', onclick: () => FP.backup.exportFile(ctx) }, 'Export a backup'),
         FP.print.button(ctx, root),

@@ -122,9 +122,11 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
 **Your journey:**
 
 1. **Your figures**, in five sections (section by section unless you choose one page):
-   - **About you:** your age, when you'd like to retire and what you'd like to spend
-     in retirement. *Your risk appetite is still stored (and kept in backups), but
-     the question is off the screens until a later version uses it.*
+   - **About you:** your age, when you'd like to retire, what you'd like to spend
+     in retirement and **how you feel about investment risk** (cautious, balanced,
+     adventurous or not sure yet). Under it, the three typical mixes, each with its
+     trade-off in one line and the not-a-recommendation notice (see
+     [What each pot is invested in](#what-each-pot-is-invested-in)).
    - **Income:** your salary. **Advanced** (folded away) holds the rest, each part
      folding open on its own with a one-line summary: workplace pension, **student
      loan** (repaid from your pay, so it lives here rather than under Debts),
@@ -138,7 +140,8 @@ has room. From 900px wide the tabs become a side menu next to a wider page.
      what you've itemised is used. A debt payment counts once its debt has a
      balance under Debts. Then what you save each month, then **money left over each month**: a
      suggested split to use in one tap, with your own split and ideas folded away.
-   - **Assets:** what you own today.
+   - **Assets:** what you own today. Under each pension, ISA and other investment,
+     **What it's invested in** folds open to its mix of shares, bonds and cash.
    - **Debts:** your mortgage and other debts. For each, give the **balance** and
      any two of **monthly payment**, **time left** (in months or years) and
      **interest rate**, and the third is worked out and shown under it (for example
@@ -194,7 +197,7 @@ The same measure has the same name on every screen (the names live in one place,
 | **Today** (`#now`) | Where you stand this month, in three parts: **This month** (cash flow: take-home − spending − mortgage − other debts − regular savings = left over), **Own and owe** (net worth, what you own vs owe, home equity, mortgage payoff with and without overpayments) and **Pay and tax** (income tax by band for the rest of the UK or Scotland, National Insurance, pension method, student loan, each bonus month, how much of a £100 rise you'd keep, and the figures it's based on with Change links). |
 | **Your figures** (header, `#setup`) | Five sections: **About you** (age, retirement age and spending goal), **Income** (salary; under Advanced: pension, student loan, bonuses, salary sacrifice, workplace benefits, tax code, other income), **Outgoings** (an estimate of everything going out, itemised under Bills, Debt payments and Other; regular savings; money left over each month), **Assets** and **Debts** (mortgage, other debts, each folding to a one-line summary once it has a balance). Section by section, or on one page as five headings with summaries, one open at a time. A strip above the tabs shows what the section you're in changes, as you type: About you, what you could spend in retirement; Income, take-home; Outgoings, what's left over; Assets and Debts, net worth. It sits above the Back and Next buttons and never covers them. |
 | **Future** | Year-by-year projection to your end age (95 unless you change it), in today's money or future money. Net worth and home-equity lines with a shaded range for returns 2 points lower or higher, a stacked chart by component, headline figures (money lasts to; savings and pensions, pension pots and net worth when you retire; mortgage-free; student loan), money left over each month (folded above the results) and a full year-by-year table. |
-| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets), save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
+| **Scenarios** | Your plan is the **Baseline**. Try a one-tap **what-if** (retire 2 years earlier, work 2 years longer, overpay £200 a month more, spend 10% less, a 10% pay rise, weaker markets: shares and bonds 2 points lower), save one from any detail panel or Actions, or copy your plan and change anything; compare up to 8. **Make this my plan** (in a scenario's ⋯ menu) makes it your Baseline after you confirm; the old Baseline is kept as "Previous plan (date)". The comparison opens on what's different from the Baseline, leading with **money lasts to** and **could spend in retirement**, then net worth at one age for every scenario (the Baseline's retirement age, named in the label), in £ and years, green better, red worse; **Show all figures** opens the full table; an overlay chart follows. At 8 the page says why you can't add more. |
 | **Assumptions** (More menu) | Every number the model depends on, editable, with the date each default was set, per-item reset and **Reset all to defaults**. The few entered in Your figures (retirement age, mortgage rate, pension %) link there. |
 | **Settings** (More menu) | Theme (System, Light or Dark) and whether projections show today's or future money, saved in this browser only. |
 | **Your data** (More menu) | Privacy notes, when you last exported a backup, JSON export/import, load sample data, and **Clear all data**. |
@@ -236,8 +239,10 @@ All editable in the Assumptions panel (defaults set 23 Oct 2026):
 | Spending growth | 2.5% a year |
 | House price growth | 3.0% a year |
 | Savings interest | 3.5% (enter it after tax; savings tax isn't modelled) |
-| Investment return | 5.0% a year, minus 0.4% fees |
-| Pension growth | 5.0% a year, minus 0.5% fees |
+| Shares, bonds, cash in a pot (set 25 Oct 2026) | 6.5%, 4.0% and 3.5% a year before fees; volatility 16%, 6% and 1% |
+| What each pot is invested in | 40% shares, 60% bonds (5.0% a year before fees) |
+| Change to shares and bonds returns | 0 points |
+| Fees | 0.4% on ISAs and other investments, 0.5% on pensions |
 | Mortgage rate | 4.5%, with an optional change to a new rate after N years |
 | Pension contributions | 5% employee, 3% employer |
 | Retirement age / projection end age | 67 / 95 |
@@ -351,6 +356,44 @@ A **suggested split** follows from these, and always includes the emergency fund
 then 10% to keep it topped up, with 70% to paying off expensive debts if you have any.
 **Use this split** applies it (the same change as the action). This used to be the "surplus split" in Assumptions;
 existing saved splits carry over.
+
+## What each pot is invested in
+
+Each pension pot (yours, your partner's and each other pot), your ISAs and your other
+investments has a **mix**: how much is in shares, bonds and cash. Under each one in
+Assets, **What it's invested in** shows the mix and what it grows at after fees
+("40% shares, 60% bonds · about 4.6% a year after fees"). Open it to change the
+shares and bonds percentages (cash is the rest), with a line on growth against the
+size of falls: "Grows about 4.6% a year after fees on average. In a bad year (about
+1 in 20) it could fall by about 12%."
+
+- **Growth comes from the mix:** each asset class has a return and a volatility in
+  Assumptions (**Shares, bonds & cash**, set 25 Oct 2026). A pot grows at its mix's
+  average return, less its fees (investment or pension fees). **Change to shares and
+  bonds returns** (in its Advanced part) adds points to both, for weaker or stronger
+  markets. Volatility isn't used in the projection; it only sizes the falls, taking
+  the three asset classes to fall together.
+- **A new pot is 40% shares, 60% bonds**, which grows at 5% a year before fees, as
+  every pot did before mixes.
+- **Saves from before mixes** keep exactly the same growth: their investment and
+  pension returns become mixes and a change to shares and bonds returns that give
+  the same rates (version 6 → 7).
+
+**Your risk level** (About you) shows **a typical mix for this risk level** beside
+each pot: cautious 20% shares, 60% bonds, 20% cash; balanced 60% shares, 35% bonds,
+5% cash; adventurous 90% shares, 10% bonds. These are illustrations for people with
+that risk level, in the spirit of the FCA's targeted support (suggestions for people
+with common characteristics, not personal recommendations), and name no products,
+providers or funds. Beside every one: "An illustration for people with this risk
+level, not a recommendation for you. Consider regulated advice."
+
+- **Use this mix** (beside a pot) gives that pot the typical mix, with Undo; **Try as
+  a scenario** adds a copy of your plan with the change and opens Scenarios.
+- **Actions** has **Use a typical cautious (balanced, adventurous) mix** once you've answered the risk
+  question, for every pot that doesn't have it yet (your pension and ISAs, and any
+  other pot with money in it), with its trade-off, the notice, Apply, Try as a
+  scenario and how to do it. It's a patch like every other action.
+- Scenarios list a changed mix among their differences.
 
 ## Check-ins and Progress
 
@@ -557,8 +600,8 @@ Each year, in order:
    stop once the loan is repaid or written off. Salary and workplace
    pension contributions stop at retirement age; State Pension starts at State Pension
    age.
-2. **Growth** — home, cash, investments (after fees) and pension (after fees) grow at
-   their own rates.
+2. **Growth** — home and cash grow at their own rates; each ISA, other investment and
+   pension pot grows at the rate its mix gives, after fees.
 3. **Debts** — the mortgage is paid down month by month (fixed payment plus
    overpayments, so overpayments shorten the term; the payment is recalculated if the
    rate changes). Other debts are paid until cleared.
@@ -574,7 +617,8 @@ Each year, in order:
 
 In the code, `initState` sets up where you start and `stepYear` runs one year in
 the order above; `project` loops it. Each year gets its rates of return (before
-fees) from the assumptions, or from an optional year-by-year path, and a list of
+fees: cash savings, your home, and shares, bonds and cash in pots) from the
+assumptions, or from an optional year-by-year path, and a list of
 life events. Nothing on screen uses a path or events yet: they're there so a later
 version can show a range of market outcomes and dated life events.
 
@@ -588,7 +632,7 @@ the following year.
 to your end age, the same age the charts run to, to find the highest monthly
 spending from retirement (in today's money) that never runs short. It doesn't sell your
 home; mortgage and debt payments are on top. The **range on the net worth chart** re-runs
-it with investment and pension returns 2 points a year lower and higher.
+it with shares and bonds returns 2 points a year lower and higher.
 
 ## Project layout
 
@@ -604,6 +648,7 @@ js/model/migrate.js        numbered steps that upgrade older saves and backups
 js/model/store.js          localStorage, export/import, clear
 js/calc/*.js               pure calculations (no DOM): mortgage, summary, tax,
                            student loan, growth, projection, compare
+js/calc/mix.js             what each pot is invested in: growth, falls, model mixes
 js/calc/patch.js           patches: what an idea or what-if changes, applying it, its impact
 js/calc/outcomes.js        the results you can tap into: drivers, levers, before/after
 js/ui/*.js                 one file per screen, plus field, chart, checklist, panel
@@ -625,7 +670,17 @@ so the tests load it straight into Node.
 npm test   # Node 18+, no dependencies to install
 ```
 
-295 tests cover:
+311 tests cover:
+
+- **What each pot is invested in:** the asset-class assumptions, the default mix
+  giving exactly 5% before fees, each pot (yours, your partner's, other pots)
+  growing at its own mix less fees, the market shift, model mixes trading growth
+  against falls, the notice and no "you should", saved mixes checked, Use this mix
+  for one pot or all as a patch on a copy, the action (only with a risk level, and
+  not among the ideas in the golden snapshots), version 6 saves loading with the
+  same results (every fixture against its golden snapshot) and with changed returns
+  keeping exactly the same growth, and Weaker markets matching an old save with
+  returns 2 points lower.
 
 - **Golden snapshots:** five households in `tests/fixtures/` (the sample, a quick
   start, a taper case in Scotland with Plan 2, pension salary sacrifice, a bonus and

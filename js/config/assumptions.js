@@ -7,16 +7,19 @@
   'use strict';
 
   const SET_ON = '2026-10-23';
+  // Asset classes and model mixes (brief 10).
+  const MIX_SET_ON = '2026-10-25';
 
   const GROUPS = [
     { id: 'economy', label: 'Economy' },
-    { id: 'returns', label: 'Savings & investment returns' },
+    { id: 'returns', label: 'Savings interest & fees' },
+    { id: 'mix', label: 'Shares, bonds & cash' },
     { id: 'borrowing', label: 'Mortgage & debts' },
     { id: 'pension', label: 'Pension & retirement' },
     { id: 'tax', label: 'Tax & State Pension in projections' },
   ];
 
-  // unit: 'pct' (% per year), 'pctOfPay', 'pctOfBalance',
+  // unit: 'pct' (% per year), 'pts' (percentage points a year), 'pctOfPay', 'pctOfBalance',
   //       'age', 'year', 'money' (£ a year), 'choice' (one of `options`)
   const DEFS = [
     {
@@ -45,24 +48,51 @@
       help: 'Interest on cash savings. Enter it after any tax — the planner does not model savings tax.',
     },
     {
-      key: 'investmentReturn', group: 'returns', label: 'Investment return (before fees)', unit: 'pct',
-      default: 5.0, min: -20, max: 20, setOn: SET_ON,
-      help: 'Average yearly growth of ISA and general investment accounts, before fees.',
-    },
-    {
       key: 'investmentFees', group: 'returns', label: 'Investment fees', unit: 'pct',
       default: 0.4, min: 0, max: 5, setOn: SET_ON, advanced: true,
-      help: 'Platform and fund charges, taken off the return each year.',
-    },
-    {
-      key: 'pensionGrowth', group: 'returns', label: 'Pension growth (before fees)', unit: 'pct',
-      default: 5.0, min: -20, max: 20, setOn: SET_ON,
-      help: 'Average yearly growth of your pension pot, before fees.',
+      help: 'Platform and fund charges on ISAs and other investments, taken off their growth each year.',
     },
     {
       key: 'pensionFees', group: 'returns', label: 'Pension fees', unit: 'pct',
       default: 0.5, min: 0, max: 5, setOn: SET_ON, advanced: true,
       help: 'Pension provider and fund charges, taken off the growth each year.',
+    },
+    // What ISAs, other investments and pension pots grow at comes from what
+    // each is invested in (its mix of shares, bonds and cash, in Your figures).
+    {
+      key: 'sharesReturn', group: 'mix', label: 'Shares: return (before fees)', unit: 'pct',
+      default: 6.5, min: -20, max: 20, setOn: MIX_SET_ON,
+      help: 'Average yearly growth of shares (equities) over the long run, before fees. A long-run assumption, not a forecast.',
+    },
+    {
+      key: 'sharesVolatility', group: 'mix', label: 'Shares: how much returns vary', unit: 'pct',
+      default: 16, min: 0, max: 50, setOn: MIX_SET_ON, advanced: true,
+      help: 'Volatility: how far a typical year\u2019s return is from the average. Shares can fall a lot in a bad year. Used to show the size of falls, not in the projection.',
+    },
+    {
+      key: 'bondsReturn', group: 'mix', label: 'Bonds: return (before fees)', unit: 'pct',
+      default: 4.0, min: -20, max: 20, setOn: MIX_SET_ON,
+      help: 'Average yearly growth of bonds (gilts and corporate bonds) over the long run, before fees.',
+    },
+    {
+      key: 'bondsVolatility', group: 'mix', label: 'Bonds: how much returns vary', unit: 'pct',
+      default: 6, min: 0, max: 50, setOn: MIX_SET_ON, advanced: true,
+      help: 'Volatility of bonds. Lower than shares, but bonds can still fall, especially when interest rates rise.',
+    },
+    {
+      key: 'cashReturn', group: 'mix', label: 'Cash in a pot: return (before fees)', unit: 'pct',
+      default: 3.5, min: -20, max: 20, setOn: MIX_SET_ON,
+      help: 'Cash and cash-like funds held inside an ISA or pension. Your cash savings use the savings interest rate instead.',
+    },
+    {
+      key: 'cashVolatility', group: 'mix', label: 'Cash in a pot: how much returns vary', unit: 'pct',
+      default: 1, min: 0, max: 50, setOn: MIX_SET_ON, advanced: true,
+      help: 'Volatility of cash held in a pot. Small, though it can lose value against rising prices.',
+    },
+    {
+      key: 'marketShift', group: 'mix', label: 'Shares and bonds: change to returns', unit: 'pts',
+      default: 0, min: -30, max: 30, setOn: MIX_SET_ON, advanced: true,
+      help: 'Points added to shares and bonds returns, for weaker or stronger markets. The Weaker markets what-if sets it to \u22122. Saves from before mixes keep any investment or pension return you\u2019d changed here.',
     },
     {
       key: 'mortgageRate', group: 'borrowing', label: 'Mortgage interest rate', unit: 'pct',
@@ -169,8 +199,24 @@
   ];
 
   const UNIT_SUFFIX = {
-    pct: '% a year', pctOfPay: '% of salary', pctOfBalance: '% of balance',
+    pct: '% a year', pts: 'points a year', pctOfPay: '% of salary', pctOfBalance: '% of balance',
     age: 'years old', year: 'years', money: 'a year', choice: '',
+  };
+
+  /*
+   * Mixes: what a pot is invested in, as percentages adding up to 100.
+   * DEFAULT_MIX is what a pot has until you change it: at the default returns
+   * it grows at 5% a year before fees, as every pot did before mixes.
+   * MODEL_MIXES are illustrations for people with each risk level (the risk
+   * question in About you), not recommendations: no products or funds.
+   */
+  const MIX_KEYS = ['shares', 'bonds', 'cash'];
+  const DEFAULT_MIX = { shares: 40, bonds: 60, cash: 0 };
+  const MODEL_MIXES = {
+    setOn: MIX_SET_ON,
+    cautious: { shares: 20, bonds: 60, cash: 20 },
+    balanced: { shares: 60, bonds: 35, cash: 5 },
+    adventurous: { shares: 90, bonds: 10, cash: 0 },
   };
 
   function defaults() {
@@ -183,5 +229,5 @@
     return DEFS.find((d) => d.key === key);
   }
 
-  FP.assumptions = { GROUPS, DEFS, UNIT_SUFFIX, defaults, def };
+  FP.assumptions = { GROUPS, DEFS, UNIT_SUFFIX, MIX_KEYS, DEFAULT_MIX, MODEL_MIXES, defaults, def };
 })(globalThis.FP = globalThis.FP || {});

@@ -142,7 +142,7 @@
     }
 
     // 4. Mortgage vs savings
-    const netInvest = FP.growth.netRate(a.investmentReturn, a.investmentFees);
+    const netInvest = FP.mix.netRate(profile.mixes.isa, a, 'invest');
     if (m && m.balance > 0) {
       if (m.rate > a.savingsRate) {
         add('mortgage', 'tip', 'Overpaying the mortgage beats cash savings',
@@ -244,6 +244,11 @@
       'Ask whether overpaying shortens your term or lowers your monthly payment.',
       'Set it up with your lender as a regular monthly amount or a lump sum.',
     ],
+    mix: [
+      'Check what each pot is invested in now: your provider\u2019s app or latest statement lists its funds and how much is in shares, bonds and cash.',
+      'Most providers let you change funds online. Many workplace pensions have ready-made options at different risk levels.',
+      'Compare the charges before you switch, and consider regulated advice if you\u2019re unsure.',
+    ],
     debt: [
       'Pay more than the minimum each month, starting with the most expensive debt.',
       'For a credit card, consider a 0% balance transfer: check the fee and how long the 0% lasts.',
@@ -269,6 +274,27 @@
     return makeIdea(JSON.parse(JSON.stringify(profile)), 'split', tone, 'Use the suggested split',
       `${FP.projection.SPLIT_KEYS.filter((k) => r.split[k] > 0).map((k) => `${r.split[k]}% ${SPLIT_NAMES[k]}`).join(', ')}. ${r.splitReason}`, patch);
   }
+  /*
+   * The model mix for your risk level as an action: applying it gives your
+   * pension, ISAs and any other pots with money in them that mix, so it can be
+   * tried as a scenario first. An illustration for people with that risk
+   * level, not a recommendation. Null without a risk level, or when every pot
+   * has the mix already. Also carries tradeOff (one line) and notice.
+   */
+  function mixAction(profile) {
+    const level = profile.about.riskAppetite;
+    const m = FP.mix.model(level);
+    const patch = m ? FP.mix.useAllPatch(profile, level) : null;
+    if (!patch) return null;
+    const names = FP.mix.shownPots(profile).filter((x) => patch.some((c) => c.path === x.path)).map((x) => x.short);
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+    const idea = makeIdea(JSON.parse(JSON.stringify(profile)), 'mix', 'tip', `Use a typical ${level} mix`,
+      `${FP.profile.capital(FP.mix.describe(m))} for your ${list}. A typical mix for people with a ${level} risk level.`, patch);
+    idea.tradeOff = FP.mix.tradeOffText(m, profile.assumptions);
+    idea.notice = FP.mix.NOTICE;
+    return idea;
+  }
+
   const SPLIT_NAMES = { emergency: 'emergency fund', debts: 'paying off debts', cash: 'cash savings', invest: 'investments', mortgage: 'mortgage', pension: 'pension' };
 
   /*
@@ -376,5 +402,5 @@
     };
   }
 
-  FP.suggest = { analyse, suggestSplit, splitAction, rankActions, highlights, duration, HOW_TO, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
+  FP.suggest = { analyse, suggestSplit, splitAction, mixAction, rankActions, highlights, duration, HOW_TO, EMERGENCY_MIN_MONTHS, EMERGENCY_MAX_MONTHS };
 })(globalThis.FP = globalThis.FP || {});

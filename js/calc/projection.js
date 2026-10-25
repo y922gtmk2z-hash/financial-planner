@@ -7,8 +7,9 @@
  *  1. Income: salary and bonuses grow with salary growth; take-home uses the
  *     tax rules with thresholds frozen or raised with inflation. Salary stops
  *     at retirement age. State Pension (taxed) from State Pension age.
- *  2. Growth on opening balances: home, cash, investments (net of fees),
- *     pension (net of fees).
+ *  2. Growth on opening balances: home, cash, and each ISA, investment and
+ *     pension pot at the rate its mix of shares, bonds and cash gives (see
+ *     FP.mix), net of fees.
  *  3. Mortgage amortises month by month (fixed payment plus overpayments, with
  *     an optional rate change); other debts amortise until cleared.
  *  4. Spending grows with spending growth. Surplus = net income - spending -
@@ -181,10 +182,13 @@
     });
     const ownerIndex = (o) => (o === 'partner' && persons.length > 1 ? 1 : 0);
     // Pension pots besides your main one (assets.pension): your partner's main pot, then any others.
-    const pots = (profile.partner ? [{ owner: 1, bal: profile.partner.pension || 0, access: a.pensionAccessAge, monthly: 0, main: true }] : [])
+    // Each has the mix it's invested in, which sets how it grows.
+    const mixOf = (m) => FP.profile.cleanMix(m) || FP.profile.newMix();
+    const pots = (profile.partner ? [{ owner: 1, bal: profile.partner.pension || 0, access: a.pensionAccessAge, monthly: 0, main: true, mix: mixOf(profile.partner.pensionMix) }] : [])
       .concat((profile.pensions || []).filter((x) => x.type === 'dc').map((x) => ({
-        owner: ownerIndex(x.owner), bal: x.value || 0, access: x.accessAge == null ? a.pensionAccessAge : x.accessAge, monthly: x.monthly || 0,
+        owner: ownerIndex(x.owner), bal: x.value || 0, access: x.accessAge == null ? a.pensionAccessAge : x.accessAge, monthly: x.monthly || 0, mix: mixOf(x.mix),
       })));
+    const mixes = profile.mixes || {};
     // Defined benefit pensions: a yearly income (today's money) from the start age.
     const dbs = (profile.pensions || []).filter((x) => x.type === 'db' && x.income > 0).map((x) => {
       const owner = ownerIndex(x.owner);
@@ -196,6 +200,7 @@
       startMonthIndex: startYear * 12 + (startMonth - 1),
       cashLimitFromIndex: clY * 12 + (clM - 1),
       byAmount, leftToday, persons, pots, dbs,
+      isaMix: mixOf(mixes.isa), giaMix: mixOf(mixes.gia), pensionMix: mixOf(mixes.pension),
       shares: splitShares(profile.leftover, leftToday),
       warnOnce: (key, text) => { if (!warnings.some((w) => w.key === key)) warnings.push({ key, level: 'warn', text }); },
 
@@ -246,9 +251,11 @@
 
   /*
    * One year (y = 1 for the first), in the order at the top of this file.
-   * Changes `state` and returns the year's row. ctx.returns = { cash, invest,
-   * pension, house }: this year's rates, % a year, before fees (fees still come
-   * off investments and pensions). ctx.events: life events (not used yet).
+   * Changes `state` and returns the year's row. ctx.returns = { cash, house,
+   * shares, bonds, cashFund }: this year's rates, % a year, for cash savings,
+   * your home, and the shares, bonds and cash that pots are invested in
+   * (before fees, which still come off investments and pensions).
+   * ctx.events: life events (not used yet).
    */
   function stepYear(state, y, ctx) {
     const { profile, opts, cfg, a, age0, startYear, startMonthIndex, cashLimitFromIndex, byAmount, shares, debts, termMonths, overMonthly, spendMonthly0, relief, warnOnce, persons, pots } = state;
@@ -303,10 +310,12 @@
     const r = ctx.returns;
     home = FP.growth.compound(home, r.house, 1);
     cash = FP.growth.compound(cash, r.cash, 1);
-    isa = FP.growth.compound(isa, FP.growth.netRate(r.invest, a.investmentFees), 1);
-    gia = FP.growth.compound(gia, FP.growth.netRate(r.invest, a.investmentFees), 1);
-    pension = FP.growth.compound(pension, FP.growth.netRate(r.pension, a.pensionFees), 1);
-    pots.forEach((x) => { x.bal = FP.growth.compound(x.bal, FP.growth.netRate(r.pension, a.pensionFees), 1); });
+    const mixReturns = { shares: r.shares, bonds: r.bonds, cash: r.cashFund };
+    const grow = (bal, mix, fees) => FP.growth.compound(bal, FP.growth.netRate(FP.mix.grossRate(mix, mixReturns), fees), 1);
+    isa = grow(isa, state.isaMix, a.investmentFees);
+    gia = grow(gia, state.giaMix, a.investmentFees);
+    pension = grow(pension, state.pensionMix, a.pensionFees);
+    pots.forEach((x) => { x.bal = grow(x.bal, x.mix, a.pensionFees); });
 
     // 3. Mortgage, month by month
     const mStart = mBal;
@@ -636,9 +645,11 @@
     return { pension, need, gross, tax };
   }
 
-  // This year's returns: the assumptions, or that year of opts.returnsPath.
+  // This year's returns: the assumptions (with the market shift on shares and
+  // bonds), or that year of opts.returnsPath.
   function returnsFor(a, path, y) {
-    const out = { cash: a.savingsRate, invest: a.investmentReturn, pension: a.pensionGrowth, house: a.housePriceGrowth };
+    const m = FP.mix.returnsOf(a);
+    const out = { cash: a.savingsRate, house: a.housePriceGrowth, shares: m.shares, bonds: m.bonds, cashFund: m.cash };
     const given = Array.isArray(path) ? path[y - 1] : null;
     if (given && typeof given === 'object') {
       Object.keys(out).forEach((k) => { if (Number.isFinite(given[k])) out[k] = given[k]; });
@@ -648,8 +659,8 @@
 
   /*
    * opts: maxYears (up to your end age; 40 if not given), startYear,
-   * startMonth, taxConfig, returnsPath (an array of { cash, invest, pension,
-   * house } by year, first projection year first, overriding the assumption
+   * startMonth, taxConfig, returnsPath (an array of { cash, house, shares,
+   * bonds, cashFund } by year, first projection year first, overriding the assumption
    * rates; missing years or rates use the assumptions), events (an array,
    * passed to each year as ctx.events), and the solvers' retirementSpending,
    * retirementBoost and retirementBoostTo.

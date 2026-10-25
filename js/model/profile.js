@@ -7,7 +7,7 @@
   'use strict';
 
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 6;
+  const SCHEMA_VERSION = 7;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -44,6 +44,23 @@
   ];
 
   /*
+   * What a pot is invested in: { shares, bonds, cash }, percentages adding up
+   * to 100 (see FP.mix). A new pot has the default mix.
+   */
+  const newMix = () => ({ ...FP.assumptions.DEFAULT_MIX });
+  // A valid mix (each 0 to 100, adding up to 100), or null.
+  function cleanMix(m) {
+    if (!m || typeof m !== 'object') return null;
+    const out = {};
+    for (const k of FP.assumptions.MIX_KEYS) {
+      const v = m[k];
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 100) return null;
+      out[k] = v;
+    }
+    return Math.abs(out.shares + out.bonds + out.cash - 100) < 0.01 ? out : null;
+  }
+
+  /*
    * Your figures fields, in five sections: About you, Income, Outgoings
    * (your estimate here; bills, debt payments, other spending, saving and
    * money left over have their own editors), Assets and Debts. `path` is where the value lives in the profile. Fields
@@ -62,9 +79,9 @@
         { path: 'goals.retirementIncome', label: 'What you\u2019d like to spend in retirement', type: 'money', suffix: 'a month', nullable: true,
           nullPlaceholder: 'Same as now',
           help: 'In today\u2019s money, on top of any mortgage or debts still being paid. Leave blank to aim for what you spend now.' },
-        // Not used in the plan yet (see README): stored so it can be later.
+        // Picks which model mix (an illustration, not a recommendation) is shown beside each pot.
         { path: 'about.riskAppetite', label: 'How do you feel about investment risk?', type: 'select', options: RISK_LEVELS,
-          help: 'Cautious: you\u2019d rather grow slowly than see big falls. Adventurous: you can ride out falls for higher long-term growth. This doesn\u2019t change your plan yet.' },
+          help: 'Cautious: you\u2019d rather grow slowly than see big falls. Adventurous: you can ride out big falls for more growth over the long run. It shows a typical mix for your risk level beside each pot; it doesn\u2019t change your plan unless you use that mix.' },
       ],
     },
     {
@@ -294,6 +311,9 @@
       pensions: [],
       // Who owns an asset or the mortgage, where it isn't you: { 'assets.isa': 'partner', mortgage: 'joint' }.
       owners: {},
+      // What your ISAs, other investments and pension are invested in (your
+      // partner's pension and other pots keep theirs with them).
+      mixes: { isa: newMix(), gia: newMix(), pension: newMix() },
     };
   }
 
@@ -302,7 +322,8 @@
    * fields (about, income, and retirement and State Pension in assumptions);
    * a partner, if there is one, is profile.partner, in the same shape:
    * { name, age, retirementAge, statePension, statePensionAge,
-   *   employeePensionPct, employerPensionPct, pension (their main pot), income }.
+   *   employeePensionPct, employerPensionPct, pension (their main pot),
+   *   pensionMix (what it's invested in), income }.
    */
   const OWNERS = ['you', 'partner', 'joint'];
   const MAX_PENSIONS = 12;
@@ -377,7 +398,7 @@
   // Where a field of yours lives for a person: income.* and your pension and
   // retirement figures under partner.* for your partner; unchanged for you.
   const PARTNER_PATHS = {
-    'about.age': 'partner.age', 'about.name': 'partner.name', 'assets.pension': 'partner.pension',
+    'about.age': 'partner.age', 'about.name': 'partner.name', 'assets.pension': 'partner.pension', 'mixes.pension': 'partner.pensionMix',
     'assumptions.retirementAge': 'partner.retirementAge', 'assumptions.statePension': 'partner.statePension',
     'assumptions.statePensionAge': 'partner.statePensionAge',
     'assumptions.employeePensionPct': 'partner.employeePensionPct', 'assumptions.employerPensionPct': 'partner.employerPensionPct',
@@ -401,6 +422,7 @@
       about: { ...p.about, age: x.age == null ? p.about.age : x.age, name: x.name },
       income: x.income,
       assets: { ...p.assets, pension: x.pension },
+      mixes: { ...p.mixes, pension: x.pensionMix },
       assumptions: { ...p.assumptions, retirementAge: x.retirementAge, statePension: x.statePension, statePensionAge: x.statePensionAge,
         employeePensionPct: x.employeePensionPct, employerPensionPct: x.employerPensionPct },
       partner: null,
@@ -434,7 +456,7 @@
   }
 
   function newPension(type, owner) {
-    return { id: newId('pn'), type: type || 'dc', name: '', value: 0, income: 0, accessAge: null, monthly: 0, owner: owner || 'you' };
+    return { id: newId('pn'), type: type || 'dc', name: '', value: 0, income: 0, accessAge: null, monthly: 0, owner: owner || 'you', mix: newMix() };
   }
 
   function newPartner(p) {
@@ -442,7 +464,7 @@
     return {
       name: '', age: null, retirementAge: a.retirementAge, statePension: a.statePension, statePensionAge: a.statePensionAge,
       employeePensionPct: FP.assumptions.def('employeePensionPct').default, employerPensionPct: FP.assumptions.def('employerPensionPct').default,
-      pension: 0, income: blank().income,
+      pension: 0, pensionMix: newMix(), income: blank().income,
     };
   }
 
@@ -585,12 +607,15 @@
     if (src.owners && typeof src.owners === 'object') {
       ['assets.homeValue', 'assets.cashSavings', 'assets.isa', 'assets.gia', 'assets.other', 'mortgage'].forEach((k) => { if (ownerOf(src.owners[k])) p.owners[k] = src.owners[k]; });
     }
+    const srcMixes = src.mixes && typeof src.mixes === 'object' ? src.mixes : {};
+    ['isa', 'gia', 'pension'].forEach((k) => { p.mixes[k] = cleanMix(srcMixes[k]) || newMix(); });
     p.partner = normalisePartner(src.partner, p);
     if (Array.isArray(src.pensions)) {
       p.pensions = src.pensions.filter((x) => x && typeof x === 'object').slice(0, MAX_PENSIONS).map((x) => {
         const row = normaliseRow(x, PENSION_FIELDS, 'pn');
         // A partner's pension only while there's a partner.
         row.owner = x.owner === 'partner' && p.partner ? 'partner' : 'you';
+        row.mix = cleanMix(x.mix) || newMix();
         return row;
       });
     }
@@ -620,6 +645,7 @@
       employeePensionPct: field(assumptionField('employeePensionPct'), src.employeePensionPct, d.employeePensionPct),
       employerPensionPct: field(assumptionField('employerPensionPct'), src.employerPensionPct, d.employerPensionPct),
       pension: field({ type: 'money' }, src.pension, 0),
+      pensionMix: cleanMix(src.pensionMix) || newMix(),
       income: normalise({ income: src.income }).income,
     };
   }
@@ -664,6 +690,6 @@
   FP.profile = {
     SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
     who, whose, capital, personPath, asPerson, PARTNER_FIELDS, NAME_FIELD, HOUSEHOLD_FIELD, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
-    blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
+    newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
 })(globalThis.FP = globalThis.FP || {});

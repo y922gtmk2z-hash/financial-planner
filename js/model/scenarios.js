@@ -162,6 +162,13 @@
     }
     push('Emergency fund target (months)', (a.leftover || {}).emergencyMonths, (b.leftover || {}).emergencyMonths, 'number');
     push('Salary sacrifice (a month)', total(a.income.sacrifices, 'monthly'), total(b.income.sacrifices, 'monthly'), 'money');
+    // What each pot is invested in, for pots both scenarios have.
+    const mixesOf = (p) => new Map(FP.mix.pots(p).map((x) => [x.id, x]));
+    const pb = mixesOf(b);
+    mixesOf(a).forEach((x, id) => {
+      const y = pb.get(id);
+      if (y && !FP.mix.sameMix(x.mix, y.mix)) push(`${x.label}: invested in`, FP.mix.describe(x.mix), FP.mix.describe(y.mix), 'text');
+    });
     const timing = (p) => p.income.bonuses.filter((x) => x.amount > 0).map((x) => x.month).sort().join(',');
     if (timing(a) !== timing(b) && total(a.income.bonuses, 'amount') === total(b.income.bonuses, 'amount')) {
       out.push({ label: 'Bonus months', kind: 'note' });
@@ -216,13 +223,10 @@
       patch: (p) => [{ path: 'income.grossSalary', op: 'set', value: Math.round(p.income.grossSalary * 1.1) }],
     },
     {
-      id: 'weakerMarkets', label: 'Weaker markets (returns 2 points lower)',
-      applies: (p) => p.assumptions.investmentReturn - 2 >= limit('investmentReturn').min && p.assumptions.pensionGrowth - 2 >= limit('pensionGrowth').min,
+      id: 'weakerMarkets', label: 'Weaker markets (shares and bonds 2 points lower)',
+      applies: (p) => p.assumptions.marketShift - 2 >= limit('marketShift').min,
       name: () => 'Weaker markets',
-      patch: () => [
-        { path: 'assumptions.investmentReturn', op: 'add', value: -2 },
-        { path: 'assumptions.pensionGrowth', op: 'add', value: -2 },
-      ],
+      patch: () => [{ path: 'assumptions.marketShift', op: 'add', value: -2 }],
     },
   ];
 

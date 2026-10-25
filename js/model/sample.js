@@ -54,7 +54,7 @@
     const early = FP.scenarios.clone(ws, base, 'Retire at 60 (sample)');
     early.profile.assumptions.retirementAge = 60;
     const markets = FP.scenarios.clone(ws, base, 'Stronger markets (sample)');
-    Object.assign(markets.profile.assumptions, { investmentReturn: 7, pensionGrowth: 7, housePriceGrowth: 4 });
+    Object.assign(markets.profile.assumptions, { marketShift: 2, housePriceGrowth: 4 });
     ws.activeId = base;
     return ws;
   }

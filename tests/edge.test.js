@@ -93,8 +93,8 @@ test('projection: zero growth and zero inflation keep everything flat', () => {
   p.about.age = 50;
   p.assets = { homeValue: 100000, cashSavings: 10000, isa: 10000, gia: 10000, pension: 10000, other: 0 };
   Object.assign(p.assumptions, {
-    inflation: 0, housePriceGrowth: 0, savingsRate: 0, investmentReturn: 0, investmentFees: 0,
-    pensionGrowth: 0, pensionFees: 0, statePension: 0, retirementAge: 50, pensionAccessAge: 90,
+    inflation: 0, housePriceGrowth: 0, savingsRate: 0, sharesReturn: 0, bondsReturn: 0, cashReturn: 0, investmentFees: 0,
+    pensionFees: 0, statePension: 0, retirementAge: 50, pensionAccessAge: 90,
   });
   const r = FP.projection.project(p).rows;
   const last = r[r.length - 1];

@@ -261,7 +261,7 @@ test('a deficit is drawn from cash then investments, then becomes a shortfall', 
   p.assets.cashSavings = 6000;
   p.assets.gia = 3000;
   p.assumptions.savingsRate = 0;
-  p.assumptions.investmentReturn = 0;
+  Object.assign(p.assumptions, { sharesReturn: 0, bondsReturn: 0, cashReturn: 0 });
   p.assumptions.investmentFees = 0;
   const r = FP.projection.project(p);
   const y1 = r.rows[1];
@@ -279,7 +279,7 @@ test('in retirement, State Pension is paid and the pension is drawn after tax', 
   p.about.age = 68;
   p.spending = [{ id: 's', category: 'All', monthly: 2000 }];
   p.assets.pension = 500000;
-  p.assumptions.pensionGrowth = 0;
+  Object.assign(p.assumptions, { sharesReturn: 0, bondsReturn: 0, cashReturn: 0 });
   p.assumptions.pensionFees = 0;
   const y1 = FP.projection.project(p).rows[1];
   close(y1.statePension, 12547.6);

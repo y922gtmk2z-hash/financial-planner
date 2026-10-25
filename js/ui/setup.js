@@ -107,9 +107,6 @@
       groupFields(sec, id, make));
   }
 
-  // Kept in the profile, but not asked until a later version uses it.
-  const HIDDEN = ['about.riskAppetite'];
-
   /*
    * About you: who the plan is for, then what the quick start asked. With a
    * partner, your name and theirs, their age and retirement age, and their
@@ -128,7 +125,7 @@
         if (back) back.focus();
       }, { confirm: true }),
       p.partner ? make(P.NAME_FIELD) : null,
-      section('about').fields.filter((f) => !HIDDEN.includes(f.path)).map(make),
+      section('about').fields.map((f) => (f.path === 'about.riskAppetite' ? riskField(ctx, make(f)) : make(f))),
       p.partner ? h('div', { class: 'field-group person-group', role: 'group', 'aria-labelledby': 'grp-partner' },
         h('h3', { id: 'grp-partner' }, p.partner.name || 'Your partner'),
         theirs.filter((f) => !f.more).map(make),
@@ -374,6 +371,18 @@
     return card;
   }
 
+  // The risk question, with the three model mixes under it (yours marked).
+  function riskField(ctx, el) {
+    const levels = FP.mixUi.levels(ctx);
+    const wrap = h('div', { class: 'risk-field' }, el, levels);
+    // Each pot's typical mix follows your answer.
+    wrap.addEventListener('change', () => {
+      levels.redraw();
+      document.querySelectorAll('.mix-fold').forEach((f) => { if (f.redraw) f.redraw(); });
+    });
+    return wrap;
+  }
+
   /*
    * Who owns something, where there's a partner: you, them or (for a home,
    * savings and debts) both of you. Owners are labels, except for regular ISA
@@ -399,13 +408,18 @@
     const make = maker(ctx);
     const p = ctx.profile();
     const mainPot = p.partner ? { ...P.fieldFor('assets.pension'), label: 'Your pension pots' } : null;
-    const fields = sec.fields.filter((f) => !f.advanced).map((f) => (mainPot && f.path === 'assets.pension' ? [make(mainPot), maker(ctx, 1)({ ...mainPot, help: 'Total of their defined-contribution pension pots.' })] : make(f)));
+    // Each ISA, investment and pension pot has what it's invested in under it.
+    const MIXES = { 'assets.pension': 'pension', 'assets.isa': 'isa', 'assets.gia': 'gia' };
+    const withMix = (f) => (MIXES[f.path] ? [make(f), FP.mixUi.fold(ctx, MIXES[f.path])] : make(f));
+    const fields = sec.fields.filter((f) => !f.advanced).map((f) => (mainPot && f.path === 'assets.pension'
+      ? [make(mainPot), FP.mixUi.fold(ctx, 'pension'), maker(ctx, 1)({ ...mainPot, help: 'Total of their defined-contribution pension pots.' }), FP.mixUi.fold(ctx, 'partnerPension')]
+      : withMix(f)));
     const owned = sec.fields.filter((f) => f.path !== 'assets.pension');
     return h('section', { class: 'card', id: 'assets', 'aria-labelledby': 'sec-assets' },
       h('h2', { id: 'sec-assets' }, 'Assets'),
       h('p', { class: 'muted' }, sec.intro),
       fields,
-      h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(make)),
+      h('details', { class: 'advanced' }, h('summary', null, 'Other investments and assets'), sec.fields.filter((f) => f.advanced).map(withMix)),
       p.partner ? h('details', { class: 'advanced', id: 'asset-owners' }, h('summary', null, 'Who owns what'),
         h('p', { class: 'help' }, 'For your own reference: the plan adds everything together either way.'),
         h('div', { class: 'owner-list' }, owned.map((f) => h('div', { class: 'owner-row' },
@@ -457,6 +471,7 @@
               ? { label: 'Pays from age', placeholder: String(P.people(p)[owner].statePensionAge), help: 'From your statement: the scheme’s normal pension age. Left blank, it starts at the owner’s State Pension age.' }
               : { label: 'Can be taken from age', placeholder: String(a.pensionAccessAge), help: `Left blank, from ${a.pensionAccessAge} (the minimum pension age in Assumptions). Drawn on to cover any shortfall once its owner has retired.` }),
             db ? null : box('monthly', { label: owner ? 'They pay in' : 'You pay in' }),
+            db ? null : FP.mixUi.fold(ctx, `pot${i}`),
             h('button', { type: 'button', class: 'link danger', onclick: () => { list.splice(i, 1); ctx.changed(); draw(); } }, 'Remove this pension')));
         })) : null,
         h('button', {

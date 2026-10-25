@@ -17,6 +17,7 @@ const FILES = [
   'js/calc/studentloan.js',
   'js/calc/savings.js',
   'js/calc/growth.js',
+  'js/calc/mix.js',
   'js/calc/projection.js',
   'js/calc/patch.js',
   'js/calc/compare.js',
