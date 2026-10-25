@@ -287,13 +287,22 @@
   /*
    * Sections you open or close stay that way while you move between screens
    * (each screen is redrawn when you come back). Any <details> with an id
-   * takes part; until you touch one, its screen decides.
+   * takes part; until you touch one, its screen decides. Opening a section
+   * closes the others beside it, so one is open at a time.
    */
   const opened = new Map();
   main.addEventListener('click', (e) => {
     const summary = e.target.closest && e.target.closest('summary');
     const d = summary && summary.parentElement;
-    if (!d || d.tagName !== 'DETAILS' || !d.id) return;
+    if (!d || d.tagName !== 'DETAILS' || e.defaultPrevented) return;
+    if (!d.open) {
+      [...d.parentElement.children].forEach((x) => {
+        if (x === d || x.tagName !== 'DETAILS' || !x.open) return;
+        x.open = false;
+        if (x.id) opened.set(x.id, false);
+      });
+    }
+    if (!d.id) return;
     // The click toggles it just after this handler runs.
     setTimeout(() => opened.set(d.id, d.open));
   });

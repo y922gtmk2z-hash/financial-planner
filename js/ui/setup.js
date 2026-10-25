@@ -1,8 +1,8 @@
 /*
  * Your figures: enter your numbers once, in five sections: About you, Income,
  * Outgoings (bills, debt payments and other), Assets and Debts. Each asks the essentials first, with detail
- * folded away (under Income, everything beyond your salary is under
- * Advanced). Every field writes straight into the shared profile.
+ * folded away (under Income, each part of your pay beyond your salary folds
+ * on its own). Every field writes straight into the shared profile.
  */
 (function (FP) {
   'use strict';
@@ -139,7 +139,7 @@
   }
 
   /*
-   * The parts of Advanced under Income. Each folds away on its own, and its
+   * The parts of your pay under Income, after your salary. Each folds away on its own, and its
    * heading says what you've entered so you can see it at a glance.
    * status(p): a short summary, or '' when nothing is set.
    */
@@ -171,7 +171,7 @@
   }
 
   /*
-   * Income: your salary, and everything else about your pay under Advanced.
+   * Income: your salary, then everything else about your pay, each part folded.
    * With a partner, a switch at the top shows their pay instead, in the same
    * boxes (the editors below see the plan as theirs alone: P.asPerson).
    */
@@ -191,7 +191,6 @@
       // Their pay, for the editors: the plan as theirs, and paths under partner.*.
       const pctx = i ? { ...ctx, profile: () => P.asPerson(ctx.profile(), 1), update: (path, v) => ctx.update(P.personPath(1, path), v) } : ctx;
       const make = maker(ctx, i);
-      const pp = P.asPerson(p, i);
       statuses.length = 0;
       const parts = INCOME_PARTS.map((part) => {
         const status = h('span', { class: 'part-status' });
@@ -216,9 +215,8 @@
       FP.dom.fill(body,
         i ? h('p', { class: 'notice info small' }, `${P.capital(P.whose(p, 1))} pay. Where the help says ‘you’, it means ${P.who(p, 1)}.`) : null,
         sec.fields.filter((f) => !f.group).map(make),
-        h('details', { class: 'advanced more-details', id: 'pay-details', open: hasPayDetail(pp) || null },
-          h('summary', null, 'Advanced: pension, student loan, bonuses and more'),
-          h('p', { class: 'help' }, `Optional. Leave this closed if you only want to give ${i ? 'their' : 'your'} salary: a 5% pension with 3% from ${i ? 'their' : 'your'} employer is assumed.`),
+        h('div', { class: 'pay-details', id: 'pay-details' },
+          h('p', { class: 'help' }, `Optional. Leave these if you only want to give ${i ? 'their' : 'your'} salary: a 5% pension with 3% from ${i ? 'their' : 'your'} employer is assumed.`),
           h('div', { class: 'parts' }, parts)));
     };
     draw();
@@ -756,15 +754,15 @@
       }
     }
 
-    // The strip sits above the Back and Next buttons: pinned to the bottom of
-    // the screen, it's only ever pushed up from where it sits, so it can't cover them.
+    // The Back and Next buttons sit straight under the section; the strip,
+    // pinned to the bottom of the screen, comes after them.
     // Leaving from the strip counts as having been through the section you're in, like Next.
     const strip = liveStrip(ctx, root, () => (mode === 'steps' ? STEPS[current].id : openAll >= 0 ? STEPS[openAll].id : null),
       () => { if (mode === 'steps') markVisited(current); });
     // How much is in so far, and what to add next; it follows what you type.
     const meter = h('div', { class: 'setup-meter', role: 'status' }, FP.checklist.meter(ctx.profile()));
     meter.refresh = () => FP.dom.fill(meter, FP.checklist.meter(ctx.profile()));
-    FP.dom.add(root, h('h1', null, 'Your figures'), intro, meter, toHand(), nav, groups, strip, footer, calc);
+    FP.dom.add(root, h('h1', null, 'Your figures'), intro, meter, toHand(), nav, groups, footer, strip, calc);
 
     // A link to a field in another section (e.g. from Your plan's checklist) opens that section.
     root.addEventListener('fp:reveal', (e) => {
@@ -828,8 +826,8 @@
   }
 
   /*
-   * What's worth finding before you start, and which section each fills. Open
-   * the first time you see Your figures, then folded to one line.
+   * What's worth finding before you start, and which section each fills.
+   * Folded to one line until you open it.
    */
   const L = () => FP.field.LINKS;
   const TO_HAND = [
@@ -842,9 +840,7 @@
     ['Your student loan balance', 'Income', 'income', 'what you owe and when you started repaying', () => [L().studentLoan, 'Sign in to manage your student loan balance']],
   ];
   function toHand() {
-    const first = FP.store.pref('seenToHand') !== '1';
-    FP.store.pref('seenToHand', '1');
-    return h('details', { class: 'card fold-card to-hand', id: 'to-hand', open: first || null },
+    return h('details', { class: 'card fold-card to-hand', id: 'to-hand' },
       h('summary', null, h('span', { class: 'fold-title' }, 'Have these to hand'), h('span', { class: 'fold-sum' }, 'Payslip, P60, pension and debt statements')),
       h('div', { class: 'fold-body' },
         h('p', { class: 'help' }, 'Not essential: a rough figure is fine for anything you don\u2019t have. Links open GOV.UK in a new tab.'),

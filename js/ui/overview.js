@@ -424,7 +424,10 @@
     const rows = real ? proj.rows.map(FP.projection.toReal) : proj.rows;
     const ev = proj.events;
     const moneyNote = real ? 'today\u2019s money' : 'future pounds';
-    const series = [{ label: 'Net worth', color: '--series-7', values: rows.map((x) => x.netWorth) }];
+    // Net worth by what it's made of: ISAs, pensions, home equity and the rest
+    // (a single line if there's nothing to split).
+    const parts = FP.yearByYear.componentSeries(rows);
+    const series = parts.length ? parts : [{ label: 'Net worth', color: '--series-7', values: rows.map((x) => x.netWorth) }];
     const markers = [
       ev.retirement ? { index: ev.retirement.y, label: `Retire ${a.retirementAge}` } : null,
       ev.mortgageFree ? { index: ev.mortgageFree.y, label: 'Mortgage-free' } : null,
@@ -432,14 +435,15 @@
     return h('section', { class: 'card', 'aria-labelledby': 'ov-chart-h' },
       h('h2', { id: 'ov-chart-h' }, 'Net worth over time'),
       h('p', { class: 'muted' }, h('a', { href: '#plan/own-and-owe', 'data-sheet': 'own-and-owe' }, `${money(today.netWorth)} today`), ` (${money(today.assets.total)} owned \u2212 ${money(today.liabilities.total)} owed)`),
+      FP.chart.keys(series.map((x) => ({ label: x.label, color: x.color }))),
       FP.chart.timeChart({
-        type: 'line', series, markers,
+        type: parts.length ? 'area' : 'line', series, markers, totalLabel: 'Net worth',
         xLabels: rows.map((x) => String(x.age)),
         xTitle: (i) => `Age ${rows[i].age} \u00b7 ${rows[i].year}`,
-        ariaLabel: `Line chart of projected net worth by age, in ${moneyNote}`,
+        ariaLabel: `Stacked area chart of projected net worth by age, split into home equity, savings, ISAs, pensions and what you owe, in ${moneyNote}`,
       }),
       FP.dom.soWhat(netWorthSoWhat(rows, ev)),
-      h('p', { class: 'muted small' }, `Ages along the bottom, to ${rows[rows.length - 1].age}, in ${moneyNote}. `, h('a', { href: '#plan/year-by-year' }, 'See year by year')),
+      h('p', { class: 'muted small' }, `Ages along the bottom, to ${rows[rows.length - 1].age}, in ${moneyNote}. Debts, your student loan and any shortfall are shown below zero. `, h('a', { href: '#plan/year-by-year' }, 'See year by year')),
       FP.dom.cardFoot('#setup/assets'));
   }
 

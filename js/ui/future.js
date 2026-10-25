@@ -152,10 +152,7 @@
         if (el) el.textContent = status;
       });
     }
-    const compSeries = COMPONENTS.map((c) => ({
-      label: c.label, color: c.color,
-      values: rows.map((x) => (c.key === 'owed' ? -(x.debts + x.shortfall) : c.negative ? -x[c.key] : x[c.key])),
-    })).filter((ser) => ser.values.some((v) => Math.abs(v) > 0.5));
+    const compSeries = componentSeries(rows);
 
     return [
       r.warnings.length ? h('ul', { class: 'notices' }, r.warnings.map((w) =>
@@ -179,6 +176,16 @@
 
       tableCard(rows, a, moneyNote, r),
       notesCard(a, p.leftover, p)];
+  }
+
+  // What net worth is made of, year by year: one series per part that's ever
+  // more than 50p (debts, your student loan and any shortfall below zero).
+  // Shared with Your plan's net worth chart.
+  function componentSeries(rows) {
+    return COMPONENTS.map((c) => ({
+      label: c.label, color: c.color,
+      values: rows.map((x) => (c.key === 'owed' ? -(x.debts + x.shortfall) : c.negative ? -x[c.key] : x[c.key])),
+    })).filter((ser) => ser.values.some((v) => Math.abs(v) > 0.5));
   }
 
   /*
@@ -371,5 +378,5 @@
 
 
   FP.screens = FP.screens || {};
-  FP.yearByYear = { render, drawSplitStatus, getView, setView, marketPaths, lastsHeadline };
+  FP.yearByYear = { render, drawSplitStatus, getView, setView, marketPaths, lastsHeadline, componentSeries };
 })(globalThis.FP = globalThis.FP || {});
