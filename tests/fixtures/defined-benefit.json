@@ -1,0 +1,12 @@
+{
+  "about": { "age": 52 },
+  "income": { "grossSalary": 48000 },
+  "assets": { "cashSavings": 20000, "pension": 60000, "homeValue": 300000 },
+  "outgoings": { "estimate": 2300 },
+  "spending": [{ "id": "db-rest", "category": "Rest of your estimate", "monthly": 0, "group": "other", "rest": true }],
+  "assumptions": { "retirementAge": 62 },
+  "pensions": [
+    { "id": "db-1", "type": "db", "name": "Council pension (deferred)", "income": 9500, "accessAge": 60 },
+    { "id": "dc-1", "type": "dc", "name": "Old workplace pot", "value": 35000, "accessAge": 57, "monthly": 0 }
+  ]
+}

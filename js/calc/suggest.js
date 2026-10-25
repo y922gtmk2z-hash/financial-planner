@@ -34,8 +34,9 @@
 
   function analyse(profile) {
     const a = profile.assumptions;
+    // Your pay (for your tax band and the taper); the household's take-home for what's left.
     const pay = FP.tax.forProfile(profile);
-    const today = FP.summary.compute(profile, pay.takeHomeMonthly);
+    const today = FP.summary.compute(profile, FP.tax.household(profile).takeHomeMonthly);
     const cf = today.cashFlow;
     const left = cf.surplus;
     const essentials = cf.outgoings;
@@ -132,7 +133,8 @@
 
     // 5. ISA allowance
     const saving = FP.savings.monthlyTotals(profile.savings);
-    const isaRoom = Math.max(0, (a.isaAllowance || 0) - (saving.cashIsa + saving.ssIsa) * 12);
+    // One ISA allowance each.
+    const isaRoom = Math.max(0, (a.isaAllowance || 0) * FP.profile.people(profile).length - (saving.cashIsa + saving.ssIsa) * 12);
     if (isaRoom > 0) {
       // Into a stocks & shares ISA: what's left over, up to the allowance, in £10s.
       const isaMonthly = Math.floor(Math.min(isaRoom / 12, left) / 10) * 10;

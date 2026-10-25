@@ -101,7 +101,7 @@
     const id = `act-${x.id}`;
     // Costing more each month than is left over would leave you short.
     const cost = figs.find((f) => f.key === 'leftoverCost');
-    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
+    const left = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow.surplus;
     const tooMuch = cost && cost.value > Math.max(0, left || 0) + 0.5;
     return h('li', { class: `card action ${x.tone}`, 'aria-labelledby': `${id}-h` },
       h('div', { class: 'action-head' },

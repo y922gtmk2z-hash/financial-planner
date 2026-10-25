@@ -57,7 +57,7 @@
   function leftoverFold(ctx, draw) {
     const p = ctx.profile();
     if (!FP.summary.checklist(p).ready) return null;
-    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus;
+    const left = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow.surplus;
     if (!(left > 0)) return null;
     return h('details', { class: 'leftover-fold', id: 'future-leftover' },
       h('summary', null, h('span', null, 'Left over each month: ', h('strong', null, `${FP.dom.money(left)} a month`)), h('span', { class: 'muted small' }, 'Change what you do with it')),

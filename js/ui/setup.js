@@ -664,17 +664,17 @@
       const rs = FP.summary.checklist(p).ready ? FP.projection.retirementSpend(p) : null;
       return [[FP.dom.measure('couldSpend'), rs ? `${money(rs.monthly, { approx: FP.dom.far(p.assumptions.retirementAge - p.about.age) })} a month` : '\u2014']];
     },
-    income: (p) => [['Take-home', `${money(FP.tax.forProfile(p).takeHomeMonthly)} a month`]],
+    income: (p) => [['Take-home', `${money(FP.tax.household(p).takeHomeMonthly)} a month`]],
     outgoings: (p) => [leftCell(p)],
     assets: (p) => [netWorthCell(p)],
     debts: (p) => [netWorthCell(p)],
   };
   function leftCell(p) {
-    const left = FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).cashFlow.surplus || 0;
+    const left = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow.surplus || 0;
     return [left < 0 ? 'Short by' : 'Left over', `${money(Math.abs(left))} a month`, left < 0];
   }
   function netWorthCell(p) {
-    return [FP.dom.measure('netWorth'), money(FP.summary.compute(p, FP.tax.forProfile(p).takeHomeMonthly).netWorth)];
+    return [FP.dom.measure('netWorth'), money(FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).netWorth)];
   }
 
   function liveStrip(ctx, root, section, leaving) {
@@ -684,7 +684,7 @@
     strip.refresh = () => {
       const p = ctx.profile();
       const show = STRIP[section()];
-      const cells = show ? show(p) : [['Take-home', money(FP.tax.forProfile(p).takeHomeMonthly)], leftCell(p)];
+      const cells = show ? show(p) : [['Take-home', money(FP.tax.household(p).takeHomeMonthly)], leftCell(p)];
       FP.dom.fill(figures, cells.map(([label, value, bad]) => h('span', null, h('small', null, label), h('strong', { class: bad ? 'negative' : null }, value))));
     };
     return strip;

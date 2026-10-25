@@ -113,7 +113,7 @@
     const plan = ws.scenarios[0].profile;
     const c = ws.checkins;
     const same = c.snapshots.find((s) => s.date === date);
-    const pay = FP.tax.forProfile(plan);
+    const pay = FP.tax.household(plan);
     const snap = {
       date,
       balances: JSON.parse(JSON.stringify(balances)),

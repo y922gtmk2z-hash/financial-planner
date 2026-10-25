@@ -11,6 +11,8 @@
  *   3  { workspace }, every profile in today's shape.
  *   4  Ideas can also be marked 'applied' (made to your plan from Actions).
  *   5  The workspace keeps your check-ins (snapshots of your balances).
+ *   6  Household mode: a profile can have a partner, more pensions, and owners
+ *      on assets and debts. Nothing moves: you stay in the profile's own fields.
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -88,6 +90,17 @@
       // Check-ins started: older workspaces have none yet.
       up(data) {
         if (isObj(data.workspace) && !isObj(data.workspace.checkins)) data.workspace.checkins = { snapshots: [], projection: null };
+        return data;
+      },
+    },
+    {
+      from: 5, to: 6,
+      // Household mode started: every plan so far is just you, with one pension pot.
+      up(data) {
+        profilesOf(data).forEach((p) => {
+          if (p.partner === undefined) p.partner = null;
+          if (!Array.isArray(p.pensions)) p.pensions = [];
+        });
         return data;
       },
     },
