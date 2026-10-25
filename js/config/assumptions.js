@@ -100,16 +100,6 @@
       help: 'The yearly rate on your mortgage today (not the APRC). Entered in Your figures. If it\u2019s blank it\u2019s worked out from your monthly payment, or 4.5% is used.',
     },
     {
-      key: 'mortgageRateChangeYear', group: 'borrowing', label: 'Rate changes after (years)', unit: 'year',
-      default: null, nullable: true, min: 1, max: 40, setOn: SET_ON, advanced: true,
-      help: 'Optional. For example, when a fixed deal ends. Leave blank for no change.',
-    },
-    {
-      key: 'mortgageRateAfterChange', group: 'borrowing', label: 'New mortgage rate', unit: 'pct',
-      default: null, nullable: true, min: 0, max: 25, setOn: SET_ON, advanced: true,
-      help: 'The rate after the change above. Leave blank for no change.',
-    },
-    {
       key: 'otherDebtRate', group: 'borrowing', label: 'Default rate for other debts', unit: 'pct',
       default: 7.0, min: 0, max: 100, setOn: SET_ON,
       help: 'Used for any debt in Your figures where you leave the rate blank.',

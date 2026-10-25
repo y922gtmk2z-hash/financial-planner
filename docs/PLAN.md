@@ -41,14 +41,14 @@ js/app.js                routing and wiring
 tests/*.test.js          node --test
 ```
 
-## Data model (schema v9)
+## Data model (schema v10)
 
 ```
 profile = {
   schemaVersion, isSample,
   about:      { age },
   assets:     { homeValue, cashSavings, isa, gia, pension, other },
-  mortgage:   { balance, remainingTermYears, monthlyOverpayment },
+  mortgage:   { balance, remainingTermYears, monthlyOverpayment, fixEnds ('YYYY-MM'|null), rateAfterFix|null },
   debts:      [{ id, name, balance, rate|null, monthlyPayment }],   // blank rate → assumption
   income:     { grossSalary, bonuses: [{ id, amount, month }], studentLoanPlan, region, pensionMethod },
   spending:   [{ id, category, monthly }],
@@ -70,7 +70,9 @@ with ideas that can also be marked `applied`, 5 a workspace that also keeps your
 `pensions` and `owners` (you stay in the profile's own fields; `FP.profile.people` gives both of
 you in one shape), 7 a mix on every ISA, investment and pension pot (`mixes`, `partner.pensionMix`,
 `pensions[].mix`), replacing the investment and pension return assumptions, 8 life events
-(`events`), 9 scenarios stored as the Baseline plus a patch each.
+(`events`), 9 scenarios stored as the Baseline plus a patch each, 10 the mortgage's fixed rate
+ending as a month and year with the rate expected after (replacing two assumptions), and
+rough figures (`rough`, e.g. a pension figure from the quick start).
 `js/model/migrate.js` upgrades older files one numbered step at a time (`{ from, to,
 up }`), so `profile.normalise` only checks and cleans today's shape. Any change to
 the saved shape adds a step and a test.

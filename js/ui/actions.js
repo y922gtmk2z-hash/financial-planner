@@ -1,5 +1,7 @@
 /*
- * Actions: one card per idea, ranked by what it does for you, with Apply (to the
+ * Actions: one card per idea, ranked by its value a year (safety problems
+ * first), with ideas worth under £100 a year folded under Smaller ideas and
+ * ones you can't afford yet under When you have room. Each has Apply (to the
  * scenario you're editing, with Undo), Try as a scenario, Done / Not for me,
  * how to do it, and a calendar reminder. Opened from Your plan's Next steps.
  */
@@ -10,39 +12,36 @@
   const TONE_ICON = { warn: '!', tip: 'i' };
   const MARKED = { done: '✓ Done', hidden: 'Not for me', applied: '✓ Applied to your plan' };
 
-  // The ideas worth acting on (not the "already fine" ones), plus the suggested split.
-  function actionsFor(p) {
-    const r = FP.suggest.analyse(p);
-    const list = r.suggestions.filter((s) => s.tone !== 'good');
-    const split = FP.suggest.splitAction(p, r);
-    // "Build your emergency fund" already means using the suggested split: one
-    // card, making exactly the change the split action makes.
-    const fund = list.find((s) => s.id === 'emergency');
-    // The typical mix for your risk level, for every pot, once you've answered the risk question.
-    const mix = FP.suggest.mixAction(p);
-    if (fund && split) { fund.patch = split.patch; return list.concat(mix || []); }
-    return list.concat(split || [], mix || []);
-  }
+  // The ideas worth acting on (not the "already fine" ones), the suggested
+  // split and the typical mix for your risk level (see FP.suggest.actions).
+  const actionsFor = (p) => FP.suggest.actions(p, { cashKnown: FP.checklist.cashKnown(p) });
   // Ones you haven't marked done, not for you or applied.
   const openActions = (p) => actionsFor(p).filter((x) => !(p.ideas || {})[x.id]);
 
-  // A scenario's name for an action: what it changes.
-  function scenarioName(x, p) {
-    const c = x.patch[0];
+  // A scenario's name for an action: what it changes (patch: the change made, if not its own).
+  function scenarioName(x, p, patch) {
+    const c = (patch || x.patch)[0];
     if (x.id === 'relief' || x.id === 'taper') return `Pension +${c.value}%`;
     if (x.id === 'mortgage') return `Overpay ${money((p.mortgage.monthlyOverpayment || 0) + c.value)} a month`;
-    if (x.id === 'isa') return `ISA ${money(c.value[c.value.length - 1].monthly)} a month`;
+    if (x.id === 'isa') return `ISA ${money(c.value.slice(p.savings.length).reduce((t, r) => t + r.monthly, 0))} a month`;
     if (x.id === 'debt') return `Pay ${money(c.value)} more off debts`;
     if (x.id === 'split') return 'Suggested split';
     if (x.id === 'mix') return `Typical ${p.about.riskAppetite} mix`;
     return x.title;
   }
 
-  // "+£210 a month in retirement", "saves £1,900 interest", "£84 a month less left over now".
+  // "+£2,520 a year in retirement", "saves about £410 interest a year", "£84 a month less left over now".
   function figureText(f, p) {
     const years = (n) => `${n} ${n === 1 ? 'year' : 'years'}`;
     const ahead = FP.dom.far(p.assumptions.retirementAge - p.about.age);
+    const cover = (n) => `${n >= 24 ? 'over 24' : (Math.round(n * 10) / 10).toLocaleString('en-GB')} month${n === 1 ? '' : 's'}`;
     switch (f.key) {
+      case 'retirementPerYear': return `+${money(f.value, { approx: ahead })} a year to spend in retirement`;
+      case 'interestPerYear': return `saves about ${money(f.value)} interest a year`;
+      case 'taxPerYear': return `saves about ${money(f.value)} tax a year`;
+      case 'paymentRise': return `payments up about ${money(f.value)} a month`;
+      case 'coverNow': return `covers ${cover(f.value)} of outgoings now`;
+      case 'coverIn': return `${f.target} months covered in ${FP.suggest.duration(f.value)}`;
       case 'retirementSpend': return `+${money(f.value, { approx: ahead })} a month in retirement`;
       case 'interestSaved': return `saves ${money(f.value, { approx: true })} interest`;
       case 'debtFreeSooner': return `debt-free ${years(f.value)} sooner`;
@@ -64,6 +63,8 @@
     isa: 'Use your ISA allowance', mortgage: 'Overpay the mortgage', mortgageLow: 'Your mortgage is cheap',
     debt: 'Clear your most expensive debt first', emergency: 'Build your emergency fund', studentLoan: 'Don\u2019t rush to overpay your student loan',
     noSurplus: 'Nothing left over each month', split: 'Use the suggested split', mix: 'Use a typical mix for your risk level',
+    claimRelief: 'Claim higher-rate pension relief', claimReliefPartner: 'Claim your partner\u2019s higher-rate pension relief',
+    fixEnds: 'Your fixed rate ends soon', statePension: 'Check your State Pension record', statePensionPartner: 'Check your partner\u2019s State Pension record',
   };
 
   const firstSentence = (text) => { const m = text.match(/^.*?[.!?](?=\s|$)/); return m ? m[0] : text; };
@@ -76,7 +77,7 @@
     const list = h('div', { class: 'action-list', 'aria-busy': 'true' },
       h('p', { class: 'muted', role: 'status' }, 'Working out what each idea would do for you…'));
     FP.dom.add(root,
-      FP.dom.pageHead('Actions', 'What to do next, biggest gain first'),
+      FP.dom.pageHead('Actions', 'What to do next, most valuable first'),
       h('p', { class: 'lead' }, 'Each one is a change you could make. Apply it to your plan, try it as a scenario first, or set a reminder. General rules of thumb, not advice.'),
       list);
     // Ranking re-runs the plan for each idea, so the page shows first.
@@ -84,13 +85,20 @@
       if (!list.isConnected) return;
       const all = actionsFor(p);
       const marks = p.ideas || {};
-      const open = FP.suggest.rankActions(all.filter((x) => !marks[x.id]));
+      const g = FP.suggest.groupActions(all.filter((x) => !marks[x.id]));
       // Everything you've marked, including ideas your figures no longer bring up.
       const put = Object.keys(marks).map((k) => all.find((x) => x.id === k) || { id: k, title: NAMES[k] || k });
       list.removeAttribute('aria-busy');
       FP.dom.fill(list,
-        open.length ? h('ol', { class: 'actions' }, open.map((x) => card(x, ctx))) : h('section', { class: 'card' },
-          h('p', null, 'Nothing to act on right now. Your figures change over time, so check back after you update them.')),
+        g.main.length ? h('ol', { class: 'actions' }, g.main.map((x) => card(x, ctx, { later: !!(x.afford && x.afford.none) }))) : h('section', { class: 'card' },
+          h('p', null, g.smaller.length || g.later.length ? 'Nothing big to act on right now: see the ideas below.' : 'Nothing to act on right now. Your figures change over time, so check back after you update them.')),
+        g.smaller.length ? h('details', { class: 'card fold-card', id: 'actions-smaller' },
+          h('summary', null, h('span', { class: 'fold-title' }, 'Smaller ideas'), h('span', { class: 'fold-sum' }, `${g.smaller.length} worth under ${money(FP.suggest.SMALL_VALUE)} a year`)),
+          h('ol', { class: 'actions' }, g.smaller.map((x) => card(x, ctx)))) : null,
+        g.later.length ? h('section', { class: 'card fold-card later', id: 'actions-later', 'aria-labelledby': 'actions-later-h' },
+          h('h2', { id: 'actions-later-h' }, 'When you have room'),
+          h('p', { class: 'muted' }, 'These cost more each month than you have left over now. Free up some room first.'),
+          h('ul', { class: 'actions' }, g.later.map((x) => card(x, ctx, { later: true })))) : null,
         put.length ? h('details', { class: 'card fold-card', id: 'actions-put-away' },
           h('summary', null, h('span', { class: 'fold-title' }, `${put.length} done, applied or not for you`), h('span', { class: 'fold-sum' }, 'Bring any back')),
           h('ul', { class: 'actions put-away' }, put.map((x) => putAway(x, ctx)))) : null,
@@ -98,14 +106,17 @@
     }, 0);
   }
 
-  function card(x, ctx) {
+  // opts.later: nothing affordable yet, so no Apply.
+  function card(x, ctx, opts) {
     const p = ctx.profile();
-    const figs = x.patch ? FP.suggest.highlights(x) : [];
+    const later = !!(opts && opts.later);
+    const figs = FP.suggest.highlights(x);
     const id = `act-${x.id}`;
-    // Costing more each month than is left over would leave you short.
-    const cost = figs.find((f) => f.key === 'leftoverCost');
-    const left = FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow.surplus;
-    const tooMuch = cost && cost.value > Math.max(0, left || 0) + 0.5;
+    const af = x.afford;
+    // More than is left over: offer what you can afford instead.
+    const scaled = af && af.scaled;
+    const patch = scaled ? scaled.patch : x.patch;
+    const left = Math.max(0, FP.summary.compute(p, FP.tax.household(p).takeHomeMonthly).cashFlow.surplus || 0);
     return h('li', { class: `card action ${x.tone}`, 'aria-labelledby': `${id}-h` },
       h('div', { class: 'action-head' },
         h('span', { class: 'idea-icon', 'aria-hidden': 'true' }, TONE_ICON[x.tone] || 'i'),
@@ -113,13 +124,14 @@
       h('p', null, firstSentence(x.text)),
       x.tradeOff ? h('p', { class: 'help' }, x.tradeOff) : null,
       x.notice ? h('p', { class: 'notice info mix-notice' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, 'i'), h('span', null, x.notice)) : null,
-      figs.length ? h('ul', { class: 'action-figures', 'aria-label': 'What it would do' },
+      figs.length && !later ? h('ul', { class: 'action-figures', 'aria-label': 'What it would do' },
         figs.map((f) => h('li', { class: COSTS.includes(f.key) ? 'cost' : 'gain' }, figureText(f, p)))) : null,
-      tooMuch ? h('p', { class: 'notice warn' }, h('span', { class: 'notice-icon', 'aria-hidden': 'true' }, '!'),
-        `That\u2019s more than the ${money(Math.max(0, left))} a month you have left over now, so you\u2019d be short each month. Free up some spending first, or make a smaller change in Your figures.`) : null,
-      x.patch ? h('div', { class: 'button-row' },
-        h('button', { type: 'button', class: 'small', onclick: () => apply(x, ctx) }, 'Apply'),
-        h('button', { type: 'button', class: 'small secondary', onclick: () => tryIt(x, ctx) }, 'Try as a scenario')) : null,
+      later && af ? h('p', { class: 'help' }, `It would cost about ${money(af.cost)} a month; you have ${money(left)} left over now.`) : null,
+      scaled ? h('p', { class: 'help afford-note' }, `The full change would cost ${money(af.cost)} a month, more than the ${money(left)} you have left over, so this is the part you can afford.`) : null,
+      x.link ? h('p', null, h('a', { href: x.link.href, rel: 'noopener noreferrer', target: '_blank' }, x.link.text)) : null,
+      patch && !later ? h('div', { class: 'button-row' },
+        h('button', { type: 'button', class: 'small', onclick: () => apply(x, ctx, patch) }, scaled ? `Apply ${money(scaled.monthly)} a month (what you can afford)` : 'Apply'),
+        h('button', { type: 'button', class: 'small secondary', onclick: () => tryIt(x, ctx, patch) }, 'Try as a scenario')) : null,
       h('div', { class: 'idea-actions' },
         h('button', { type: 'button', class: 'link', onclick: () => mark(x, 'done', ctx), 'aria-label': `Mark “${x.title}” as done` }, '✓ Done'),
         h('button', { type: 'button', class: 'link muted', onclick: () => mark(x, 'hidden', ctx), 'aria-label': `“${x.title}” is not for me` }, 'Not for me')),
@@ -130,9 +142,9 @@
   }
 
   // Applies the change to the scenario you're editing, with Undo.
-  function apply(x, ctx) {
+  function apply(x, ctx, patch) {
     const before = JSON.parse(JSON.stringify(ctx.profile()));
-    const after = FP.patch.applyPatch(before, x.patch);
+    const after = FP.patch.applyPatch(before, patch || x.patch);
     after.ideas = { ...after.ideas, [x.id]: 'applied' };
     ctx.replaceProfile(after);
     undoable[x.id] = { before, after: JSON.stringify(ctx.profile()) };
@@ -152,10 +164,10 @@
     ctx.toast(`Undone: ${x.title}`);
   }
 
-  function tryIt(x, ctx) {
+  function tryIt(x, ctx, patch) {
     const ws = ctx.workspace();
     const p = ctx.profile();
-    const sc = FP.scenarios.addProfile(ws, FP.patch.applyPatch(p, x.patch), scenarioName(x, p));
+    const sc = FP.scenarios.addProfile(ws, FP.patch.applyPatch(p, patch || x.patch), scenarioName(x, p, patch));
     if (!sc) { ctx.toast(`You have ${FP.scenarios.MAX_SCENARIOS} scenarios already. Delete one on What if to add another.`); return; }
     ctx.changed();
     ctx.go('what-if');
@@ -219,5 +231,5 @@
     return x ? x.title : NAMES[id] || id;
   }
 
-  FP.screens.actions = { title: 'Actions', render, openActions, nameOf, figureText };
+  FP.screens.actions = { title: 'Actions', render, openActions, actionsFor, nameOf, figureText };
 })(globalThis.FP = globalThis.FP || {});

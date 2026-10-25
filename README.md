@@ -42,13 +42,17 @@ publish, so browsers fetch the new files instead of a cached copy (GitHub Pages 
 browsers keep files for about 10 minutes). `npm test` checks they all match.
 
 The first time you open it, it starts **empty**, on a **front page**: the app's name,
-three steps (answer five quick questions, see your first plan, add detail when you're
+three steps (answer six quick questions, see your first plan, add detail when you're
 ready), a **Get started** button, links to a fictional example or to import a backup,
 and the not-advice notice. It has no header, tabs or footer. Get started opens the
 **Quick start**: first, who the plan is for (**Just me** or **Me and a partner**);
 then your age, salary, everything going out each month (including
 mortgage, bills and debt payments; an estimate is fine), retirement
-age and (optionally) what you'd like to spend in retirement. With a partner, four
+age, (optionally) what you'd like to spend in retirement, and **Roughly what's in your
+pensions and savings now?** (one money box; leave it blank for **Not sure**). That last
+figure goes into your pension pots, flagged **Rough** in Your figures (Assets) until you
+edit it, and while it's rough it doesn't count towards the plan detail meter or take you
+past the first look. With a partner, four
 more questions appear after your salary: their name (optional), age, salary and
 when they'd like to retire. Those answers give a
 **first look** at Plan: what you take home and have left each month, and for
@@ -57,7 +61,8 @@ about £Y." then "Short by about £Z" or "On course". Both figures are in today'
 money, from the same calculation Plan uses later: what the projection says
 you'd have (with the default 5% + 3% workplace pension) against what you'd need to
 spend your goal to the end of your plan. A line says it's based on your answers and
-that pensions and savings you already have aren't included yet; the button under it
+either that it includes your rough figure for pensions and savings or, if you left
+that blank, that pensions and savings you already have aren't included yet; the button under it
 is **Add your pensions and savings**. It opens Your figures where the gaps are: the
 first of Assets, Debts, Income (its Advanced part) and Outgoings (itemised) you
 haven't been to yet, or if you've been to them all, the first that's still empty
@@ -201,7 +206,7 @@ the front page, which shows it), then as one line you can open; this is remember
 this browser. The scenario picker appears once you have more than one scenario, with
 the first one shown as "Baseline"; its **Compare** link opens What if. Each tab opens
 with a one-line subtitle (Plan: "Four questions, answered"; Actions: "What to do next,
-biggest gain first"; What if: "Try a change and compare"; Progress: "What you have
+most valuable first"; What if: "Try a change and compare"; Progress: "What you have
 against your plan"). **Your figures** is always in the header, so the screens don't
 repeat it as a button; cards end with an **Edit your figures** link instead. On a
 390 × 844 phone the first figure on Plan starts within the top 45% of the screen,
@@ -362,12 +367,42 @@ in What if are patches too.
 ## Actions
 
 **Actions** (the second tab, `#actions`, open once you've done the quick start; also
-from **Next steps** on Plan) has one card per idea, ranked: ones that fix a problem first, then
-the biggest gain in what you could spend in retirement. Each card says why in one
-line, and shows up to two figures for what it would do, its main gain and what it
-costs ("+£38 a month in retirement", "£84 a month less left over now"; for the
-mortgage or a debt, "saves £15.7k interest"). If it would cost more each month than
-you have left over, the card says so. Then:
+from **Next steps** on Plan) has one card per idea, ranked by its **value a year in £**:
+interest saved a year (for the mortgage or a debt: the interest it saves, spread over
+the years it makes a difference), extra retirement income a year (today's money), or tax
+saved a year. The order is:
+
+1. **Decide what to do with your £X left over**, whenever money left over has no job
+   yet (nothing chosen under Money left over each month). It applies the suggested
+   split. Every other action's figures are then measured **on top of that split**, so
+   their gains aren't just "start saving" counted again.
+2. **Safety problems**, whatever their value: short each month, no emergency fund
+   (shown in **months of cover**, never in retirement income), and debt over 20% APR.
+3. Everything else, most valuable first. Ideas with no figure in £ (check for employer
+   matching, the State Pension check) come after.
+4. **Smaller ideas**: worth under £100 a year, folded away.
+5. **When you have room**: changes that cost more each month than you have left over,
+   with nothing smaller worth doing, shown without Apply.
+
+When a change costs more than is left over but a smaller one fits, the card offers it:
+**Apply £44 a month (what you can afford)**, with its own figures. Each card says why in
+one line and shows up to two figures: its value a year, then what it costs ("saves about
+£222 interest a year", "£44 a month less left over now"). The emergency fund waits until
+you've answered your cash savings (entered some, or been through Assets).
+
+Big-ticket checks also appear here:
+
+- **Your fixed rate ends in March 2027**, when the fix (Debts › Mortgage, **Fixed rate
+  ends** and **Rate you expect after**) ends within 12 months: how much payments could
+  rise, and when to start comparing deals.
+- **The £100k tax trap**: with adjusted net income between £100,000 and £125,140, the
+  pension contribution that brings it to £100,000 (to 0.1% of salary) and the tax saved.
+- **Claim higher-rate pension relief**: with a relief-at-source pension and a 40% or
+  higher rate, the £ a year to claim through Self Assessment.
+- **Check your State Pension record**: below the full amount, with a link to
+  [Check your State Pension](https://www.gov.uk/check-state-pension).
+
+Then:
 
 - **Apply** makes the change in the scenario you're editing. A message offers
   **Undo** for 10 seconds, and the card moves to a folded list marked **Applied**,
@@ -382,10 +417,11 @@ you have left over, the card says so. Then:
 - **Remind me** downloads a calendar reminder (an `.ics` file, made in your browser,
   nothing sent) for a date you pick, with the steps in it.
 
-**Use the suggested split** is an action too, making exactly the change **Use this
-split** makes, so the advice and your plan can't disagree. When your emergency fund
-is short, "Build your emergency fund" makes that change instead (it's the same
-split). Plan's other screens still show ideas under Money left over each month.
+**Use the suggested split** (or, with nothing chosen yet, **Decide what to do with your
+£X left over**) is an action too, making exactly the change **Use this split** makes, so
+the advice and your plan can't disagree. When your emergency fund is short and you've
+chosen a split of your own, "Build your emergency fund" makes that change instead (it's
+the same split). Plan's other screens still show ideas under Money left over each month.
 
 A **suggested split** follows from these, and always includes the emergency fund:
 80% while it's below your target (50% with 40% to expensive debts if you have both),
@@ -485,11 +521,21 @@ money) or **be debt-free by an age**, and one thing to change:
 
 It finds the least change that reaches the goal by bisection (the same approach as
 "could spend in retirement"), rounded so it still does: pension to 0.5%, spending and
-payments to £10, ages to a year. What you spend changes every category and your
-estimate by the same share, down to a quarter of what you spend now. The answer
-("To spend £4,500 a month in retirement, you'd need to pay 51% of your salary into
-your pension (now 5%)") comes with **Apply** (with Undo) and **Try as a scenario**.
-When the goal is already met, or can't be reached, it says so.
+payments to £10, ages to a year. Each lever stays within what you could do:
+
+- your pension contribution: no more than what's left over each month plus what you
+  pay in now, and within the £60,000 annual allowance including your employer's;
+- when you retire: no later than 75;
+- what you spend: no lower than your bills (your debt payments aren't touched). Bills
+  stay as they are and every other category, and your estimate, change by the same
+  share. With no bills itemised, a quarter of what you spend now is the floor.
+
+The answer ("To spend £3,500 a month in retirement, you'd need to pay 9.5% of your
+salary into your pension (now 5%)") comes with **Apply** (with Undo) and **Try as a
+scenario**. If the goal can't be reached within those limits it says **Not reachable
+by changing this alone. Closest: …** (for the sample household's £4,600 a month by the
+pension: paying 6.5%, the most it can afford, which gets about £3,816 a month) and
+offers only **Try as a scenario**. When the goal is already met, it says so.
 
 ## Check-ins and Progress
 
@@ -699,8 +745,8 @@ Each year, in order:
 2. **Growth** — home and cash grow at their own rates; each ISA, other investment and
    pension pot grows at the rate its mix gives, after fees.
 3. **Debts** — the mortgage is paid down month by month (fixed payment plus
-   overpayments, so overpayments shorten the term; the payment is recalculated if the
-   rate changes). Other debts are paid until cleared.
+   overpayments, so overpayments shorten the term; the payment is recalculated from
+   the month after your fixed rate ends, at the rate you expect after). Other debts are paid until cleared.
 4. **Spending** grows with spending growth and carries on unchanged in retirement.
    Life events that year are added on (or, for money coming in, added to income; an
    inheritance goes straight into cash savings).
@@ -814,6 +860,17 @@ Chromium at 390px and 1280px wide, and fail on any console error:
   golden results, a partner's events kept; goal-seek answers meeting their goal within
   £10 a month or a year, being the least change, saying when nothing's needed or it
   can't be done, and the spending change sticking.
+- **Ranking, affordability and big-ticket checks** (`tests/brief14.test.js`): debt over
+  20% APR as a safety problem, value a year by kind, interest saved a year, smaller
+  ideas, the emergency fund waiting for your cash savings, the £100k tax trap (the
+  contribution and tax saved), relief at source to claim, the State Pension check,
+  a fixed rate ending (when, and the payment rise) and its effect on the projection,
+  month-and-year fields, migration 10 (the old "rate changes after N years" becoming
+  the month the fix ends, in plans and scenario patches), rough figures, and goal-seek
+  limits (the sample household's £4,600 a month by the pension is out of reach and
+  never 52.5%; the annual allowance; retiring by 75; spending no lower than bills).
+  The golden snapshots also hold each idea's value a year, affordability and figures,
+  the Actions order, and what it would take to spend 20% more by each lever.
 
 - **What each pot is invested in:** the asset-class assumptions, the default mix
   giving exactly 5% before fees, each pot (yours, your partner's, other pots)
@@ -846,8 +903,9 @@ Chromium at 390px and 1280px wide, and fail on any console error:
   sample household take under 3 seconds.
 - **Actions:** how-to steps for each kind of idea (2 to 4, no providers), the
   suggested split as an action (for the sample household it puts 70% towards its
-  debts, and does exactly what Use this split did), ranking (problems first, then
-  the biggest gain), the two figures on each card, the Applied mark (and saves from
+  debts, and does exactly what Use this split did), ranking (deciding about money left
+  over first, then safety problems, then value a year; under £100 a year in Smaller
+  ideas), gains measured on top of the suggested split, scaling to what you can afford, the two figures on each card, the Applied mark (and saves from
   version 3 loading), making a scenario your plan, and the calendar file (dates,
   escaping, 75-octet lines).
 - **Households:** every single-person result unchanged; you and your partner in the

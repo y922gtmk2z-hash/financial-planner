@@ -20,6 +20,11 @@
  *   8  Life events (profile.events). Older plans have none.
  *   9  Scenarios are the baseline plus a patch: every scenario after the
  *      first keeps only what differs from the baseline, not a whole profile.
+ *  10  A mortgage's fixed rate ends in a month and year (mortgage.fixEnds,
+ *      'YYYY-MM') with the rate you expect after (mortgage.rateAfterFix),
+ *      replacing two assumptions: the rate changing after a number of years
+ *      (mortgageRateChangeYear) and the new rate (mortgageRateAfterChange).
+ *      Plans can also mark figures as rough answers (profile.rough).
  * A file with no version is read as 2 if it holds a workspace, else 1.
  */
 (function (FP) {
@@ -158,6 +163,42 @@
           delete sc.profile;
         });
         data.workspace.scenarios = list;
+        return data;
+      },
+    },
+    {
+      from: 9, to: 10,
+      // "Rate changes after N years" becomes the month the fix ends: N years
+      // from this month, less one (the new rate starts the month after, as
+      // before). Scenario patches that changed either move with them.
+      up(data, now) {
+        const d = now || new Date();
+        const fixEnds = (years) => {
+          const i = d.getFullYear() * 12 + d.getMonth() + Math.round(years) * 12 - 1;
+          return `${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`;
+        };
+        const okYears = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= 40;
+        const okRate = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 25;
+        profilesOf(data).forEach((p) => {
+          const a = isObj(p.assumptions) ? p.assumptions : {};
+          if (okYears(a.mortgageRateChangeYear) || okRate(a.mortgageRateAfterChange)) {
+            if (!isObj(p.mortgage)) p.mortgage = {};
+            if (okYears(a.mortgageRateChangeYear)) p.mortgage.fixEnds = fixEnds(a.mortgageRateChangeYear);
+            if (okRate(a.mortgageRateAfterChange)) p.mortgage.rateAfterFix = a.mortgageRateAfterChange;
+          }
+          delete a.mortgageRateChangeYear;
+          delete a.mortgageRateAfterChange;
+        });
+        if (isObj(data.workspace) && Array.isArray(data.workspace.scenarios)) {
+          data.workspace.scenarios.filter((sc) => isObj(sc) && Array.isArray(sc.patch)).forEach((sc) => {
+            sc.patch = sc.patch.map((c) => {
+              if (!isObj(c) || c.op !== 'set') return c;
+              if (c.path === 'assumptions.mortgageRateChangeYear') return { path: 'mortgage.fixEnds', op: 'set', value: okYears(c.value) ? fixEnds(c.value) : null };
+              if (c.path === 'assumptions.mortgageRateAfterChange') return { path: 'mortgage.rateAfterFix', op: 'set', value: okRate(c.value) ? c.value : null };
+              return c;
+            }).filter((c) => !(isObj(c) && /^assumptions\.mortgageRate(ChangeYear|AfterChange)$/.test(c.path)));
+          });
+        }
         return data;
       },
     },

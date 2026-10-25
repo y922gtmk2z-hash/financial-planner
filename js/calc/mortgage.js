@@ -68,5 +68,33 @@
     return { yearly, allowance, exceeds: yearly > allowance + EPSILON && yearly > 0 };
   }
 
-  FP.mortgage = { monthlyPayment, amortise, overpaymentLimit };
+  /*
+   * A fixed rate ending: mortgage.fixEnds ('YYYY-MM', the last month of the
+   * fix) and mortgage.rateAfterFix (% a year). The new rate applies from the
+   * month after. startMonthIndex: the month to count from (year * 12 + month
+   * - 1, January = 0). Returns { afterMonths, annualRatePct } (the rateChange
+   * amortise takes), or null with no change to come.
+   */
+  function fixChange(m, startMonthIndex) {
+    const at = monthIndex(m && m.fixEnds);
+    if (at == null || m.rateAfterFix == null) return null;
+    const afterMonths = at + 1 - startMonthIndex;
+    return afterMonths > 0 ? { afterMonths, annualRatePct: m.rateAfterFix } : null;
+  }
+
+  // 'YYYY-MM' → year * 12 + month - 1, or null.
+  function monthIndex(text) {
+    const r = /^(\d{4})-(\d{2})$/.exec(text || '');
+    if (!r || Number(r[2]) < 1 || Number(r[2]) > 12) return null;
+    return Number(r[1]) * 12 + Number(r[2]) - 1;
+  }
+
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  // 'YYYY-MM' → "March 2027" (or '' if it isn't one).
+  function monthName(text) {
+    const i = monthIndex(text);
+    return i == null ? '' : `${MONTH_NAMES[i % 12]} ${Math.floor(i / 12)}`;
+  }
+
+  FP.mortgage = { monthlyPayment, amortise, overpaymentLimit, fixChange, monthIndex, monthName };
 })(globalThis.FP = globalThis.FP || {});

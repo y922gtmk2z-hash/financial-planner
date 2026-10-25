@@ -45,9 +45,8 @@
     const mBalance = num(m.balance);
     const loan = FP.loan.forMortgage(profile);
     const termMonths = mortgageMonths(loan);
-    const rateChange = a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null
-      ? { afterMonths: a.mortgageRateChangeYear * 12, annualRatePct: a.mortgageRateAfterChange }
-      : null;
+    const now = new Date();
+    const rateChange = FP.mortgage.fixChange(m, now.getFullYear() * 12 + now.getMonth());
 
     let mortgage = null;
     if (mBalance > 0) {
@@ -185,7 +184,8 @@
         why: 'Without it, everything you take home would look like savings.' },
       { id: 'salary', label: 'Your salary', done: !working || num(profile.income.grossSalary) > 0, blocking: false, target: 'income.grossSalary',
         why: 'Leave it blank if you\u2019re not working.' },
-      { id: 'pension', label: 'Your pension pots', done: num(profile.assets.pension) > 0, blocking: false, target: 'assets.pension',
+      // A rough figure from the quick start isn't done until you've edited it.
+      { id: 'pension', label: 'Your pension pots', done: num(profile.assets.pension) > 0 && !(profile.rough || {})['assets.pension'], blocking: false, target: 'assets.pension',
         why: 'Fine to leave blank if you don\u2019t have one yet.' },
       { id: 'cash', label: 'Your cash savings', done: num(profile.assets.cashSavings) > 0, blocking: false, target: 'assets.cashSavings',
         why: 'Used for your emergency fund.' },

@@ -122,7 +122,7 @@ test('saved, only the baseline keeps a profile; it loads back the same', () => {
   const back = S.normalise(saved);
   ws.scenarios.forEach((sc, i) => assert.equal(json(back.scenarios[i].profile), json(sc.profile), sc.name));
   const exported = JSON.parse(FP.store.exportJson(ws));
-  assert.equal(exported.schemaVersion, 9);
+  assert.equal(exported.schemaVersion, 10);
   assert.equal(exported.workspace.scenarios[1].profile, undefined);
   const imported = FP.store.importJson(json(exported));
   assert.equal(imported.ok, true);

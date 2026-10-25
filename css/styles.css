@@ -360,6 +360,9 @@ main:focus, main:focus-visible { outline: none; }
 .input-wrap.worked input::placeholder { color: var(--accent); opacity: 1; font-style: italic; }
 /* Time left: the number, then months or years. */
 .term-row { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem; gap: 8px; }
+.month-year .term-row { grid-template-columns: minmax(0, 1fr) 6rem; }
+.rough-note .badge { margin-right: 4px; }
+.afford-note { margin-top: 4px; }
 .input-wrap input, .input-wrap select {
   flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
   font: inherit; font-size: 1rem; /* 16px stops iOS zooming */ padding: 10px 4px; outline: none;

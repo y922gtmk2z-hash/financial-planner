@@ -93,8 +93,9 @@
         ]));
     }
 
-    const rateChange = a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null
-      ? `Rate changes to ${pct(a.mortgageRateAfterChange, 2)} after ${a.mortgageRateChangeYear} yr` : null;
+    const pm = p && p.mortgage;
+    const rateChange = pm && pm.fixEnds && pm.rateAfterFix != null
+      ? `Fixed rate ends ${FP.mortgage.monthName(pm.fixEnds)}, then ${pct(pm.rateAfterFix, 2)}` : null;
 
     return h('section', { class: 'card', 'aria-labelledby': 'home-h' },
       h('h2', { id: 'home-h' }, 'Home equity'),

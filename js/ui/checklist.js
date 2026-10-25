@@ -96,5 +96,8 @@
     return `#setup/${gap.target}`;
   }
 
-  FP.checklist = { card, note, isEmpty, emptyCard, meter, nextSection };
+  // Whether your cash savings have been answered: some entered, or you've been through Assets.
+  const cashKnown = (p) => (p.assets.cashSavings || 0) > 0 || visited().includes('assets');
+
+  FP.checklist = { card, note, isEmpty, emptyCard, meter, nextSection, cashKnown };
 })(globalThis.FP = globalThis.FP || {});

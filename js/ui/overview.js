@@ -15,10 +15,13 @@
   // Which ideas belong on which card, and the panel each card's rows open.
   const AREA_IDEAS = {
     month: ['noSurplus', 'emergency', 'isa'],
-    debt: ['debt', 'mortgage', 'studentLoan'],
-    retirement: ['taper', 'relief', 'match'],
+    debt: ['fixEnds', 'debt', 'mortgage', 'studentLoan'],
+    retirement: ['taper', 'claimRelief', 'claimReliefPartner', 'relief', 'statePension', 'statePensionPartner', 'match'],
   };
-  const IDEA_PANEL = { noSurplus: 'leftover', emergency: 'emergency', isa: 'leftover', debt: 'leftover', mortgage: 'mortgage', studentLoan: 'studentLoan', taper: 'retirement', relief: 'retirement', match: 'retirement' };
+  const IDEA_PANEL = {
+    noSurplus: 'leftover', emergency: 'emergency', isa: 'leftover', debt: 'leftover', mortgage: 'mortgage', fixEnds: 'mortgage', studentLoan: 'studentLoan',
+    taper: 'retirement', claimRelief: 'retirement', claimReliefPartner: 'retirement', relief: 'retirement', statePension: 'retirement', statePensionPartner: 'retirement', match: 'retirement',
+  };
 
   const isSheet = (target) => FP.planSheets.SHEETS.some((x) => x.id === target);
 
@@ -92,8 +95,8 @@
   // Ideas you haven't ticked off or hidden, most pressing first.
   function openIdeas(p) {
     const marks = p.ideas || {};
-    return FP.suggest.analyse(p).suggestions.filter((x) => x.tone !== 'good' && !marks[x.id])
-      .sort((x, y) => (x.tone === 'warn' ? 0 : 1) - (y.tone === 'warn' ? 0 : 1));
+    return FP.suggest.analyse(p, { cashKnown: FP.checklist.cashKnown(p) }).suggestions.filter((x) => x.tone !== 'good' && !marks[x.id])
+      .sort((x, y) => (x.safety ? 0 : x.tone === 'warn' ? 1 : 2) - (y.safety ? 0 : y.tone === 'warn' ? 1 : 2));
   }
 
   // A card answering one question: a verdict, the figures behind it (each opens its
@@ -213,7 +216,9 @@
       h('h2', { id: 'oc-retirement' }, 'Retirement'),
       h('p', { class: 'verdict info' }, h('span', { class: 'badge' }, 'Rough'), lead),
       result,
-      h('p', { class: 'small' }, `Based on ${n} ${n === 1 ? 'answer' : 'answers'}. Your existing pensions and savings aren\u2019t included yet.`),
+      h('p', { class: 'small' }, `Based on ${n} ${n === 1 ? 'answer' : 'answers'}. ${FP.welcome.isRoughPots(p)
+        ? `It includes your rough ${money(p.assets.pension)} in pensions and savings, treated as a pension pot.`
+        : 'Your existing pensions and savings aren\u2019t included yet.'}`),
       how ? h('p', { class: 'muted small' }, how) : null,
       FP.dom.cardFoot('#setup/about'));
   }

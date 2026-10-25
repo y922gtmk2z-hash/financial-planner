@@ -63,12 +63,13 @@ test('mortgage amortises like the stand-alone calculator; equity = value - balan
   assert.equal(free, Math.ceil(ref.months / 12));
 });
 
-test('mortgage rate change applies after the chosen number of years', () => {
+test('mortgage rate change applies from the month after the fixed rate ends', () => {
   const p = profile();
-  p.mortgage = { balance: 200000, remainingTermYears: 25, monthlyOverpayment: 0 };
+  // The fix ends 23 months from this month, so the new rate starts after 24 months.
+  const now = new Date();
+  const end = now.getFullYear() * 12 + now.getMonth() + 23;
+  p.mortgage = { balance: 200000, remainingTermYears: 25, monthlyOverpayment: 0, fixEnds: `${Math.floor(end / 12)}-${String((end % 12) + 1).padStart(2, '0')}`, rateAfterFix: 6 };
   p.leftover.mortgage = 0;
-  p.assumptions.mortgageRateChangeYear = 2;
-  p.assumptions.mortgageRateAfterChange = 6;
   const r = FP.projection.project(p).rows;
   const ref = FP.mortgage.amortise({ balance: 200000, annualRatePct: 4.5, termMonths: 300, rateChange: { afterMonths: 24, annualRatePct: 6 } });
   close(r[2].mortgage, ref.yearEndBalances[1], 0.01);

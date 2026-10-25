@@ -2599,9 +2599,288 @@
         "text": "You’re £483 a month short after spending, debts and regular savings. Look at your biggest spending categories, or reduce regular savings until it balances.",
         "patch": null,
         "impact": null,
-        "howTo": []
+        "howTo": [],
+        "safety": true,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
+      },
+      {
+        "id": "debt",
+        "tone": "warn",
+        "title": "Clear Credit card first",
+        "text": "It costs 24.9% a year, more than savings earn (3.5%), so paying extra off it is a guaranteed return. Personal loan (14.9%) and Car loan (9.9%) are next. Put a share of your leftover money into “Paying off debts faster” (most expensive first), or raise the monthly payment in Your figures.",
+        "patch": [
+          {
+            "path": "debts.2.monthlyPayment",
+            "op": "add",
+            "value": 50
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": -483.37,
+            "retirementSpend": 1249.12,
+            "atRetirement": 112818.6,
+            "lastsTo": 77,
+            "debtFreeAge": 35,
+            "interest": 2984.19
+          },
+          "after": {
+            "leftover": -533.37,
+            "retirementSpend": 1249.12,
+            "atRetirement": 112818.6,
+            "lastsTo": 77,
+            "debtFreeAge": 34,
+            "interest": 2289.1
+          },
+          "change": {
+            "leftover": -50,
+            "retirementSpend": 0,
+            "atRetirement": 0,
+            "lastsTo": 0,
+            "debtFreeAge": -1,
+            "interest": -695.09,
+            "interestSavedPerYear": 173.77
+          }
+        },
+        "howTo": [
+          "Pay more than the minimum each month, starting with the most expensive debt.",
+          "For a credit card, consider a 0% balance transfer: check the fee and how long the 0% lasts.",
+          "Set up a direct debit for the higher amount so it’s never late."
+        ],
+        "safety": true,
+        "kind": "interest",
+        "valuePerYear": 173.77,
+        "highlights": [
+          {
+            "key": "interestPerYear",
+            "value": 173.77
+          },
+          {
+            "key": "leftoverCost",
+            "value": 50
+          }
+        ],
+        "afford": {
+          "cost": 50,
+          "left": 0,
+          "none": true,
+          "scaled": null
+        }
+      },
+      {
+        "id": "emergency",
+        "tone": "warn",
+        "title": "Build your emergency fund",
+        "text": "Your cash covers about 0.1 months of essential outgoings; your target is 3 (£6,750). A common aim is 3–6 months (£6,750–£13,500).",
+        "patch": null,
+        "impact": null,
+        "howTo": [],
+        "safety": true,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [
+          {
+            "key": "coverNow",
+            "value": 0.13
+          }
+        ],
+        "afford": null
+      },
+      {
+        "id": "match",
+        "tone": "tip",
+        "title": "Check for employer matching",
+        "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
+        "patch": null,
+        "impact": null,
+        "howTo": [],
+        "safety": false,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
+      },
+      {
+        "id": "isa",
+        "tone": "tip",
+        "title": "Use your ISA allowance",
+        "text": "You have about £20,000 of this year’s £20,000 ISA allowance left. Growth and interest in an ISA are tax-free. For money you won’t need for at least five years, a stocks & shares ISA has historically beaten cash, but can fall in value.",
+        "patch": [
+          {
+            "path": "savings",
+            "op": "set",
+            "value": [
+              {
+                "id": "idea-isa",
+                "type": "ssIsa",
+                "monthly": 1660,
+                "grows": "fixed"
+              }
+            ]
+          }
+        ],
+        "impact": {
+          "before": {
+            "leftover": -483.37,
+            "retirementSpend": 1249.12,
+            "atRetirement": 112818.6,
+            "lastsTo": 77,
+            "debtFreeAge": 35,
+            "interest": 2984.19
+          },
+          "after": {
+            "leftover": -2143.37,
+            "retirementSpend": 1249.12,
+            "atRetirement": 112818.6,
+            "lastsTo": 77,
+            "debtFreeAge": 35,
+            "interest": 2984.19
+          },
+          "change": {
+            "leftover": -1660,
+            "retirementSpend": 0,
+            "atRetirement": 0,
+            "lastsTo": 0,
+            "debtFreeAge": 0,
+            "interest": 0,
+            "interestSavedPerYear": 0
+          }
+        },
+        "howTo": [
+          "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
+          "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
+          "Set up a monthly payment on payday so it happens without thinking about it."
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 0,
+        "highlights": [
+          {
+            "key": "leftoverCost",
+            "value": 1660
+          }
+        ],
+        "afford": {
+          "cost": 1660,
+          "left": 0,
+          "none": true,
+          "scaled": null
+        }
       }
     ],
-    "split": null
+    "split": null,
+    "unallocated": false,
+    "actions": {
+      "main": [
+        "noSurplus",
+        "emergency",
+        "debt",
+        "match"
+      ],
+      "smaller": [],
+      "later": [
+        "isa"
+      ]
+    }
+  },
+  "goalSeek": {
+    "goal": {
+      "id": "spend",
+      "value": 1500
+    },
+    "levers": {
+      "pension": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "pension",
+        "now": 5,
+        "value": 5,
+        "targets": null,
+        "canTry": false,
+        "closest": {
+          "limit": "afford",
+          "reaches": 1249.12
+        },
+        "patch": []
+      },
+      "retireAge": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "retireAge",
+        "now": 67,
+        "value": 75,
+        "targets": null,
+        "canTry": true,
+        "closest": {
+          "limit": "age",
+          "reaches": 1470.07
+        },
+        "patch": [
+          {
+            "path": "assumptions.retirementAge",
+            "op": "set",
+            "value": 75
+          }
+        ]
+      },
+      "spending": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "spending",
+        "now": 1830,
+        "value": 1230,
+        "targets": null,
+        "canTry": true,
+        "closest": {
+          "limit": "bills",
+          "reaches": 1250.52
+        },
+        "patch": [
+          {
+            "path": "spending.0.monthly",
+            "op": "set",
+            "value": 950
+          },
+          {
+            "path": "spending.1.monthly",
+            "op": "set",
+            "value": 280
+          },
+          {
+            "path": "spending.2.monthly",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "spending.3.monthly",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "spending.4.monthly",
+            "op": "set",
+            "value": 0
+          }
+        ]
+      }
+    }
   }
 }

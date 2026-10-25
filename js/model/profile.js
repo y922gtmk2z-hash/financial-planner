@@ -6,8 +6,11 @@
 (function (FP) {
   'use strict';
 
+  // Figures the quick start can fill with a rough answer (see blank().rough).
+  const ROUGH_PATHS = ['assets.pension'];
+
   // The version of saved data. Older saves are upgraded by js/model/migrate.js.
-  const SCHEMA_VERSION = 9;
+  const SCHEMA_VERSION = 10;
 
   // How you've marked an idea. 'applied' (its change made to your plan) since version 4.
   const IDEA_MARKS = ['done', 'hidden', 'applied'];
@@ -158,6 +161,11 @@
         { path: 'mortgage.monthlyPayment', label: 'Monthly payment', type: 'money', suffix: 'a month', group: 'mortgage', needsMortgage: true, nullable: true,
           nullPlaceholder: 'Not sure',
           help: 'Your normal payment, without overpayments. Also under Debt payments in Outgoings.' },
+        { path: 'mortgage.fixEnds', label: 'Fixed rate ends', type: 'monthYear', group: 'mortgage', needsMortgage: true, nullable: true,
+          help: 'The last month of your fixed (or tracker) deal, from your mortgage offer. Leave blank if you\u2019re not on a deal.' },
+        { path: 'mortgage.rateAfterFix', label: 'Rate you expect after', type: 'pct', min: 0, max: 25, suffix: '% a year', group: 'mortgage', needsMortgage: true, nullable: true,
+          nullPlaceholder: 'Not sure',
+          help: 'What you expect to pay once the deal ends: your lender\u2019s standard variable rate, or a new deal. Your payments are worked out again at this rate from the month after.' },
         { path: 'mortgage.monthlyOverpayment', label: 'Monthly overpayment', type: 'money', group: 'mortgage', more: true, needsMortgage: true,
           help: 'Extra paid on top of your normal payment each month. Most lenders allow up to 10% of the balance a year without a charge.' },
       ],
@@ -320,7 +328,7 @@
       isSample: false,
       about: { age: null, riskAppetite: '', name: '' },
       assets: { homeValue: 0, cashSavings: 0, isa: 0, gia: 0, pension: 0, other: 0 },
-      mortgage: { balance: 0, remainingTermYears: 0, monthlyPayment: null, monthlyOverpayment: 0 },
+      mortgage: { balance: 0, remainingTermYears: 0, monthlyPayment: null, monthlyOverpayment: 0, fixEnds: null, rateAfterFix: null },
       debts: [],
       income: {
         grossSalary: 0, bonuses: [], sacrifices: [], benefits: [], otherIncome: 0, taxFreeIncome: 0, otherIncomeAfterRetirement: 'no', studentLoanPlan: 'none', studentLoanBalance: 0, studentLoanStartYear: null,
@@ -334,6 +342,8 @@
       outgoings: { estimate: null },
       // Ideas you've marked done, hidden or applied to your plan: { [idea id]: 'done' | 'hidden' | 'applied' }.
       ideas: {},
+      // Figures that are only a rough answer from the quick start, until you edit them: { 'assets.pension': true }.
+      rough: {},
       spending: [newRest()],
       assumptions: FP.assumptions.defaults(),
       // A partner, planned together with you (see partnerOf), or null for just you.
@@ -546,6 +556,15 @@
     if (field.type === 'text') {
       return { ok: true, value: String(raw == null ? '' : raw).trim().slice(0, 60) };
     }
+    if (field.type === 'monthYear') {
+      // A month and year, 'YYYY-MM' (2000 to 2100), or blank for none.
+      const text = String(raw == null ? '' : raw).trim();
+      if (!text) return { ok: true, value: field.nullable ? null : '' };
+      const m = /^(\d{4})-(\d{1,2})$/.exec(text);
+      if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return { ok: false, error: 'Choose a month and enter a year, like 2027.' };
+      if (Number(m[1]) < 2000 || Number(m[1]) > 2100) return { ok: false, error: 'Enter a year between 2000 and 2100.' };
+      return { ok: true, value: `${m[1]}-${m[2].padStart(2, '0')}` };
+    }
     if (field.type === 'select' || field.type === 'toggle') {
       const ok = field.options.some((o) => o.value === raw);
       return ok ? { ok: true, value: raw } : { ok: false, error: 'Choose an option from the list.' };
@@ -627,6 +646,9 @@
       Object.entries(src.ideas).slice(0, 40).forEach(([k, v]) => {
         if (/^[a-zA-Z]{1,30}$/.test(k) && IDEA_MARKS.includes(v)) p.ideas[k] = v;
       });
+    }
+    if (src.rough && typeof src.rough === 'object') {
+      ROUGH_PATHS.forEach((k) => { if (src.rough[k] === true && get(p, k) > 0) p.rough[k] = true; });
     }
     if (Array.isArray(src.savings)) {
       p.savings = src.savings.filter((x) => x && typeof x === 'object').slice(0, MAX_SAVINGS)
@@ -738,7 +760,7 @@
   }
 
   FP.profile = {
-    SCHEMA_VERSION, IDEA_MARKS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
+    SCHEMA_VERSION, IDEA_MARKS, ROUGH_PATHS, OWNERS, PENSION_TYPES, PENSION_FIELDS, MAX_PENSIONS, people, newPartner, newPension, addPartner, removePartner,
     who, whose, capital, personPath, asPerson, PARTNER_FIELDS, NAME_FIELD, HOUSEHOLD_FIELD, SECTIONS, FIELD_GROUPS, RISK_LEVELS, DEBT_FIELDS, SPENDING_FIELDS, SPENDING_GROUPS, REST_CATEGORY, STUDENT_LOAN_PLANS, REGIONS, PENSION_METHODS, BONUS_MONTHS, BONUS_FIELDS, MAX_BONUSES, SACRIFICE_TYPES, SACRIFICE_FIELDS, MAX_SACRIFICES, BENEFIT_TYPES, BENEFIT_FIELDS, MAX_BENEFITS, SAVING_TYPES, SAVING_FIELDS, MAX_SAVINGS, LEFTOVER_FIELDS, LEFTOVER_DEFAULT, EMERGENCY_MONTHS_FIELD, leftoverField,
     EVENT_TYPES, EVENT_PERS, EVENT_FIELDS, MAX_EVENTS, eventType, newEvent, newMix, cleanMix, blank, get, set, fieldFor, assumptionField, parseValue, normalise, newDebt, newBonus, newBenefit, newSacrifice, newSaving, newSpending, newRest,
   };
