@@ -146,7 +146,9 @@
     } else if (method === 'reliefAtSource') {
       const reliefRate = cfg.reliefAtSourceRate / 100;
       pensionFromPay = pensionGross * (1 - reliefRate);
-      bandExtension = pensionGross;
+      // Higher-rate relief, claimed through Self Assessment, extends your bands
+      // (input.reliefNotClaimed: as if it isn't claimed, to see what it's worth).
+      bandExtension = input.reliefNotClaimed ? 0 : pensionGross;
       adjustedNetIncome = gross - pensionGross;
     } else {
       payForTax = gross - pensionGross;

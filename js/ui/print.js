@@ -96,7 +96,7 @@
       ]) : null,
       actions.length ? h('section', null, h('h2', null, 'Top actions'),
         h('ol', { class: 'print-actions' }, actions.map((x) => h('li', null, h('strong', null, x.title),
-          ' — ', x.patch ? FP.suggest.highlights(x).map((f) => FP.screens.actions.figureText(f, p)).join('; ') || x.text.match(/^.*?[.!?](?=\s|$)/)[0] : x.text.match(/^.*?[.!?](?=\s|$)/)[0])))) : null,
+          ' — ', FP.suggest.highlights(x).map((f) => FP.screens.actions.figureText(f, p)).join('; ') || x.text.match(/^.*?[.!?](?=\s|$)/)[0])))) : null,
       table('Key assumptions', assumptionRows(p)),
       h('p', { class: 'print-note' }, h('strong', null, 'Planning illustration only — not financial advice. '), notice),
       h('p', { class: 'print-note' }, 'Figures five or more years ahead are rounded. Made with the UK finance planner; your figures stay in your browser.'));

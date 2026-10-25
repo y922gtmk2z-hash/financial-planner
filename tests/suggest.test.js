@@ -25,11 +25,17 @@ test('left over is take-home minus spending, debts and regular savings', () => {
   assert.ok(Math.abs(r.left - (take - 1000 - 100)) < 0.01);
 });
 
-test('nothing left over: say so, and no split', () => {
+test('nothing left over: say so first, and no split', () => {
   const r = FP.suggest.analyse(profile({ spend: 5000 }));
   assert.ok(r.left < 0);
-  assert.deepEqual(ids(r), ['noSurplus']);
+  assert.equal(ids(r)[0], 'noSurplus');
+  assert.ok(r.suggestions[0].safety);
   assert.equal(r.split, null);
+  assert.equal(r.splitIdea, null);
+  // Ideas that cost money each month wait for when you have room.
+  const g = FP.suggest.groupActions(FP.suggest.actions(profile({ spend: 5000 })));
+  assert.ok(g.later.some((x) => x.id === 'isa'));
+  assert.equal(g.main[0].id, 'noSurplus');
 });
 
 test('a small emergency fund comes first', () => {
@@ -39,7 +45,16 @@ test('a small emergency fund comes first', () => {
   assert.deepEqual(r.split, { emergency: 80, debts: 0, cash: 0, invest: 10, mortgage: 0, pension: 10 });
   const e = r.suggestions.find((s) => s.id === 'emergency');
   assert.match(e.text, /target is 3/);
-  assert.match(e.text, /Putting 80% of what’s left/);
+  // Nothing chosen for leftover money: the suggested split (first) fills it.
+  assert.match(e.text, /The suggested split above puts 80% of what’s left/);
+  assert.equal(e.patch, null);
+  assert.ok(e.safety);
+  // With a split of your own, the fund's card makes the suggested one.
+  const own = profile({ cash: 1000 });
+  own.leftover.invest = 100;
+  const e2 = FP.suggest.analyse(own).suggestions.find((s) => s.id === 'emergency');
+  assert.match(e2.text, /Putting 80% of what’s left/);
+  assert.ok(e2.patch.some((c) => c.path === 'leftover.emergency'));
   assert.equal(FP.suggest.duration(1), '1 month');
   assert.equal(FP.suggest.duration(30), 'about 3 years');
   assert.equal(FP.suggest.duration(500), 'over 10 years');

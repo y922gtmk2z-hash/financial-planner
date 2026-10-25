@@ -72,12 +72,15 @@
       const note = f.type === 'taxcode' ? h('p', { class: 'help tax-code-note', role: 'status' }) : null;
       const explain = () => { if (note) note.textContent = FP.tax.describeTaxCode(P.get(ctx.profile(), f.path)); };
       explain();
+      // A rough answer from the quick start says so until you edit it.
+      const rough = (ctx.profile().rough || {})[f.path] ? h('p', { class: 'help rough-note' }, h('span', { class: 'badge' }, 'Rough'),
+        ' Your quick-start answer for pensions and savings together. Put in your own figure and this goes.') : null;
       const el = FP.field.render(f, {
         value: P.get(ctx.profile(), f.path),
         nullPlaceholder: f.nullPlaceholder,
         check: FP.welcome.senseCheck(f.path, ctx.profile),
-        onChange: (v) => { ctx.update(f.path, v); explain(); },
-        extra: note,
+        onChange: (v) => { ctx.update(f.path, v); explain(); if (rough) rough.hidden = true; },
+        extra: note || rough,
       });
       const needs = f.needsPlan ? 'plan' : f.needsMortgage ? 'mortgage' : null;
       if (needs) {
@@ -614,7 +617,13 @@
     // What's left of your estimate follows every change to your outgoings.
     const ctx = {
       ...appCtx,
-      update(path, value) { P.set(appCtx.profile(), path, value); ctx.changed(); },
+      update(path, value) {
+        P.set(appCtx.profile(), path, value);
+        // Editing a rough figure makes it yours.
+        const rough = appCtx.profile().rough;
+        if (rough && rough[path]) delete rough[path];
+        ctx.changed();
+      },
       changed() { FP.summary.syncOutgoings(appCtx.profile()); appCtx.changed(); FP.field.recheckAll(root); },
     };
     const saved = FP.store.pref('setupMode');

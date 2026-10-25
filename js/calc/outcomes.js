@@ -83,7 +83,7 @@
       title: 'Mortgage',
       drivers: () => [
         'mortgage.balance', 'assumptions.mortgageRate', 'mortgage.remainingTermYears', 'mortgage.monthlyOverpayment',
-        'leftover.mortgage', 'assumptions.mortgageRateChangeYear', 'assumptions.mortgageRateAfterChange', 'assumptions.overpaymentLimitPct',
+        'leftover.mortgage', 'mortgage.fixEnds', 'mortgage.rateAfterFix', 'assumptions.overpaymentLimitPct',
       ],
       ideas: ['mortgage', 'mortgageLow'],
       evaluate(p) {

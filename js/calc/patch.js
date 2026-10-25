@@ -47,6 +47,30 @@
     return Math.max(0, mortgage) + Math.max(0, debts) + studentLoan;
   }
 
+  // Interest paid in each year of the projection (as interestPaid, year by year).
+  function interestByYear(proj) {
+    return proj.rows.slice(1).map((r, i) => {
+      const prev = proj.rows[i];
+      return Math.max(0, r.mortgagePaid + r.toMortgage - (prev.mortgage - r.mortgage))
+        + Math.max(0, r.debtPaid + r.toDebts - (prev.debts - r.debts)) + r.studentLoanInterest;
+    });
+  }
+
+  /*
+   * Interest saved a year by a change: the total saved, spread over the years
+   * it makes a difference in (where a year's interest changes by £1 or more).
+   * 0 if it saves none.
+   */
+  function interestSavedPerYear(before, after) {
+    if (!before.ok || !after.ok) return null;
+    const a = interestByYear(before);
+    const b = interestByYear(after);
+    const diffs = a.map((x, i) => x - (b[i] || 0));
+    const saved = diffs.reduce((t, x) => t + x, 0);
+    const years = diffs.filter((x) => Math.abs(x) >= 1).length;
+    return saved > 0 && years ? saved / years : 0;
+  }
+
   /*
    * The figures an idea or what-if is judged on, for one profile:
    * leftover (a month), retirementSpend (could spend a month from retirement,
@@ -58,6 +82,10 @@
    * Any figure that can't be worked out yet is null.
    */
   function measure(profile) {
+    return measured(profile).figures;
+  }
+  // The figures, and the projection they came from.
+  function measured(profile) {
     const leftover = FP.summary.compute(profile, FP.tax.household(profile).takeHomeMonthly).cashFlow.surplus;
     const proj = FP.projection.project(profile);
     const spend = FP.projection.retirementSpend(profile);
@@ -75,7 +103,7 @@
       debtFreeAge = free ? free.age : null;
       interest = interestPaid(proj);
     }
-    return {
+    const figures = {
       leftover: leftover == null ? null : leftover,
       retirementSpend: spend ? spend.monthly : null,
       atRetirement,
@@ -83,22 +111,26 @@
       debtFreeAge,
       interest,
     };
+    return { figures, proj };
   }
 
   /*
    * What a patch would change: { before, after, change }, each with the
    * figures from measure(). change is after − before, or null where either
-   * is missing.
+   * is missing, plus interestSavedPerYear (see above).
    */
   function impact(profile, patch) {
-    const before = measure(profile);
-    const after = measure(applyPatch(profile, patch));
+    const was = measured(profile);
+    const now = measured(applyPatch(profile, patch));
+    const before = was.figures;
+    const after = now.figures;
     const change = {};
     Object.keys(before).forEach((k) => {
       change[k] = typeof before[k] === 'number' && typeof after[k] === 'number' ? after[k] - before[k] : null;
     });
+    change.interestSavedPerYear = interestSavedPerYear(was.proj, now.proj);
     return { before, after, change };
   }
 
-  FP.patch = { applyPatch, impact, measure, interestPaid };
+  FP.patch = { applyPatch, impact, measure, interestPaid, interestByYear, interestSavedPerYear };
 })(globalThis.FP = globalThis.FP || {});

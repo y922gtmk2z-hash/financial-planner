@@ -8,7 +8,12 @@
   const { h, money } = FP.dom;
 
   // The answers behind a first, rough plan. Same profile fields as Your figures.
-  const QUICK = ['about.age', 'income.grossSalary', 'outgoings.estimate', 'assumptions.retirementAge', 'goals.retirementIncome'];
+  const QUICK = ['about.age', 'income.grossSalary', 'outgoings.estimate', 'assumptions.retirementAge', 'goals.retirementIncome', 'assets.pension'];
+  // One rough figure for everything put by: it fills your pension pots, marked rough until you edit it.
+  const POTS_FIELD = { path: 'assets.pension', label: 'Roughly what\u2019s in your pensions and savings now?', type: 'money', nullable: true,
+    nullPlaceholder: 'Not sure',
+    help: 'Pensions, savings and investments together. A rough figure is fine, or leave it blank if you\u2019re not sure. You can split it up in Your figures later.' };
+  const isRoughPots = (p) => !!(p.rough && p.rough['assets.pension']);
   const SPEND_FIELD = { path: 'outgoings.estimate', label: 'Everything going out each month', type: 'money', suffix: 'a month', nullable: true,
     nullPlaceholder: '0',
     help: 'Include your rent or mortgage, bills and any loan or card payments, as well as everyday spending. An estimate is fine: you can refine it later.' };
@@ -17,7 +22,9 @@
   // Outgoings already itemised without an estimate are edited in Your figures, not here.
   const itemisedOnly = (p) => p.outgoings.estimate == null && spendTotal(p) > 0;
   function quickPaths(p) {
-    return QUICK.filter((path) => path !== SPEND_FIELD.path || !itemisedOnly(p));
+    return QUICK.filter((path) => (path !== SPEND_FIELD.path || !itemisedOnly(p))
+      // Pension pots you've entered in Your figures are edited there, not here.
+      && (path !== POTS_FIELD.path || !(p.assets.pension > 0) || isRoughPots(p)));
   }
   // With a partner, four more: their name, age, salary and retirement age.
   const PARTNER_QUICK = FP.profile.PARTNER_FIELDS.filter((f) => !f.more);
@@ -27,6 +34,7 @@
 
   function quickField(path) {
     if (path === SPEND_FIELD.path) return SPEND_FIELD;
+    if (path === POTS_FIELD.path) return POTS_FIELD;
     return FP.profile.SECTIONS.flatMap((sec) => sec.fields).find((f) => f.path === path);
   }
 
@@ -103,7 +111,7 @@
   }
 
   /*
-   * Quick start: up to five answers, then a first look at your plan. Where the same
+   * Quick start: up to six answers, then a first look at your plan. Where the same
    * fields also appear further down the page (Setup), typing in one copy
    * updates the other.
    */
@@ -136,7 +144,7 @@
   }
 
   /*
-   * Quick start: who the plan is for, then up to five answers (four more with
+   * Quick start: who the plan is for, then up to six answers (four more with
    * a partner), then a first look at your plan. Where the same fields also
    * appear further down the page (Setup), typing in one copy updates the other.
    */
@@ -146,11 +154,19 @@
     if (p.spending.length > 1 && !(spendTotal(p) > 0)) p.spending = [FP.profile.newRest()];
     const paths = quickPaths(p);
     const ask = (f) => FP.field.render(f, {
-      value: FP.profile.get(ctx.profile(), f.path),
+      value: f === POTS_FIELD ? (ctx.profile().assets.pension || null) : FP.profile.get(ctx.profile(), f.path),
       nullPlaceholder: f.nullPlaceholder,
       noBlankNote: true,
       check: senseCheck(f.path, ctx.profile),
       onChange: (v) => {
+        if (f === POTS_FIELD) {
+          // Blank is "not sure": nothing in your pots, and nothing marked rough.
+          const pp = ctx.profile();
+          pp.assets.pension = v || 0;
+          if (v > 0) pp.rough['assets.pension'] = true; else delete pp.rough['assets.pension'];
+          ctx.changed();
+          return;
+        }
         FP.profile.set(ctx.profile(), f.path, v);
         // Your estimate goes into your outgoings as the rest not itemised yet.
         if (f.path === SPEND_FIELD.path) FP.summary.syncOutgoings(ctx.profile());
@@ -215,7 +231,7 @@
   }
 
   const steps = (p) => [
-    [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, what goes out each month and when you’d like to retire. About a minute; rough figures are fine.'],
+    [`Answer ${questionCount(p)} quick questions`, 'Your age, pay, what goes out each month, when you’d like to retire and roughly what you’ve put by. About a minute; rough figures are fine.'],
     ['See your first plan', 'What’s left each month, and how much you’d need for retirement.'],
     ['Add detail when you’re ready', 'Savings, pensions and debts sharpen the picture and unlock your next steps.'],
   ];
@@ -277,12 +293,13 @@
   function isRough(p) {
     const inc = p.income;
     const visited = (FP.store.pref('setupVisited') || '').split(',');
-    const added = Object.values(p.assets).some((v) => v > 0) || p.mortgage.balance > 0 || (p.debts || []).length > 0
+    // A rough figure from the quick start doesn't count as having added your pots.
+    const added = Object.entries(p.assets).some(([k, v]) => v > 0 && !(k === 'pension' && isRoughPots(p))) || p.mortgage.balance > 0 || (p.debts || []).length > 0
       || (p.savings || []).length > 0 || p.spending.some((r) => !r.rest && r.monthly > 0) || FP.projection.splitShares(p.leftover, 1).total > 0
       || inc.studentLoanPlan !== 'none' || inc.bonuses.length > 0 || inc.sacrifices.length > 0 || (inc.benefits || []).length > 0
       || inc.otherIncome > 0 || inc.taxFreeIncome > 0 || !!inc.taxCode;
     return !added && !(visited.includes('assets') && visited.includes('debts'));
   }
 
-  FP.welcome = { render, householdToggle, isRough, senseCheck, failedChecks, answerCount, LIMITS };
+  FP.welcome = { render, householdToggle, isRough, isRoughPots, senseCheck, failedChecks, answerCount, LIMITS };
 })(globalThis.FP = globalThis.FP || {});

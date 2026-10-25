@@ -12,6 +12,8 @@ test('apply “Use your ISA allowance” to the Baseline: other scenarios’ cha
   const before = await summaries(page);
   expect(before.length).toBe(2);
   await open(page, '#actions');
+  // Worth under £100 a year to the sample household, so it's under Smaller ideas.
+  await page.locator('#actions-smaller > summary').click();
   const card = page.locator('.action', { has: page.getByRole('heading', { name: 'Use your ISA allowance' }) });
   await card.getByRole('button', { name: 'Apply' }).click();
   await expect(page.locator('#toast')).toContainText('Applied: Use your ISA allowance');

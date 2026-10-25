@@ -219,6 +219,7 @@
       mRate: mLoan.rate,
       mPayment: FP.mortgage.monthlyPayment(mBal, mLoan.rate, termMonths),
       monthsElapsed: 0,
+      fixChange: FP.mortgage.fixChange(profile.mortgage, startYear * 12 + (startMonth - 1)),
 
       // Rates are APRs, so interest is charged at the matching monthly rate.
       debts: profile.debts.map((d) => {
@@ -326,11 +327,12 @@
     const mStart = mBal;
     let mortgagePaid = 0;
     let overpaid = 0;
-    if (a.mortgageRateChangeYear != null && a.mortgageRateAfterChange != null && g === a.mortgageRateChangeYear && mBal > 0) {
-      mRate = a.mortgageRateAfterChange;
-      mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths - monthsElapsed);
-    }
     for (let m = 0; m < 12 && mBal > 0.005; m += 1) {
+      // When a fixed rate ends, the payment is worked out again at the rate you expect after.
+      if (state.fixChange && monthsElapsed === state.fixChange.afterMonths) {
+        mRate = state.fixChange.annualRatePct;
+        mPayment = FP.mortgage.monthlyPayment(mBal, mRate, termMonths - monthsElapsed);
+      }
       const interest = mBal * mRate / 100 / 12;
       const due = mBal + interest;
       const contractual = monthsElapsed >= termMonths ? due : mPayment;

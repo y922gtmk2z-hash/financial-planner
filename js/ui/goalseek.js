@@ -32,6 +32,7 @@
       debtFree: `be debt-free by ${r.goal.value}`,
     }[r.goal.id];
     if (r.already) return `You’re on course to ${goalText} already${r.goal.id === 'retireAt' ? ', with nothing else changed' : ''}.`;
+    if (!r.reachable) return `Not reachable by changing this alone. Closest: ${closestText(r, p)}`;
     const lever = {
       pension: `pay ${FP.dom.pct(r.value)} of your salary into your pension (now ${FP.dom.pct(r.now)})`,
       retireAge: `retire at ${r.value} (now ${r.now})`,
@@ -39,6 +40,31 @@
       overpay: `pay ${money(r.value)} a month extra on ${(r.targets || []).join(' and ')}`,
     }[r.lever];
     return `To ${goalText}, you’d need to ${lever}.`;
+  }
+
+  // The closest the lever gets, within its limit, and what that reaches.
+  function closestText(r, p) {
+    const limit = {
+      afford: 'the most you can afford from what’s left over each month',
+      allowance: `within the ${money(FP.taxConfig.pensionAnnualAllowance)} annual allowance, with your employer’s contribution`,
+      age: `the latest this works out is ${FP.goalSeek.MAX_RETIRE_AGE}`,
+      bills: 'no lower than your bills',
+      quarter: 'a quarter of what you spend now',
+      owed: 'paying off everything you owe within a year',
+    }[r.closest.limit] || '';
+    const doing = {
+      pension: `paying ${FP.dom.pct(r.value)} of your salary into your pension (${limit})`,
+      retireAge: `retiring at ${r.value} (${limit})`,
+      spending: `spending ${money(r.value)} a month (${limit})`,
+      overpay: `paying ${money(r.value)} a month extra (${limit})`,
+    }[r.lever];
+    const got = r.closest.reaches;
+    const gets = got == null ? ''
+      : r.goal.id === 'spend' ? `, which gets you about ${money(got)} a month`
+        : r.goal.id === 'retireAt' ? `, with your money lasting to about ${got}`
+          : `, debt-free by ${got}`;
+    if (!r.canTry) return `there’s no room to change this: ${limit}.`;
+    return `${doing}${gets}.`;
   }
 
   // A scenario's name for the answer.
@@ -100,13 +126,14 @@
   }
 
   function answer(ctx, r, p) {
-    const can = r.patch.length > 0;
+    const can = r.patch.length > 0 && (r.reachable || r.canTry);
     return h('div', { class: 'goal-result' },
       h('p', null, h('strong', null, answerText(r, p))),
-      r.lever === 'spending' && !r.already ? h('p', { class: 'help' }, 'Every spending category, and your estimate of everything going out, changes by the same share.') : null,
+      r.lever === 'spending' && !r.already ? h('p', { class: 'help' }, 'Your bills stay as they are; every other spending category, and your estimate of everything going out, changes by the same share.') : null,
+      // Out of reach: the closest is only offered to try, not to apply.
       can ? h('div', { class: 'button-row' },
-        h('button', { type: 'button', class: 'small', onclick: () => apply(ctx, r) }, 'Apply'),
-        h('button', { type: 'button', class: 'small secondary', onclick: () => tryIt(ctx, r) }, 'Try as a scenario')) : null,
+        r.reachable ? h('button', { type: 'button', class: 'small', onclick: () => apply(ctx, r) }, 'Apply') : null,
+        h('button', { type: 'button', class: `small${r.reachable ? ' secondary' : ''}`, onclick: () => tryIt(ctx, r) }, 'Try as a scenario')) : null,
       h('p', { class: 'help' }, 'On your assumptions, with average returns every year. Planning illustration only, not advice.'));
   }
 

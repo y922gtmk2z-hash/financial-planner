@@ -2653,57 +2653,19 @@
   "suggest": {
     "suggestions": [
       {
-        "id": "emergency",
-        "tone": "warn",
-        "title": "Build your emergency fund",
-        "text": "Your cash covers about 0.0 months of essential outgoings; your target is 3 (£12,600). A common aim is 3–6 months (£12,600–£25,200). Putting 80% of what’s left (£535 a month) into your emergency fund gets you there in 24 months, or 19 months with all of it.",
+        "id": "taper",
+        "tone": "tip",
+        "title": "Use your pension to avoid the 60% band",
+        "text": "Your adjusted net income is about £118,380. Between £100,000 and £125,140 you lose some personal allowance, so keep only about £20 of each extra £100. Paying £18,408 more a year into your pension (15.6% more of salary) brings it to £100,000 and saves about £12,787 tax a year.",
         "patch": [
           {
-            "path": "leftover.unit",
-            "op": "set",
-            "value": "pct"
-          },
-          {
-            "path": "leftover.emergency",
-            "op": "set",
-            "value": 80
-          },
-          {
-            "path": "leftover.debts",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.cash",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.invest",
-            "op": "set",
-            "value": 10
-          },
-          {
-            "path": "leftover.mortgage",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.pension",
-            "op": "set",
-            "value": 10
+            "path": "assumptions.employeePensionPct",
+            "op": "add",
+            "value": 15.6
           }
         ],
         "impact": {
           "before": {
-            "leftover": 668.54,
-            "retirementSpend": 1783.64,
-            "atRetirement": 277673.86,
-            "lastsTo": 73,
-            "debtFreeAge": 51,
-            "interest": 10612.36
-          },
-          "after": {
             "leftover": 668.54,
             "retirementSpend": 3766.41,
             "atRetirement": 890849.83,
@@ -2711,60 +2673,43 @@
             "debtFreeAge": 51,
             "interest": 10612.36
           },
-          "change": {
-            "leftover": 0,
-            "retirementSpend": 1982.77,
-            "atRetirement": 613175.98,
-            "lastsTo": 18,
-            "debtFreeAge": 0,
-            "interest": 0
-          }
-        },
-        "howTo": []
-      },
-      {
-        "id": "taper",
-        "tone": "tip",
-        "title": "Use your pension to avoid the 60% band",
-        "text": "Between £100,000 and £125,140 you lose some personal allowance, so you keep only about £20 of each extra £100. Pension contributions (or salary sacrifice) bring your income down and win that back.",
-        "patch": [
-          {
-            "path": "assumptions.employeePensionPct",
-            "op": "add",
-            "value": 16
-          }
-        ],
-        "impact": {
-          "before": {
-            "leftover": 668.54,
-            "retirementSpend": 1783.64,
-            "atRetirement": 277673.86,
-            "lastsTo": 73,
-            "debtFreeAge": 51,
-            "interest": 10612.36
-          },
           "after": {
-            "leftover": 95.9,
-            "retirementSpend": 3221.61,
-            "atRetirement": 833021.55,
-            "lastsTo": 85,
+            "leftover": 113.21,
+            "retirementSpend": 4206.49,
+            "atRetirement": 1148106.7,
+            "lastsTo": 95,
             "debtFreeAge": 53,
-            "interest": 13855.47
+            "interest": 13751.31
           },
           "change": {
-            "leftover": -572.64,
-            "retirementSpend": 1437.98,
-            "atRetirement": 555347.7,
-            "lastsTo": 12,
+            "leftover": -555.33,
+            "retirementSpend": 440.08,
+            "atRetirement": 257256.87,
+            "lastsTo": 4,
             "debtFreeAge": 2,
-            "interest": 3243.11
+            "interest": 3138.95,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
           "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
           "Check your next payslip to see the new amount going in."
-        ]
+        ],
+        "safety": false,
+        "kind": "tax",
+        "valuePerYear": 12787.26,
+        "highlights": [
+          {
+            "key": "taxPerYear",
+            "value": 12787.26
+          },
+          {
+            "key": "leftoverCost",
+            "value": 555.33
+          }
+        ],
+        "afford": null
       },
       {
         "id": "match",
@@ -2773,7 +2718,12 @@
         "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
         "patch": null,
         "impact": null,
-        "howTo": []
+        "howTo": [],
+        "safety": false,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
       },
       {
         "id": "isa",
@@ -2797,34 +2747,49 @@
         "impact": {
           "before": {
             "leftover": 668.54,
-            "retirementSpend": 1783.64,
-            "atRetirement": 277673.86,
-            "lastsTo": 73,
+            "retirementSpend": 3766.41,
+            "atRetirement": 890849.83,
+            "lastsTo": 91,
             "debtFreeAge": 51,
             "interest": 10612.36
           },
           "after": {
             "leftover": 8.54,
-            "retirementSpend": 2493.22,
-            "atRetirement": 454606.44,
-            "lastsTo": 79,
+            "retirementSpend": 3845.09,
+            "atRetirement": 870655.7,
+            "lastsTo": 91,
             "debtFreeAge": 51,
             "interest": 10612.36
           },
           "change": {
             "leftover": -660,
-            "retirementSpend": 709.58,
-            "atRetirement": 176932.58,
-            "lastsTo": 6,
+            "retirementSpend": 78.68,
+            "atRetirement": -20194.14,
+            "lastsTo": 0,
             "debtFreeAge": 0,
-            "interest": 0
+            "interest": 0,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
           "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
           "Set up a monthly payment on payday so it happens without thinking about it."
-        ]
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 944.12,
+        "highlights": [
+          {
+            "key": "retirementPerYear",
+            "value": 944.12
+          },
+          {
+            "key": "leftoverCost",
+            "value": 660
+          }
+        ],
+        "afford": null
       }
     ],
     "split": {
@@ -2834,6 +2799,95 @@
       "invest": 10,
       "mortgage": 0,
       "pension": 10
+    },
+    "unallocated": true,
+    "actions": {
+      "main": [
+        "split",
+        "taper",
+        "isa",
+        "match"
+      ],
+      "smaller": [],
+      "later": []
+    }
+  },
+  "goalSeek": {
+    "goal": {
+      "id": "spend",
+      "value": 2200
+    },
+    "levers": {
+      "pension": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 2200
+        },
+        "lever": "pension",
+        "now": 5,
+        "value": 9.5,
+        "targets": null,
+        "patch": [
+          {
+            "path": "assumptions.employeePensionPct",
+            "op": "set",
+            "value": 9.5
+          }
+        ]
+      },
+      "retireAge": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 2200
+        },
+        "lever": "retireAge",
+        "now": 67,
+        "value": 73,
+        "targets": null,
+        "patch": [
+          {
+            "path": "assumptions.retirementAge",
+            "op": "set",
+            "value": 73
+          }
+        ]
+      },
+      "spending": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 2200
+        },
+        "lever": "spending",
+        "now": 4200,
+        "value": 1050,
+        "targets": null,
+        "canTry": true,
+        "closest": {
+          "limit": "quarter",
+          "reaches": 1783.64
+        },
+        "patch": [
+          {
+            "path": "spending.0.monthly",
+            "op": "set",
+            "value": 1050
+          },
+          {
+            "path": "outgoings.estimate",
+            "op": "set",
+            "value": 1050
+          }
+        ]
+      }
     }
   }
 }

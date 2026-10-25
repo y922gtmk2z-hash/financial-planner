@@ -70,6 +70,7 @@
     }
 
     if (field.type === 'term') return termField(field, opts, { id, helpId, errId, err });
+    if (field.type === 'monthYear') return monthYearField(field, opts, { id, helpId, errId, err });
 
     let input;
     if (field.type === 'select') {
@@ -265,6 +266,40 @@
     return h('div', { class: `field term${opts.compact ? ' compact' : ''}${done ? ' answered' : ''}`, 'data-path': field.path || null },
       h('div', { class: 'label-row' }, h('label', { for: ids.id }, field.label), done ? helpToggle(field, ids.helpId) : null),
       h('div', { class: 'term-row' }, h('div', { class: 'input-wrap' }, input), h('div', { class: 'input-wrap term-unit-wrap' }, unitSel)),
+      field.help && !opts.compact ? h('p', { class: 'help help-text', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
+      ids.err,
+      opts.extra || null);
+  }
+
+  /*
+   * A month and year (stored as 'YYYY-MM', or null when blank): a month to
+   * choose and a year to type. Blank until both are given.
+   */
+  const MONTH_LABELS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function monthYearField(field, opts, ids) {
+    const [y0, m0] = typeof opts.value === 'string' ? opts.value.split('-') : ['', ''];
+    const monthSel = h('select', { id: ids.id, 'aria-describedby': `${ids.helpId} ${ids.errId}`, class: 'month-pick' },
+      h('option', { value: '' }, 'Month'),
+      MONTH_LABELS.map((label, i) => h('option', { value: String(i + 1).padStart(2, '0'), selected: m0 === String(i + 1).padStart(2, '0') }, label)));
+    const year = h('input', {
+      type: 'text', inputmode: 'numeric', autocomplete: 'off', spellcheck: 'false', maxlength: 4, placeholder: 'Year',
+      value: y0 || '', 'aria-label': `${field.label}: year`, 'aria-describedby': `${ids.helpId} ${ids.errId}`,
+    });
+    function commit() {
+      const blankBoth = !monthSel.value && !year.value.trim();
+      // Half-filled: wait for the other half (nothing saved yet).
+      if (!blankBoth && (!monthSel.value || year.value.trim().length < 4)) { ids.err.hidden = true; return; }
+      const r = FP.profile.parseValue(field, blankBoth ? '' : `${year.value.trim()}-${monthSel.value}`);
+      ids.err.hidden = r.ok;
+      ids.err.textContent = r.ok ? '' : r.error;
+      if (r.ok) { year.removeAttribute('aria-invalid'); opts.onChange(r.value); } else year.setAttribute('aria-invalid', 'true');
+    }
+    monthSel.addEventListener('change', commit);
+    year.addEventListener('input', commit);
+    const done = field.help && !opts.compact && !!opts.value;
+    return h('div', { class: `field term month-year${done ? ' answered' : ''}`, 'data-path': field.path || null },
+      h('div', { class: 'label-row' }, h('label', { for: ids.id }, field.label), done ? helpToggle(field, ids.helpId) : null),
+      h('div', { class: 'term-row' }, h('div', { class: 'input-wrap term-unit-wrap' }, monthSel), h('div', { class: 'input-wrap' }, year)),
       field.help && !opts.compact ? h('p', { class: 'help help-text', id: ids.helpId }, field.help) : h('span', { id: ids.helpId, hidden: true }),
       ids.err,
       opts.extra || null);

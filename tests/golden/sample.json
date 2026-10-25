@@ -2679,7 +2679,7 @@
     "suggestions": [
       {
         "id": "debt",
-        "tone": "warn",
+        "tone": "tip",
         "title": "Clear Credit card (sample) first",
         "text": "It costs 7% a year, more than savings earn (3.5%), so paying extra off it is a guaranteed return. Car finance (sample) (6.9%) is next. Put a share of your leftover money into “Paying off debts faster” (most expensive first), or raise the monthly payment in Your figures.",
         "patch": [
@@ -2712,14 +2712,43 @@
             "atRetirement": 21.19,
             "lastsTo": 0,
             "debtFreeAge": 0,
-            "interest": -16.01
+            "interest": -16.01,
+            "interestSavedPerYear": 16.01
           }
         },
         "howTo": [
           "Pay more than the minimum each month, starting with the most expensive debt.",
           "For a credit card, consider a 0% balance transfer: check the fee and how long the 0% lasts.",
           "Set up a direct debit for the higher amount so it’s never late."
-        ]
+        ],
+        "safety": false,
+        "kind": "interest",
+        "valuePerYear": 14.62,
+        "highlights": [
+          {
+            "key": "interestPerYear",
+            "value": 14.62
+          },
+          {
+            "key": "leftoverCost",
+            "value": 44
+          }
+        ],
+        "afford": {
+          "cost": 50,
+          "left": 44.04,
+          "none": false,
+          "scaled": {
+            "patch": [
+              {
+                "path": "debts.1.monthlyPayment",
+                "op": "add",
+                "value": 44
+              }
+            ],
+            "monthly": 44
+          }
+        }
       },
       {
         "id": "emergencyOk",
@@ -2728,13 +2757,18 @@
         "text": "Your cash covers about 4.5 months of essential outgoings, meeting your 3-month target. Keep a small share going to it so it keeps up as your costs rise; anything beyond the target goes to your other choices.",
         "patch": null,
         "impact": null,
-        "howTo": []
+        "howTo": [],
+        "safety": false,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
       },
       {
         "id": "relief",
         "tone": "tip",
         "title": "Higher-rate pension relief",
-        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.",
+        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p. Salary sacrifice also saves National Insurance.",
         "patch": [
           {
             "path": "assumptions.employeePensionPct",
@@ -2765,14 +2799,43 @@
             "atRetirement": 29717.9,
             "lastsTo": 0,
             "debtFreeAge": 0,
-            "interest": 1097.75
+            "interest": 1097.75,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
           "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
           "Check your next payslip to see the new amount going in."
-        ]
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 174.94,
+        "highlights": [
+          {
+            "key": "retirementPerYear",
+            "value": 174.94
+          },
+          {
+            "key": "leftoverCost",
+            "value": 42
+          }
+        ],
+        "afford": {
+          "cost": 84,
+          "left": 44.04,
+          "none": false,
+          "scaled": {
+            "patch": [
+              {
+                "path": "assumptions.employeePensionPct",
+                "op": "add",
+                "value": 1.5
+              }
+            ],
+            "monthly": 42
+          }
+        }
       },
       {
         "id": "match",
@@ -2781,7 +2844,12 @@
         "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
         "patch": null,
         "impact": null,
-        "howTo": []
+        "howTo": [],
+        "safety": false,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
       },
       {
         "id": "mortgage",
@@ -2818,14 +2886,43 @@
             "atRetirement": 1299.66,
             "lastsTo": 0,
             "debtFreeAge": 0,
-            "interest": -15714.34
+            "interest": -15714.34,
+            "interestSavedPerYear": 873.02
           }
         },
         "howTo": [
           "Check your lender’s yearly overpayment limit first (often 10% of the balance), so you don’t pay an early repayment charge.",
           "Ask whether overpaying shortens your term or lowers your monthly payment.",
           "Set it up with your lender as a regular monthly amount or a lump sum."
-        ]
+        ],
+        "safety": false,
+        "kind": "interest",
+        "valuePerYear": 222.25,
+        "highlights": [
+          {
+            "key": "interestPerYear",
+            "value": 222.25
+          },
+          {
+            "key": "leftoverCost",
+            "value": 44
+          }
+        ],
+        "afford": {
+          "cost": 200,
+          "left": 44.04,
+          "none": false,
+          "scaled": {
+            "patch": [
+              {
+                "path": "mortgage.monthlyOverpayment",
+                "op": "add",
+                "value": 44
+              }
+            ],
+            "monthly": 44
+          }
+        }
       },
       {
         "id": "isa",
@@ -2875,14 +2972,29 @@
             "atRetirement": 158.71,
             "lastsTo": 0,
             "debtFreeAge": 0,
-            "interest": 448.17
+            "interest": 448.17,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
           "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
           "Set up a monthly payment on payday so it happens without thinking about it."
-        ]
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 57.13,
+        "highlights": [
+          {
+            "key": "retirementPerYear",
+            "value": 57.13
+          },
+          {
+            "key": "leftoverCost",
+            "value": 40
+          }
+        ],
+        "afford": null
       }
     ],
     "split": {
@@ -2892,6 +3004,133 @@
       "invest": 10,
       "mortgage": 0,
       "pension": 10
+    },
+    "unallocated": false,
+    "actions": {
+      "main": [
+        "mortgage",
+        "relief",
+        "match"
+      ],
+      "smaller": [
+        "isa",
+        "debt",
+        "split"
+      ],
+      "later": []
+    }
+  },
+  "goalSeek": {
+    "goal": {
+      "id": "spend",
+      "value": 4600
+    },
+    "levers": {
+      "pension": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 4600
+        },
+        "lever": "pension",
+        "now": 5,
+        "value": 6.5,
+        "targets": null,
+        "canTry": true,
+        "closest": {
+          "limit": "afford",
+          "reaches": 3816.08
+        },
+        "patch": [
+          {
+            "path": "assumptions.employeePensionPct",
+            "op": "set",
+            "value": 6.5
+          }
+        ]
+      },
+      "retireAge": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 4600
+        },
+        "lever": "retireAge",
+        "now": 67,
+        "value": 70,
+        "targets": null,
+        "patch": [
+          {
+            "path": "assumptions.retirementAge",
+            "op": "set",
+            "value": 70
+          }
+        ]
+      },
+      "spending": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 4600
+        },
+        "lever": "spending",
+        "now": 1480,
+        "value": 980,
+        "targets": null,
+        "patch": [
+          {
+            "path": "spending.0.monthly",
+            "op": "set",
+            "value": 260
+          },
+          {
+            "path": "spending.1.monthly",
+            "op": "set",
+            "value": 175
+          },
+          {
+            "path": "spending.2.monthly",
+            "op": "set",
+            "value": 205.71
+          },
+          {
+            "path": "spending.3.monthly",
+            "op": "set",
+            "value": 68.57
+          },
+          {
+            "path": "spending.4.monthly",
+            "op": "set",
+            "value": 0
+          },
+          {
+            "path": "spending.5.monthly",
+            "op": "set",
+            "value": 65
+          },
+          {
+            "path": "spending.6.monthly",
+            "op": "set",
+            "value": 88.16
+          },
+          {
+            "path": "spending.7.monthly",
+            "op": "set",
+            "value": 58.78
+          },
+          {
+            "path": "spending.8.monthly",
+            "op": "set",
+            "value": 58.78
+          }
+        ]
+      }
     }
   }
 }

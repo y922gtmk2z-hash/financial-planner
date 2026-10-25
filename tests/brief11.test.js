@@ -220,7 +220,8 @@ test('goal-seek answers meet their goal within £10 a month or one year', () => 
   const p = fixture('sample');
   const rs = FP.projection.retirementSpend(p).monthly;
   const cases = [
-    [{ id: 'spend', value: Math.round(rs + 600) }, 'pension'],
+    // The sample has only £44 left over a month, so the pension can only go a little higher.
+    [{ id: 'spend', value: Math.round(rs + 10) }, 'pension'],
     [{ id: 'spend', value: Math.round(rs + 600) }, 'retireAge'],
     [{ id: 'spend', value: Math.round(rs + 200) }, 'spending'],
     [{ id: 'debtFree', value: 50 }, 'overpay'],
@@ -229,13 +230,25 @@ test('goal-seek answers meet their goal within £10 a month or one year', () => 
   q.goals.retirementIncome = 3000;
   cases.forEach(([goal, lever]) => {
     const r = FP.goalSeek.solve(p, goal, lever);
-    assert.ok(r.ok && !r.already, `${goal.id}/${lever}: ${r.reason}`);
+    assert.ok(r.ok && !r.already && r.reachable, `${goal.id}/${lever}: ${r.reason}`);
     assert.ok(within(goal, FP.patch.applyPatch(p, r.patch)), `${goal.id}/${lever} = ${r.value}`);
   });
-  [['pension'], ['spending']].forEach(([lever]) => {
+  // With room to spare (the quick-start household), a bigger pension goal.
+  const roomy = fixture('quickstart');
+  const big = { id: 'spend', value: Math.round(FP.projection.retirementSpend(roomy).monthly + 600) };
+  const rb = FP.goalSeek.solve(roomy, big, 'pension');
+  assert.ok(rb.ok && rb.reachable, rb.reason);
+  assert.ok(within(big, FP.patch.applyPatch(roomy, rb.patch)), `pension = ${rb.value}`);
+  // Retiring at 58 on £2,500 a month: by spending less (the sample) or paying
+  // more into the pension (the quick-start household, which has room to).
+  q.goals.retirementIncome = 2500;
+  const qs = fixture('quickstart');
+  qs.goals.retirementIncome = 2500;
+  [['spending', q], ['pension', qs]].forEach(([lever, plan]) => {
     const goal = { id: 'retireAt', value: 58 };
-    const r = FP.goalSeek.solve(q, goal, lever);
-    assert.ok(r.ok && !r.already, `${lever}: ${r.reason}`);
+    const r = FP.goalSeek.solve(plan, goal, lever);
+    const q = plan;
+    assert.ok(r.ok && !r.already && r.reachable, `${lever}: ${r.reason}`);
     const after = FP.patch.applyPatch(q, r.patch);
     assert.equal(after.assumptions.retirementAge, 58);
     assert.ok(lastsOrNull(after) >= q.assumptions.endAge - 1);
@@ -245,9 +258,11 @@ test('goal-seek answers meet their goal within £10 a month or one year', () => 
 test('goal-seek finds the least change: a step less would miss the goal', () => {
   const p = fixture('sample');
   const goal = { id: 'spend', value: Math.round(FP.projection.retirementSpend(p).monthly + 600) };
-  const pen = FP.goalSeek.solve(p, goal, 'pension');
-  const less = FP.patch.applyPatch(p, [{ path: 'assumptions.employeePensionPct', op: 'set', value: pen.value - 0.5 }]);
-  assert.ok(FP.projection.retirementSpend(less).monthly < goal.value);
+  const roomy = fixture('quickstart');
+  const big = { id: 'spend', value: Math.round(FP.projection.retirementSpend(roomy).monthly + 600) };
+  const pen = FP.goalSeek.solve(roomy, big, 'pension');
+  const less = FP.patch.applyPatch(roomy, [{ path: 'assumptions.employeePensionPct', op: 'set', value: pen.value - 0.5 }]);
+  assert.ok(FP.projection.retirementSpend(less).monthly < big.value);
   const age = FP.goalSeek.solve(p, goal, 'retireAge');
   const sooner = FP.patch.applyPatch(p, [{ path: 'assumptions.retirementAge', op: 'set', value: age.value - 1 }]);
   assert.ok(FP.projection.retirementSpend(sooner).monthly < goal.value);
@@ -262,7 +277,9 @@ test('goal-seek says plainly when it can’t help, or nothing is needed', () => 
   const already = FP.goalSeek.solve(p, { id: 'spend', value: 100 }, 'pension');
   assert.equal(already.already, true);
   assert.deepEqual(already.patch, []);
-  assert.match(FP.goalSeek.solve(p, { id: 'spend', value: 900000 }, 'pension').reason, /Not even with all of your salary/);
+  const far = FP.goalSeek.solve(p, { id: 'spend', value: 900000 }, 'pension');
+  assert.equal(far.reachable, false);
+  assert.ok(far.closest.reaches < 900000);
   assert.match(FP.goalSeek.solve(p, { id: 'retireAt', value: 60 }, 'retireAge').reason, /can’t be changed/);
   assert.match(FP.goalSeek.solve(p, { id: 'debtFree', value: 30 }, 'overpay').reason, /after your age now/);
   // Spending less only clears debts sooner if leftover money goes to them.

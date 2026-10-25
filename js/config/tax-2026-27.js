@@ -102,5 +102,8 @@
 
     // Relief-at-source pensions: the provider claims this rate back on your behalf.
     reliefAtSourceRate: 20,
+    // Pension annual allowance: what you and your employer can pay in a year
+    // with tax relief (lower for some very high earners: the taper isn't modelled).
+    pensionAnnualAllowance: 60000,
   };
 })(globalThis.FP = globalThis.FP || {});

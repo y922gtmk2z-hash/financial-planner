@@ -64,29 +64,63 @@ test('nothing chosen for leftover money makes the split action a problem to fix'
   assert.equal(FP.suggest.splitAction(fixture('stretched')), null, 'no split when nothing is left over');
 });
 
-test('actions are ranked: problems first, then the biggest gain in retirement spending', () => {
-  const p = fixture('sample');
-  const r = FP.suggest.analyse(p);
-  const list = FP.suggest.rankActions(r.suggestions.concat(FP.suggest.splitAction(p, r)).filter((x) => x.tone !== 'good'));
-  const warn = list.filter((x) => x.tone === 'warn');
-  assert.deepEqual(list.slice(0, warn.length), warn, 'warn first');
-  const tips = list.slice(warn.length).filter((x) => x.patch);
-  const gains = tips.map((x) => x.impact.change.retirementSpend);
-  assert.deepEqual(gains, gains.slice().sort((x, y) => y - x), 'then by gain');
-  const noPatch = list.findIndex((x) => !x.patch);
-  if (noPatch >= 0) assert.ok(list.slice(noPatch).every((x) => !x.patch || x.tone === 'warn'), 'ideas with nothing to apply last');
+test('actions are ranked: deciding about money left over, then safety problems, then value a year', () => {
+  G.names().forEach((name) => {
+    const p = fixture(name);
+    const g = FP.suggest.groupActions(FP.suggest.actions(p));
+    const r = FP.suggest.analyse(p);
+    if (r.unallocated) assert.equal(g.main[0].id, 'split', `${name}: decide first`);
+    const rest = g.main.filter((x) => !x.decide);
+    const safe = rest.filter((x) => x.safety);
+    assert.deepEqual(rest.slice(0, safe.length), safe, `${name}: safety next`);
+    const vals = rest.slice(safe.length).map((x) => FP.suggest.valuePerYear(x)).filter((v) => v != null);
+    assert.deepEqual(vals, vals.slice().sort((x, y) => y - x), `${name}: then by value`);
+    vals.forEach((v) => assert.ok(v >= FP.suggest.SMALL_VALUE, `${name}: ${v} belongs in smaller ideas`));
+    g.smaller.forEach((x) => assert.ok(FP.suggest.valuePerYear(x) < FP.suggest.SMALL_VALUE, `${name} ${x.id}`));
+    g.later.forEach((x) => assert.ok(x.afford && x.afford.none, `${name} ${x.id}`));
+  });
 });
 
-test('each action shows up to two figures: its main gain, then its cost now', () => {
+test('with money left over unallocated, the first action decides it, and other gains are on top of that split', () => {
+  const p = fixture('quickstart');
+  const list = FP.suggest.rankActions(FP.suggest.actions(p));
+  const r = FP.suggest.analyse(p);
+  assert.equal(list[0].id, 'split');
+  assert.equal(list[0].title, `Decide what to do with your £${Math.round(r.left).toLocaleString('en-GB')} left over`);
+  // Measured from the plan with the suggested split used.
+  const isa = r.suggestions.find((x) => x.id === 'isa');
+  const withSplit = FP.patch.applyPatch(p, r.splitIdea.patch);
+  assert.deepEqual(isa.impact, FP.patch.impact(withSplit, isa.patch));
+  assert.ok(isa.impact.change.retirementSpend < FP.patch.impact(p, isa.patch).change.retirementSpend, 'not counting "start saving" again');
+});
+
+test('each action shows up to two figures: its value a year, then its cost now', () => {
   const r = FP.suggest.analyse(fixture('sample'));
   const pick = (id) => FP.suggest.highlights(r.suggestions.find((s) => s.id === id)).map((x) => x.key);
-  assert.deepEqual(pick('relief'), ['retirementSpend', 'leftoverCost']);
-  assert.deepEqual(pick('mortgage'), ['interestSaved', 'leftoverCost']);
+  assert.deepEqual(pick('relief'), ['retirementPerYear', 'leftoverCost']);
+  assert.deepEqual(pick('mortgage'), ['interestPerYear', 'leftoverCost']);
   assert.deepEqual(FP.suggest.highlights(r.suggestions.find((s) => s.id === 'match')), []);
-  // A trade-off is shown as one: the sample's suggested split adds to savings at
-  // retirement but leaves less to spend each month in retirement.
-  assert.deepEqual(FP.suggest.highlights(FP.suggest.splitAction(fixture('sample'))).map((x) => x.key), ['atRetirement', 'retirementSpendCost']);
   FP.suggest.highlights(r.suggestions.find((s) => s.id === 'mortgage')).forEach((x) => assert.ok(x.value > 0));
+  // The emergency fund is in months of cover, never retirement income.
+  const short = fixture('stretched');
+  const e = FP.suggest.analyse(short).suggestions.find((s) => s.id === 'emergency');
+  assert.ok(FP.suggest.highlights(e).every((f) => /^cover/.test(f.key)));
+  assert.equal(FP.suggest.valuePerYear(e), null);
+});
+
+test('an action costing more than is left over is scaled to what you can afford, or waits for when you have room', () => {
+  // The sample has £44 left over: the £200 mortgage overpayment becomes £44.
+  const p = fixture('sample');
+  const r = FP.suggest.analyse(p);
+  const m = r.suggestions.find((s) => s.id === 'mortgage');
+  assert.ok(m.afford.cost > r.left);
+  assert.deepEqual(m.afford.scaled.patch, [{ path: 'mortgage.monthlyOverpayment', op: 'add', value: Math.floor(r.left) }]);
+  assert.ok(m.afford.scaled.monthly <= r.left + 0.5);
+  assert.equal(m.afford.scaled.impact.change.leftover, -Math.floor(r.left));
+  // Short each month: nothing is affordable.
+  const g = FP.suggest.groupActions(FP.suggest.actions(fixture('stretched')));
+  assert.ok(g.later.length > 0);
+  g.later.forEach((x) => assert.equal(x.afford.scaled, null));
 });
 
 test('an idea can be marked applied, and older saves still load', () => {

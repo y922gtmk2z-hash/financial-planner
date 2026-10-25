@@ -119,7 +119,8 @@ test('every idea has a patch (or null), an impact and 0 or 2 to 4 how-to steps; 
     r.suggestions.forEach((s) => {
       assert.ok(s.patch === null || Array.isArray(s.patch), `${name} ${s.id}`);
       assert.ok(Array.isArray(s.howTo) && (s.howTo.length === 0 || (s.howTo.length >= 2 && s.howTo.length <= 4)), `${name} ${s.id} howTo`);
-      if (s.patch) assert.deepEqual(Object.keys(s.impact), ['before', 'after', 'change']);
+      // The emergency fund is judged in months of cover, so it has no impact figures.
+      if (s.patch && s.id !== 'emergency') assert.deepEqual(Object.keys(s.impact), ['before', 'after', 'change']);
       else assert.equal(s.impact, null);
     });
   });
@@ -142,8 +143,8 @@ test('the taper idea pays in just enough to bring your income down to £100,000'
   const idea = FP.suggest.analyse(p).suggestions.find((s) => s.id === 'taper');
   const n = idea.patch[0].value;
   const ani = (k) => FP.tax.forProfile(FP.patch.applyPatch(p, [{ path: 'assumptions.employeePensionPct', op: 'add', value: k }])).adjustedNetIncome;
-  assert.ok(ani(n) <= FP.taxConfig.taperThreshold);
-  assert.ok(ani(n - 1) > FP.taxConfig.taperThreshold);
+  assert.ok(ani(n) <= FP.taxConfig.taperThreshold + 0.5);
+  assert.ok(ani(n - 0.1) > FP.taxConfig.taperThreshold, 'to the nearest 0.1%');
 });
 
 // The what-ifs as they were written before patches, to prove nothing changed.

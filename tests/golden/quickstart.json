@@ -2552,80 +2552,10 @@
   "suggest": {
     "suggestions": [
       {
-        "id": "emergency",
-        "tone": "warn",
-        "title": "Build your emergency fund",
-        "text": "Your cash covers about 0.0 months of essential outgoings; your target is 3 (£9,600). A common aim is 3–6 months (£9,600–£19,200). Putting 80% of what’s left (£1,260 a month) into your emergency fund gets you there in 8 months, or 7 months with all of it.",
-        "patch": [
-          {
-            "path": "leftover.unit",
-            "op": "set",
-            "value": "pct"
-          },
-          {
-            "path": "leftover.emergency",
-            "op": "set",
-            "value": 80
-          },
-          {
-            "path": "leftover.debts",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.cash",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.invest",
-            "op": "set",
-            "value": 10
-          },
-          {
-            "path": "leftover.mortgage",
-            "op": "set",
-            "value": 0
-          },
-          {
-            "path": "leftover.pension",
-            "op": "set",
-            "value": 10
-          }
-        ],
-        "impact": {
-          "before": {
-            "leftover": 1575.62,
-            "retirementSpend": 1243.11,
-            "atRetirement": 188948.7,
-            "lastsTo": 65,
-            "debtFreeAge": 38,
-            "interest": 0
-          },
-          "after": {
-            "leftover": 1575.62,
-            "retirementSpend": 2812.74,
-            "atRetirement": 708896.69,
-            "lastsTo": 91,
-            "debtFreeAge": 38,
-            "interest": 0
-          },
-          "change": {
-            "leftover": 0,
-            "retirementSpend": 1569.63,
-            "atRetirement": 519948,
-            "lastsTo": 26,
-            "debtFreeAge": 0,
-            "interest": 0
-          }
-        },
-        "howTo": []
-      },
-      {
         "id": "relief",
         "tone": "tip",
         "title": "Higher-rate pension relief",
-        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p (claim the extra relief through self assessment if your scheme doesn’t give it). Salary sacrifice also saves National Insurance.",
+        "text": "You pay 40% tax on your top slice of pay, so each £1 into your pension costs you only about 60p. Salary sacrifice also saves National Insurance.",
         "patch": [
           {
             "path": "assumptions.employeePensionPct",
@@ -2636,34 +2566,49 @@
         "impact": {
           "before": {
             "leftover": 1575.62,
-            "retirementSpend": 1243.11,
-            "atRetirement": 188948.7,
-            "lastsTo": 65,
+            "retirementSpend": 2812.74,
+            "atRetirement": 708896.69,
+            "lastsTo": 91,
             "debtFreeAge": 38,
             "interest": 0
           },
           "after": {
             "leftover": 1448.12,
-            "retirementSpend": 1435.29,
-            "atRetirement": 259804.5,
-            "lastsTo": 67,
+            "retirementSpend": 2867.93,
+            "atRetirement": 738076.22,
+            "lastsTo": 92,
             "debtFreeAge": 38,
             "interest": 0
           },
           "change": {
             "leftover": -127.5,
-            "retirementSpend": 192.17,
-            "atRetirement": 70855.8,
-            "lastsTo": 2,
+            "retirementSpend": 55.19,
+            "atRetirement": 29179.53,
+            "lastsTo": 1,
             "debtFreeAge": 0,
-            "interest": 0
+            "interest": 0,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Ask payroll or HR how to pay more into your workplace pension. Most schemes let you change it at any time.",
           "If they offer salary sacrifice, ask about it: it saves National Insurance as well as tax.",
           "Check your next payslip to see the new amount going in."
-        ]
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 662.32,
+        "highlights": [
+          {
+            "key": "retirementPerYear",
+            "value": 662.32
+          },
+          {
+            "key": "leftoverCost",
+            "value": 127.5
+          }
+        ],
+        "afford": null
       },
       {
         "id": "match",
@@ -2672,7 +2617,12 @@
         "text": "Your employer adds 3%. Many employers add more if you pay more — if yours does, that’s usually the best return available.",
         "patch": null,
         "impact": null,
-        "howTo": []
+        "howTo": [],
+        "safety": false,
+        "kind": null,
+        "valuePerYear": null,
+        "highlights": [],
+        "afford": null
       },
       {
         "id": "isa",
@@ -2696,34 +2646,49 @@
         "impact": {
           "before": {
             "leftover": 1575.62,
-            "retirementSpend": 1243.11,
-            "atRetirement": 188948.7,
-            "lastsTo": 65,
+            "retirementSpend": 2812.74,
+            "atRetirement": 708896.69,
+            "lastsTo": 91,
             "debtFreeAge": 38,
             "interest": 0
           },
           "after": {
             "leftover": 5.62,
-            "retirementSpend": 2636.67,
-            "atRetirement": 590921.65,
-            "lastsTo": 87,
+            "retirementSpend": 2859.5,
+            "atRetirement": 662569.78,
+            "lastsTo": 92,
             "debtFreeAge": 38,
             "interest": 0
           },
           "change": {
             "leftover": -1570,
-            "retirementSpend": 1393.55,
-            "atRetirement": 401972.95,
-            "lastsTo": 22,
+            "retirementSpend": 46.76,
+            "atRetirement": -46326.91,
+            "lastsTo": 1,
             "debtFreeAge": 0,
-            "interest": 0
+            "interest": 0,
+            "interestSavedPerYear": 0
           }
         },
         "howTo": [
           "Decide between a cash ISA and a stocks & shares ISA (for money you won’t need for at least five years).",
           "Open one, or top up one you already have. The allowance runs from 6 April to 5 April.",
           "Set up a monthly payment on payday so it happens without thinking about it."
-        ]
+        ],
+        "safety": false,
+        "kind": "retirement",
+        "valuePerYear": 561.11,
+        "highlights": [
+          {
+            "key": "retirementPerYear",
+            "value": 561.11
+          },
+          {
+            "key": "leftoverCost",
+            "value": 1570
+          }
+        ],
+        "afford": null
       }
     ],
     "split": {
@@ -2733,6 +2698,95 @@
       "invest": 10,
       "mortgage": 0,
       "pension": 10
+    },
+    "unallocated": true,
+    "actions": {
+      "main": [
+        "split",
+        "relief",
+        "isa",
+        "match"
+      ],
+      "smaller": [],
+      "later": []
+    }
+  },
+  "goalSeek": {
+    "goal": {
+      "id": "spend",
+      "value": 1500
+    },
+    "levers": {
+      "pension": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "pension",
+        "now": 5,
+        "value": 9.5,
+        "targets": null,
+        "patch": [
+          {
+            "path": "assumptions.employeePensionPct",
+            "op": "set",
+            "value": 9.5
+          }
+        ]
+      },
+      "retireAge": {
+        "ok": true,
+        "already": false,
+        "reachable": true,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "retireAge",
+        "now": 60,
+        "value": 64,
+        "targets": null,
+        "patch": [
+          {
+            "path": "assumptions.retirementAge",
+            "op": "set",
+            "value": 64
+          }
+        ]
+      },
+      "spending": {
+        "ok": true,
+        "already": false,
+        "reachable": false,
+        "goal": {
+          "id": "spend",
+          "value": 1500
+        },
+        "lever": "spending",
+        "now": 3200,
+        "value": 800,
+        "targets": null,
+        "canTry": true,
+        "closest": {
+          "limit": "quarter",
+          "reaches": 1243.11
+        },
+        "patch": [
+          {
+            "path": "spending.0.monthly",
+            "op": "set",
+            "value": 800
+          },
+          {
+            "path": "outgoings.estimate",
+            "op": "set",
+            "value": 800
+          }
+        ]
+      }
     }
   }
 }

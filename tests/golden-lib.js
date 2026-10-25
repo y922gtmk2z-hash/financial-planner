@@ -75,10 +75,34 @@ function snapshot(profile) {
     retirementNeed: FP.projection.retirementNeed(profile),
     potNeeded: FP.projection.potNeeded(profile),
     suggest: {
-      suggestions: ideas.suggestions.map(({ id, tone, title, text, patch, impact, howTo }) => ({ id, tone, title, text, patch, impact, howTo })),
+      suggestions: ideas.suggestions.map((x) => {
+        const { id, tone, title, text, patch, impact, howTo, safety, kind, link } = x;
+        const af = x.afford;
+        return {
+          id, tone, title, text, patch, impact, howTo, safety, kind, link,
+          valuePerYear: FP.suggest.valuePerYear(x),
+          highlights: FP.suggest.highlights(x),
+          afford: af ? { cost: af.cost, left: af.left, none: af.none, scaled: af.scaled ? { patch: af.scaled.patch, monthly: af.scaled.monthly } : null } : null,
+        };
+      }),
       split: ideas.split,
+      unallocated: ideas.unallocated,
+      // The Actions screen's order: each group's ids.
+      actions: (() => {
+        const g = FP.suggest.groupActions(FP.suggest.actions(profile));
+        return { main: g.main.map((x) => x.id), smaller: g.smaller.map((x) => x.id), later: g.later.map((x) => x.id) };
+      })(),
     },
+    // What would it take to spend 20% more in retirement, by each lever.
+    goalSeek: goalSeek(profile),
   });
+}
+
+function goalSeek(profile) {
+  const rs = FP.projection.retirementSpend(profile);
+  if (!rs) return null;
+  const goal = { id: 'spend', value: Math.ceil((rs.monthly * 1.2) / 100) * 100 };
+  return { goal, levers: Object.fromEntries(['pension', 'retireAge', 'spending'].map((l) => [l, FP.goalSeek.solve(profile, goal, l)])) };
 }
 
 const goldenPath = (name) => path.join(GOLDEN, `${name}.json`);
